@@ -71,7 +71,7 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
 
     @Override
     protected void onDestroy() {
-        QianXun.unRegister();
+        QianXun.unInit();
         super.onDestroy();
     }
 

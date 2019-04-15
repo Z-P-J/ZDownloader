@@ -68,7 +68,7 @@ public class QianXun {
 //        }
 //    }
 
-    public static void unRegister() {
+    public static void unInit() {
         DownloadManagerImpl.getInstance().pauseAllMissions();
         NotifyUtil.cancelAll();
 //        context.unbindService(mConnection);
