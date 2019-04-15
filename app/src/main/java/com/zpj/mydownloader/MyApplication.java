@@ -3,6 +3,8 @@ package com.zpj.mydownloader;
 import android.app.Application;
 
 import com.zpj.qxdownloader.QianXun;
+import com.zpj.qxdownloader.get.DownloadMission;
+import com.zpj.qxdownloader.option.MissionOptions;
 import com.zpj.qxdownloader.option.QianXunOptions;
 
 public class MyApplication extends Application {
@@ -16,7 +18,7 @@ public class MyApplication extends Application {
                 .setRetryCount(10)
 //                .setUserAgent("")
                 .setCookie("");
-        QianXun.register(options);
+        QianXun.init(options);
     }
 
 }

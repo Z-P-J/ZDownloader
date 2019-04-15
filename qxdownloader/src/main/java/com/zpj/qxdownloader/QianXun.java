@@ -6,6 +6,7 @@ import com.zpj.qxdownloader.get.DownloadManager;
 import com.zpj.qxdownloader.get.DownloadManagerImpl;
 import com.zpj.qxdownloader.get.DownloadMission;
 import com.zpj.qxdownloader.notification.NotifyUtil;
+import com.zpj.qxdownloader.option.MissionOptions;
 import com.zpj.qxdownloader.option.QianXunOptions;
 
 public class QianXun {
@@ -43,13 +44,13 @@ public class QianXun {
 //        this.registerListener = registerListener;
 //    }
 
-    public static void register(Context context) {
+    public static void init(Context context) {
 //        register(context, null);
         NotifyUtil.init(context);
         DownloadManagerImpl.register(context, QianXunOptions.with(context));
     }
 
-    public static void register(QianXunOptions options) {
+    public static void init(QianXunOptions options) {
 //        register(context, null);
         Context context = options.getContext();
         NotifyUtil.init(context);
@@ -77,6 +78,17 @@ public class QianXun {
     }
 
     public static DownloadMission download(String url) {
+//        哈哈.apk
+        int res = DownloadManagerImpl.getInstance().startMission(url, "", 5);
+        if (res == -1) {
+//            Log.d("download", "文件已存在！！！");
+            return null;
+        }
+        //        mBinder.onMissionAdded(downloadMission);
+        return DownloadManagerImpl.getInstance().getMission(res);
+    }
+
+    public static DownloadMission download(String url, MissionOptions options) {
 //        哈哈.apk
         int res = DownloadManagerImpl.getInstance().startMission(url, "", 5);
         if (res == -1) {
@@ -129,6 +141,22 @@ public class QianXun {
         mission.deleteThisFromFile();
         DownloadManagerImpl.getInstance().getMissions().remove(mission);
 //        mBinder.onMissionRemoved(mission);
+    }
+
+    public static void pauseAll() {
+        DownloadManagerImpl.getInstance().pauseAllMissions();
+    }
+
+    public static void resumeAll() {
+        DownloadManagerImpl.getInstance().resumeAllMissions();
+    }
+
+    public static void deleteAll() {
+        DownloadManagerImpl.getInstance().deleteAllMissions();
+    }
+
+    public static void clearAll() {
+        DownloadManagerImpl.getInstance().clearAllMissions();
     }
 
 //    public static DownloadManagerService.DMBinder getBinder() {
