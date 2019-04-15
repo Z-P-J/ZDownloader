@@ -6,8 +6,8 @@ import android.util.Log;
 import android.util.LongSparseArray;
 
 import com.google.gson.Gson;
-import com.hss01248.notifyutil.NotifyUtil;
-import com.hss01248.notifyutil.builder.ProgressBuilder;
+import com.zpj.qxdownloader.notification.NotifyUtil;
+import com.zpj.qxdownloader.notification.builder.ProgressBuilder;
 import com.zpj.qxdownloader.util.Utility;
 
 import java.io.File;

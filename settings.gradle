@@ -1,2 +1,2 @@
-include ':app', ':qxdownloader', ':dialoglib', ':notifyutil2'
+include ':app', ':qxdownloader', ':dialoglib'
 rootProject.name='MyDownloader'

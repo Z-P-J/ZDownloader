@@ -11,7 +11,7 @@ public class QianXunOptions extends BaseOptions {
     public static QianXunOptions with(Context context) {
         QianXunOptions options = new QianXunOptions();
         options.setContext(context);
-        return new QianXunOptions();
+        return options;
     }
 
     public QianXunOptions setDownloadPath(String downloadPath) {
