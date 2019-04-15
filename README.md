@@ -60,6 +60,33 @@ QianXun.download("your download url")
                 });         
 ```
 
+### 2. 其它操作
+```java
+//暂停下载
+QianXun.pause(mission);
+
+//恢复下载
+QianXun.resume(mission);
+
+//删除下载任务和下载文件
+QianXun.delete(mission);
+
+//删除下载任务(不包含下载文件)
+QianXun.clear(mission);
+
+//暂停所有下载任务
+QianXun.pauseAll();
+
+//恢复所有下载任务
+QianXun.resumeAll();
+
+//删除所有下载任务和下载文件
+QianXun.deleteAll();
+
+//删除所有下载任务(不包含下载文件)
+QianXun.clearAll();
+```
+
 ## 二. 高级使用
 ### 1. 在Application中初始化时进行全局设置
 ```java
