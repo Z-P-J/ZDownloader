@@ -1,5 +1,7 @@
 # QXDownloader
 
+### 待完善后发布到jCenter或jitpack
+
 # 如何使用？
 ## 一. 简单使用
 ### 1. 在Application中初始化
