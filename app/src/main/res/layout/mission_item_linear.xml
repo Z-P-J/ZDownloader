@@ -1,0 +1,94 @@
+<android.support.v7.widget.CardView
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	xmlns:app="http://schemas.android.com/apk/res-auto"
+	android:id="@+id/card_view"
+	android:layout_height="wrap_content"
+	android:layout_width="match_parent"
+	app:cardUseCompatPadding="true"
+	app:cardCornerRadius="5dp"
+	app:cardElevation="1dp"
+	app:cardBackgroundColor="@color/white"
+	>
+
+	<RelativeLayout
+		android:id="@+id/item_bkg"
+		android:layout_height="wrap_content"
+		android:layout_width="match_parent"
+		>
+		<!--android:background="#cccccc"-->
+
+		<ImageView
+			android:id="@+id/item_icon"
+			android:layout_width="72dp"
+			android:layout_height="72dp"
+			android:layout_centerVertical="true"
+			android:scaleType="fitXY"
+			android:gravity="center"
+			android:padding="15dp"/>
+
+		<LinearLayout
+			android:id="@+id/item_name_and_size"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_toEndOf="@id/item_icon"
+			android:layout_toStartOf="@+id/item_more"
+			android:layout_centerVertical="true"
+			android:orientation="vertical">
+
+			<TextView
+				android:id="@+id/item_name"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:padding="6dp"
+				android:maxLines="2"
+				android:ellipsize="end"
+				android:text="XXX.xx"
+				android:textSize="16sp"
+				android:textStyle="bold"
+				android:textColor="@color/black"/>
+
+			<RelativeLayout
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content">
+
+				<TextView
+					android:id="@+id/item_size"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:padding="6dp"
+					android:singleLine="true"
+					android:text="100.00MB"
+					android:textSize="14sp"
+					android:textColor="@color/black"/>
+
+				<TextView
+					android:id="@+id/item_status"
+					android:layout_width="wrap_content"
+					android:layout_height="wrap_content"
+					android:layout_centerVertical="true"
+					android:layout_marginLeft="6dp"
+					android:layout_marginRight="6dp"
+					android:singleLine="true"
+					android:text="0%"
+					android:textSize="14sp"
+					android:textColor="@color/black"
+					android:layout_alignParentEnd="true"
+					/>
+
+			</RelativeLayout>
+
+		</LinearLayout>
+
+		<com.zpj.mydownloader.ArrowDownloadButton
+			android:layout_width="36dp"
+			android:layout_height="36dp"
+			android:id="@+id/item_more"
+			android:layout_alignParentEnd="true"
+			android:layout_centerVertical="true"
+			android:layout_marginEnd="4dp"
+			android:layout_marginStart="4dp"
+			/>
+
+	</RelativeLayout>
+
+</android.support.v7.widget.CardView>

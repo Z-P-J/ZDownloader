@@ -1,0 +1,2 @@
+include ':app', ':qxdownloader', ':dialoglib', ':notifyutil2'
+rootProject.name='MyDownloader'

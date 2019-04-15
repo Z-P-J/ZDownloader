@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="slide_anim_style" parent="@android:style/Animation">
+        <item name="android:windowEnterAnimation">@anim/slide_up_in</item>
+        <item name="android:windowExitAnimation">@anim/slide_down_out</item>
+        <!--<item name="android:interpolator">@android:anim/accelerate_decelerate_interpolator</item>-->
+    </style>
+
+</resources>
