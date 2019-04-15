@@ -56,7 +56,7 @@ QianXun.download("your download url")
                 });         
 ```
 
-## 一. 高级使用
+## 二. 高级使用
 ### 1. 在Application中初始化时进行设置
 ```java
 public class MyApplication extends Application {
