@@ -56,7 +56,7 @@ public class Utility
 	}
 	
 	public static void writeToFile(String fileName, String content) {
-		Log.d("writeToFile", "fileName=" + fileName);
+//		Log.d("writeToFile", "fileName=" + fileName);
 		try {
 			writeToFile(fileName, content.getBytes(StandardCharsets.UTF_8));
 		} catch (Exception e) {

@@ -84,8 +84,8 @@ public class NotifyUtil {
     }
 
     public static void notify(int id, Notification notification){
-        Log.d("Notification", "id = " + id);
-        Log.d("Notification", "notification = " + notification);
+//        Log.d("Notification", "id = " + id);
+//        Log.d("Notification", "notification = " + notification);
         nm.notify(id, notification);
     }
 

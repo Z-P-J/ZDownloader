@@ -1,5 +1,7 @@
 package com.zpj.qxdownloader.get;
 
+import android.content.Context;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,6 +38,8 @@ public interface DownloadManager
 	DownloadMission getMission(String uuid);
 
 	int getCount();
+
+	Context getContext();
 
 //	String getDownloadPath();
 //

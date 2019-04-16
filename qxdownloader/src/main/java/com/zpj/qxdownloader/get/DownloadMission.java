@@ -17,6 +17,7 @@ import java.util.HashMap;
 import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadPoolExecutor;
 
 public class DownloadMission {
 	private static final String TAG = DownloadMission.class.getSimpleName();
@@ -45,7 +46,7 @@ public class DownloadMission {
 	public String originUrl = "";
 	public String location = "";
 	public String cookie = "";
-	public String user_agent;
+	public String user_agent = "";
 	public long createTime = 0;
 	public int notifyId = 0;
 	public long blocks = 0;
@@ -54,7 +55,7 @@ public class DownloadMission {
 	public long done = 0;
 	public int threadCount = 3;
 	public int finishCount = 0;
-	public ArrayList<Long> threadPositions = new ArrayList<Long>();
+	public ArrayList<Long> threadPositions = new ArrayList<>();
 //	public final HashMap<Long, Boolean> blockState = new HashMap<Long, Boolean>();
 	public final LongSparseArray<Boolean> blockState = new LongSparseArray<>();
 	public boolean running = false;
@@ -67,10 +68,10 @@ public class DownloadMission {
 	
 	public transient boolean recovered = false;
 	
-	private transient ArrayList<WeakReference<MissionListener>> mListeners = new ArrayList<WeakReference<MissionListener>>();
+	private transient ArrayList<WeakReference<MissionListener>> mListeners = new ArrayList<>();
 	private transient boolean mWritingToFile = false;
 
-	private transient final ExecutorService es = Executors.newFixedThreadPool(1);
+	private transient ExecutorService executorService;// = Executors.newFixedThreadPool(3);
 
 	private transient final ProgressBuilder progressBuilder = new ProgressBuilder();
 
@@ -126,12 +127,25 @@ public class DownloadMission {
 		
 		if (done != length) {
 			Log.d(TAG, "已下载");
-			progressBuilder
-					.setProgressAndFormat(getProgress(),false, "")
-					.setContentTitle("已下载：" + name)
-					.setPause(false)
-					.setId(getId())
-					.show();
+			writeThisToFile();
+
+			executorService.submit(progressRunnable);
+//			long time1 = System.currentTimeMillis();
+//			new Thread(new Runnable() {
+//				@Override
+//				public void run() {
+//					progressBuilder
+//							.setProgressAndFormat(getProgress(),false, "")
+//							.setContentTitle("已下载：" + name)
+//							.setPause(false)
+//							.setId(getId())
+//							.show();
+//				}
+//			}).start();
+
+//			long time2 = System.currentTimeMillis();
+//			Log.d("timetimetimetime0", "tempTime3=" + (time2 - time1));
+
 			for (WeakReference<MissionListener> ref: mListeners) {
 				final MissionListener listener = ref.get();
 				if (listener != null) {
@@ -143,9 +157,20 @@ public class DownloadMission {
 					});
 				}
 			}
-			writeThisToFile();
 		}
 	}
+
+	private Runnable progressRunnable = new Runnable() {
+		@Override
+		public void run() {
+			progressBuilder
+					.setProgressAndFormat(getProgress(),false, "")
+					.setContentTitle("已下载：" + name)
+					.setPause(false)
+					.setId(getId())
+					.show();
+		}
+	};
 	
 	public synchronized void notifyFinished() {
 		if (errCode > 0) return;
@@ -169,11 +194,16 @@ public class DownloadMission {
 		writeThisToFile();
 
 		NotifyUtil.cancel(getId());
-		progressBuilder
-				.setContentTitle("已完成：" + name)
-				.setId(getId())
-				.setPause(true)
-				.show();
+		executorService.submit(new Runnable() {
+			@Override
+			public void run() {
+				progressBuilder
+						.setContentTitle("已完成：" + name)
+						.setId(getId())
+						.setPause(true)
+						.show();
+			}
+		});
 		for (WeakReference<MissionListener> ref : mListeners) {
 			final MissionListener listener = ref.get();
 			if (listener != null) {
@@ -233,24 +263,33 @@ public class DownloadMission {
 		if (!running && !finished) {
 
 			running = true;
-			ExecutorService executorService;
+//			ExecutorService executorService;
 			if (!fallback) {
-				executorService = Executors.newFixedThreadPool(threadCount);
-				for (int i = 0; i < threadCount; i++) {
-					if (threadPositions.size() <= i && !recovered) {
-						threadPositions.add((long) i);
-					}
-					executorService.submit(new DownloadRunnable(this, i));
-//					new Thread(new DownloadRunnable(this, i)).start();
-				}
+//				executorService = Executors.newFixedThreadPool(threadCount);
+//				for (int i = 0; i < threadCount; i++) {
+//					if (threadPositions.size() <= i && !recovered) {
+//						threadPositions.add((long) i);
+//					}
+//					executorService.submit(new DownloadRunnable(this, i));
+////					new Thread(new DownloadRunnable(this, i)).start();
+//				}
 			} else {
 				// In fallback mode, resuming is not supported.
 				threadCount = 1;
 				done = 0;
 				blocks = 0;
-				executorService = Executors.newFixedThreadPool(1);
-				executorService.submit(new DownloadRunnableFallback(this));
-//				new Thread(new DownloadRunnableFallback(this)).start();
+//				executorService = Executors.newFixedThreadPool(1);
+//				executorService.submit(new DownloadRunnableFallback(this));
+			}
+
+			if (executorService == null || ((ThreadPoolExecutor)executorService).getCorePoolSize() != 2 * threadCount) {
+				executorService = Executors.newFixedThreadPool(2 * threadCount);
+			}
+			for (int i = 0; i < threadCount; i++) {
+				if (threadPositions.size() <= i && !recovered) {
+					threadPositions.add((long) i);
+				}
+				executorService.submit(new DownloadRunnable(this, i));
 			}
 
 			writeThisToFile();
@@ -280,11 +319,16 @@ public class DownloadMission {
 			// if (err)
 			Log.d(TAG, "已暂停");
 			NotifyUtil.cancel(getId());
-			progressBuilder
-					.setContentTitle("已暂停：" + name)
-					.setPause(true)
-					.setId(getId())
-					.show();
+			executorService.submit(new Runnable() {
+				@Override
+				public void run() {
+					progressBuilder
+							.setContentTitle("已暂停：" + name)
+							.setPause(true)
+							.setId(getId())
+							.show();
+				}
+			});
 			for (WeakReference<MissionListener> ref: mListeners) {
 				final MissionListener listener = ref.get();
 				if (listener != null) {
@@ -303,24 +347,19 @@ public class DownloadMission {
 		deleteThisFromFile();
 		new File(location + "/" + name).delete();
 	}
+
+	private Runnable runnable = new Runnable() {
+		@Override
+		public void run() {
+			doWriteThisToFile();
+			mWritingToFile = false;
+		}
+	};
 	
 	public void writeThisToFile() {
 		if (!mWritingToFile) {
 			mWritingToFile = true;
-			es.submit(new Runnable() {
-				@Override
-				public void run() {
-					doWriteThisToFile();
-					mWritingToFile = false;
-				}
-			});
-//			new Thread() {
-//				@Override
-//				public void run() {
-//					doWriteThisToFile();
-//					mWritingToFile = false;
-//				}
-//			}.start();
+			executorService.submit(runnable);
 		}
 	}
 	

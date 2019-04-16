@@ -1,6 +1,7 @@
 package com.zpj.qxdownloader;
 
 import android.content.Context;
+import android.content.IntentFilter;
 
 import com.zpj.qxdownloader.get.DownloadManager;
 import com.zpj.qxdownloader.get.DownloadManagerImpl;
@@ -8,6 +9,7 @@ import com.zpj.qxdownloader.get.DownloadMission;
 import com.zpj.qxdownloader.notification.NotifyUtil;
 import com.zpj.qxdownloader.option.MissionOptions;
 import com.zpj.qxdownloader.option.QianXunOptions;
+import com.zpj.qxdownloader.util.NetworkChangeReceiver;
 
 public class QianXun {
 
@@ -69,7 +71,7 @@ public class QianXun {
 //    }
 
     public static void unInit() {
-        DownloadManagerImpl.getInstance().pauseAllMissions();
+        DownloadManagerImpl.unRegister();
         NotifyUtil.cancelAll();
 //        context.unbindService(mConnection);
 //        Intent intent = new Intent();

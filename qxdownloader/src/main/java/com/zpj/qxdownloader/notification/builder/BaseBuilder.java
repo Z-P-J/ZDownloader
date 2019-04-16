@@ -38,7 +38,7 @@ public class BaseBuilder {
 
     public CharSequence subText;
     public int flag = NotificationCompat.FLAG_AUTO_CANCEL;
-    public int priority = NotificationCompat.PRIORITY_DEFAULT;
+    public int priority = Notification.PRIORITY_DEFAULT;
 
     public Uri soundUri;
     public long[] vibratePatten;
@@ -307,7 +307,7 @@ public class BaseBuilder {
     @RequiresApi(api = Build.VERSION_CODES.O)
     private Notification.Builder getChannelNotification(){
         Notification.Builder builder = new Notification.Builder(NotifyUtil.context, NotifyUtil.CHANNEL_ID);
-        Log.d("contentTitle", "contentTitle=" + contentTitle);
+//        Log.d("contentTitle", "contentTitle=" + contentTitle);
         Notification.Builder notificationBuilder = builder
                 //设置标题
                 .setContentTitle(contentTitle)

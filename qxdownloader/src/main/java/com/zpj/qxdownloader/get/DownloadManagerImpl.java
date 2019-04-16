@@ -1,6 +1,7 @@
 package com.zpj.qxdownloader.get;
 
 import android.content.Context;
+import android.content.IntentFilter;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -9,6 +10,7 @@ import com.zpj.qxdownloader.io.BufferedRandomAccessFile;
 import com.zpj.qxdownloader.option.DefaultOptions;
 import com.zpj.qxdownloader.option.MissionOptions;
 import com.zpj.qxdownloader.option.QianXunOptions;
+import com.zpj.qxdownloader.util.NetworkChangeReceiver;
 import com.zpj.qxdownloader.util.Utility;
 
 import org.jsoup.Connection;
@@ -63,7 +65,15 @@ public class DownloadManagerImpl implements DownloadManager
 	public static void register(Context context, QianXunOptions options) {
 		if (mManager == null) {
 			mManager = new DownloadManagerImpl(context, options);
+			IntentFilter intentFilter = new IntentFilter();
+			intentFilter.addAction("android.net.conn.CONNECTIVITY_CHANGE");
+			context.registerReceiver(NetworkChangeReceiver.getInstance(), intentFilter);
 		}
+	}
+
+	public static void unRegister() {
+		getInstance().pauseAllMissions();
+		getInstance().getContext().unregisterReceiver(NetworkChangeReceiver.getInstance());
 	}
 
 	public static void setDownloadPath(String downloadPath) {
@@ -72,6 +82,11 @@ public class DownloadManagerImpl implements DownloadManager
 
 	public static String getDownloadPath() {
 		return DOWNLOAD_PATH;
+	}
+
+	@Override
+	public Context getContext() {
+		return mContext;
 	}
 
 	@Override
