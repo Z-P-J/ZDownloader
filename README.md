@@ -60,7 +60,16 @@ QianXun.download("your download url")
                 });         
 ```
 
-### 2. 其它操作
+### 3. 退出应用时
+```java
+@Override
+protected void onDestroy() {
+    QianXun.unInit();
+    super.onDestroy();
+}
+```
+
+### 4. 其它操作
 ```java
 //暂停下载
 QianXun.pause(mission);
