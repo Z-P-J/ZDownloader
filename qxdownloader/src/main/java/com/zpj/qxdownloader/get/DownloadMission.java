@@ -11,10 +11,8 @@ import com.zpj.qxdownloader.notification.builder.ProgressBuilder;
 import com.zpj.qxdownloader.util.Utility;
 
 import java.io.File;
-import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.Iterator;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadPoolExecutor;
@@ -68,7 +66,9 @@ public class DownloadMission {
 	
 	public transient boolean recovered = false;
 	
-	private transient ArrayList<WeakReference<MissionListener>> mListeners = new ArrayList<>();
+//	private transient ArrayList<WeakReference<MissionListener>> mListeners = new ArrayList<>();
+//	private transient WeakReference<MissionListener> missionListener;
+	private transient MissionListener missionListener;
 	private transient boolean mWritingToFile = false;
 
 	private transient ExecutorService executorService;// = Executors.newFixedThreadPool(3);
@@ -112,7 +112,7 @@ public class DownloadMission {
 		return threadPositions.get(id);
 	}
 	
-	public synchronized void notifyProgress(long deltaLen) {
+	public synchronized void notifyProgress(long deltaLen, boolean blockFinished) {
 		if (!running) return;
 		
 		if (recovered) {
@@ -127,9 +127,13 @@ public class DownloadMission {
 		
 		if (done != length) {
 			Log.d(TAG, "已下载");
-			writeThisToFile();
+			if (blockFinished) {
+				writeThisToFile();
+				executorService.submit(progressRunnable);
+			}
 
-			executorService.submit(progressRunnable);
+
+
 //			long time1 = System.currentTimeMillis();
 //			new Thread(new Runnable() {
 //				@Override
@@ -146,29 +150,50 @@ public class DownloadMission {
 //			long time2 = System.currentTimeMillis();
 //			Log.d("timetimetimetime0", "tempTime3=" + (time2 - time1));
 
-			for (WeakReference<MissionListener> ref: mListeners) {
-				final MissionListener listener = ref.get();
-				if (listener != null) {
-					MissionListener.handlerStore.get(listener).post(new Runnable() {
-						@Override
-						public void run() {
-							listener.onProgressUpdate(done, length);
-						}
-					});
-				}
-			}
+//			if (missionListener != null) {
+//				MissionListener.handlerStore.get(missionListener).post(progressRunnable);
+//			}
+
+//			Log.d("timetimetimetime0", "mListeners.size=" + mListeners.size());
+//			for (WeakReference<MissionListener> ref: mListeners) {
+//				final MissionListener listener = ref.get();
+//				if (listener != null) {
+//					MissionListener.handlerStore.get(listener).post(new Runnable() {
+//						@Override
+//						public void run() {
+//							listener.onProgressUpdate(done, length);
+//						}
+//					});
+//				}
+//			}
 		}
 	}
 
 	private Runnable progressRunnable = new Runnable() {
 		@Override
 		public void run() {
+//			if (!mWritingToFile) {
+//				mWritingToFile = true;
+////				executorService.submit(runnable);
+//				doWriteThisToFile();
+//				mWritingToFile = false;
+//			}
+			if (missionListener != null) {
+				missionListener.onProgressUpdate(done, length);
+			}
+
 			progressBuilder
 					.setProgressAndFormat(getProgress(),false, "")
 					.setContentTitle("已下载：" + name)
 					.setPause(false)
 					.setId(getId())
 					.show();
+//			if (!mWritingToFile) {
+//				mWritingToFile = true;
+////				executorService.submit(runnable);
+//				doWriteThisToFile();
+//				mWritingToFile = false;
+//			}
 		}
 	};
 	
@@ -204,17 +229,26 @@ public class DownloadMission {
 						.show();
 			}
 		});
-		for (WeakReference<MissionListener> ref : mListeners) {
-			final MissionListener listener = ref.get();
-			if (listener != null) {
-				MissionListener.handlerStore.get(listener).post(new Runnable() {
-					@Override
-					public void run() {
-						listener.onFinish();
-					}
-				});
-			}
+
+		if (missionListener != null) {
+			MissionListener.handlerStore.get(missionListener).post(new Runnable() {
+				@Override
+				public void run() {
+					missionListener.onFinish();
+				}
+			});
 		}
+//		for (WeakReference<MissionListener> ref : mListeners) {
+//			final MissionListener listener = ref.get();
+//			if (listener != null) {
+//				MissionListener.handlerStore.get(listener).post(new Runnable() {
+//					@Override
+//					public void run() {
+//						listener.onFinish();
+//					}
+//				});
+//			}
+//		}
 	}
 	
 	public synchronized void notifyError(int err) {
@@ -230,32 +264,42 @@ public class DownloadMission {
 				.setPause(true)
 				.setId(getId())
 				.show();
-		for (WeakReference<MissionListener> ref : mListeners) {
-			final MissionListener listener = ref.get();
-			MissionListener.handlerStore.get(listener).post(new Runnable() {
+		if (missionListener != null) {
+			MissionListener.handlerStore.get(missionListener).post(new Runnable() {
 				@Override
 				public void run() {
-					listener.onError(errCode);
+					missionListener.onError(errCode);
 				}
 			});
 		}
+//		for (WeakReference<MissionListener> ref : mListeners) {
+//			final MissionListener listener = ref.get();
+//			MissionListener.handlerStore.get(listener).post(new Runnable() {
+//				@Override
+//				public void run() {
+//					listener.onError(errCode);
+//				}
+//			});
+//		}
 	}
 	
 	public synchronized void addListener(MissionListener listener) {
 		Handler handler = new Handler(Looper.getMainLooper());
 		MissionListener.handlerStore.put(listener, handler);
-		mListeners.add(new WeakReference<>(listener));
+//		mListeners.add(new WeakReference<>(listener));
+		missionListener = listener;
 	}
 	
 	public synchronized void removeListener(MissionListener listener) {
-		for (Iterator<WeakReference<MissionListener>> iterator = mListeners.iterator();
-             iterator.hasNext(); ) {
-			WeakReference<MissionListener> weakRef = iterator.next();
-			if (listener!=null && listener == weakRef.get())
-			{
-				iterator.remove();
-			}
-		}
+//		for (Iterator<WeakReference<MissionListener>> iterator = mListeners.iterator();
+//             iterator.hasNext(); ) {
+//			WeakReference<MissionListener> weakRef = iterator.next();
+//			if (listener!=null && listener == weakRef.get())
+//			{
+//				iterator.remove();
+//			}
+//		}
+		missionListener = null;
 	}
 	
 	public void start() {
@@ -294,17 +338,26 @@ public class DownloadMission {
 
 			writeThisToFile();
 
-			for (WeakReference<MissionListener> ref: mListeners) {
-				final MissionListener listener = ref.get();
-				if (listener != null) {
-					MissionListener.handlerStore.get(listener).post(new Runnable() {
-						@Override
-						public void run() {
-							listener.onStart();
-						}
-					});
-				}
+			if (missionListener != null) {
+				MissionListener.handlerStore.get(missionListener).post(new Runnable() {
+					@Override
+					public void run() {
+						missionListener.onStart();
+					}
+				});
 			}
+
+//			for (WeakReference<MissionListener> ref: mListeners) {
+//				final MissionListener listener = ref.get();
+//				if (listener != null) {
+//					MissionListener.handlerStore.get(listener).post(new Runnable() {
+//						@Override
+//						public void run() {
+//							listener.onStart();
+//						}
+//					});
+//				}
+//			}
 		}
 	}
 	
@@ -329,17 +382,26 @@ public class DownloadMission {
 							.show();
 				}
 			});
-			for (WeakReference<MissionListener> ref: mListeners) {
-				final MissionListener listener = ref.get();
-				if (listener != null) {
-					MissionListener.handlerStore.get(listener).post(new Runnable() {
-						@Override
-						public void run() {
-							listener.onPause();
-						}
-					});
-				}
+
+			if (missionListener != null) {
+				MissionListener.handlerStore.get(missionListener).post(new Runnable() {
+					@Override
+					public void run() {
+						missionListener.onPause();
+					}
+				});
 			}
+//			for (WeakReference<MissionListener> ref: mListeners) {
+//				final MissionListener listener = ref.get();
+//				if (listener != null) {
+//					MissionListener.handlerStore.get(listener).post(new Runnable() {
+//						@Override
+//						public void run() {
+//							listener.onPause();
+//						}
+//					});
+//				}
+//			}
 		}
 	}
 	
@@ -359,6 +421,9 @@ public class DownloadMission {
 	public void writeThisToFile() {
 		if (!mWritingToFile) {
 			mWritingToFile = true;
+			if (executorService == null) {
+				executorService = Executors.newFixedThreadPool(2 * threadCount);
+			}
 			executorService.submit(runnable);
 		}
 	}

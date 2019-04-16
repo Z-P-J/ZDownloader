@@ -123,10 +123,10 @@ public class DownloadManagerImpl implements DownloadManager
 
 							DownloadMission mis = new Gson().fromJson(str, DownloadMission.class);
 
-							if (mis.finished) {
-								sub.delete();
-								continue;
-							}
+//							if (mis.finished) {
+//								sub.delete();
+//								continue;
+//							}
 
 							mis.running = false;
 							mis.recovered = true;

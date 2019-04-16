@@ -1,26 +1,58 @@
 package com.zpj.qxdownloader.get;
 
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Message;
 import android.text.TextUtils;
 import android.util.Log;
 
 import com.zpj.qxdownloader.io.BufferedRandomAccessFile;
+import com.zpj.qxdownloader.util.Utility;
 
 import java.io.BufferedInputStream;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
 public class DownloadRunnable implements Runnable
 {
 	private static final String TAG = DownloadRunnable.class.getSimpleName();
+
 	
 	private final DownloadMission mMission;
 	private int mId;
 
-	private final byte[] buf = new byte[8 * 1024];
+	private Handler mHandler;
+
+	private final byte[] buf = new byte[1024];
+
+	private BufferedRandomAccessFile f ;
 	
 	DownloadRunnable(DownloadMission mission, int id) {
 		mMission = mission;
 		mId = id;
+		try {
+			f = new BufferedRandomAccessFile(mMission.location + "/" + mMission.name, "rw");
+		} catch (IOException e) {
+			e.printStackTrace();
+			notifyError(1);
+			return;
+		}
+
+		HandlerThread thread = new HandlerThread("ServiceMessenger");
+		thread.start();
+
+		mHandler = new Handler(thread.getLooper()) {
+			@Override
+			public void handleMessage(Message msg) {
+				if (msg.what == 0) {
+					int obj = (int) msg.obj;
+					notifyProgress(obj, true);
+				}
+			}
+		};
 	}
 	
 	@Override
@@ -52,9 +84,9 @@ public class DownloadRunnable implements Runnable
 
 					int len = 0;
 
-					while ((len = ipt.read(buf, 0, 1024)) != -1 && mMission.running) {
+					while ((len = ipt.read(buf, 0, 4 * 1024)) != -1 && mMission.running) {
 						f.write(buf, 0, len);
-						notifyProgress(len);
+						notifyProgress(len, false);
 
 						if (Thread.currentThread().isInterrupted()) {
 							break;
@@ -198,10 +230,11 @@ public class DownloadRunnable implements Runnable
 
 					long time_1 = System.currentTimeMillis();
 					Log.d("timetimetimetime" + mId, "ttttttttt=" + (time_1 - time_0));
-					final BufferedRandomAccessFile f = new BufferedRandomAccessFile(mMission.location + "/" + mMission.name, "rw");
+
 					f.seek(start);
-					BufferedInputStream ipt = new BufferedInputStream(conn.getInputStream());
-//					final byte[] buf = new byte[2048];
+
+					BufferedInputStream ipt = new BufferedInputStream(conn.getInputStream(), 64 * 1024);
+//					final byte[] buf = new byte[4 * 1024];
 
 					long time1 = System.currentTimeMillis();
 					Log.d("timetimetimetime" + mId, "hhhhhhhhhh=" + (time1 - time_1));
@@ -209,10 +242,13 @@ public class DownloadRunnable implements Runnable
 					int tempTime = 0;
 					int tempTime2 = 0;
 					int tempTime3 = 0;
+					int tempTime4 = 0;
 					while (start < end && mMission.running) {
 						i++;
 						long time3 = System.currentTimeMillis();
-						final int len = ipt.read(buf, 0, 8 * 1024);
+						final int len = ipt.read(buf, 0, 1024);
+						long timet = System.currentTimeMillis();
+						tempTime4 += (timet - time3);
 
 						if (len == -1) {
 							break;
@@ -225,30 +261,30 @@ public class DownloadRunnable implements Runnable
 							Log.d("len", "len=" + len);
 							long time4 = System.currentTimeMillis();
 							tempTime2 += (time4 - time_4);
-//							Log.d("timetimetimetime" + mId, "time1111 = " + (time4 - time3));
-							notifyProgress(len);
+//							notifyProgress(len, false);
 							long time5 = System.currentTimeMillis();
 							tempTime3 += (time5 - time4);
 //							Log.d("timetimetimetime" + mId, "time2222 = " + (time5 - time4));
 							tempTime += (time5 - time3);
 						}
 					}
+					Message msg = new Message();
+					msg.obj = total;//(i - lastI) * 1024;
+//							lastI = i;
+					msg.what = 0;
+					mHandler.sendMessage(msg);
 					Log.d("timetimetimetime" + mId, "tempTime=" + tempTime);
 					Log.d("timetimetimetime" + mId, "tempTime2=" + tempTime2);
 					Log.d("timetimetimetime" + mId, "tempTime3=" + tempTime3);
+					Log.d("timetimetimetime" + mId, "tempTime4=" + tempTime4);
 					Log.d("timetimetimetime" + mId, "i=" + i);
 					ipt.close();
-					f.close();
-//					conn.disconnect();
+					conn.disconnect();
 
 					long time2 = System.currentTimeMillis();
 					Log.d("timetimetimetime" + mId, "time3333=" + (time2 - time1));
 					Log.d("timetimetimetime" + mId, "----------------------------finished-------------------------");
 					Log.d(TAG, mId + ":position " + position + " finished, total length " + total);
-
-
-//				new Thread(new IORunnable(mMission.location + File.separator + mMission.name, conn.getInputStream(), start, end, DownloadRunnable.this)).start();
-//				notifyProgress(end - start);
 
 
 
@@ -257,7 +293,7 @@ public class DownloadRunnable implements Runnable
 					// TODO Retry count limit & notify error
 					retry = true;
 
-					notifyProgress(-total);
+					notifyProgress(-total, true);
 
 					Log.d(TAG, mId + ":position " + position + " retrying");
 				}
@@ -275,6 +311,11 @@ public class DownloadRunnable implements Runnable
 		if (!mMission.running) {
 			Log.d(TAG, "The mission has been paused. Passing.");
 		}
+		try {
+			f.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 
 	private HttpURLConnection getConnection(String link, long start, long end) throws Exception {
@@ -290,9 +331,9 @@ public class DownloadRunnable implements Runnable
 		return conn;
 	}
 	
-	public void notifyProgress(final long len) {
+	public void notifyProgress(final long len, boolean blockFinished) {
 		synchronized (mMission) {
-			mMission.notifyProgress(len);
+			mMission.notifyProgress(len, blockFinished);
 		}
 	}
 	
