@@ -128,5 +128,5 @@ MissionOptions options = MissionOptions.with()
                 .setRetryCount(10) //单独设置出错重试次数，默认为5
                 .setUserAgent("") //单独设置UA，默认为系统自带UA
                 .setCookie(""); //单独设置全局cookie，默认为空
-QianXun.download("your download url", options1);           
+QianXun.download("your download url", options);           
 ```
