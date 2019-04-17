@@ -10,7 +10,9 @@ import com.zpj.qxdownloader.io.BufferedRandomAccessFile;
 import com.zpj.qxdownloader.option.DefaultOptions;
 import com.zpj.qxdownloader.option.MissionOptions;
 import com.zpj.qxdownloader.option.QianXunOptions;
+import com.zpj.qxdownloader.util.ErrorCode;
 import com.zpj.qxdownloader.util.NetworkChangeReceiver;
+import com.zpj.qxdownloader.util.ResponseCode;
 import com.zpj.qxdownloader.util.Utility;
 
 import org.jsoup.Connection;
@@ -23,8 +25,8 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 
-public class DownloadManagerImpl implements DownloadManager
-{
+public class DownloadManagerImpl implements DownloadManager {
+
 	private static final String TAG = DownloadManagerImpl.class.getSimpleName();
 
 	private static String DOWNLOAD_PATH = DefaultOptions.DOWNLOAD_PATH;
@@ -38,6 +40,8 @@ public class DownloadManagerImpl implements DownloadManager
 	private DownloadManagerListener downloadManagerListener;
 
 	private QianXunOptions options;
+
+	private static volatile int downloadingCount = 0;
 
 
 	private DownloadManagerImpl() {
@@ -80,8 +84,25 @@ public class DownloadManagerImpl implements DownloadManager
 		DownloadManagerImpl.DOWNLOAD_PATH = downloadPath;
 	}
 
-	public static String getDownloadPath() {
+	static int getDownloadingCount() {
+		return downloadingCount;
+	}
+
+	private static String getDownloadPath() {
 		return DOWNLOAD_PATH;
+	}
+
+	static synchronized void decreaseDownloadingCount() {
+		downloadingCount--;
+		for (DownloadMission mission : mMissions) {
+			if (!mission.finished && mission.waiting) {
+				mission.start();
+			}
+		}
+	}
+
+	static synchronized void increaseDownloadingCount() {
+		downloadingCount++;
 	}
 
 	@Override
@@ -116,21 +137,15 @@ public class DownloadManagerImpl implements DownloadManager
 
 					if (sub.getName().endsWith(".zpj")) {
 						String str = Utility.readFromFile(sub.getAbsolutePath());
-						if (str != null && !str.trim().equals("")) {
+						if (!TextUtils.isEmpty(str)) {
 
 							Log.d(TAG, "loading mission " + sub.getName());
 							Log.d(TAG, str);
 
 							DownloadMission mis = new Gson().fromJson(str, DownloadMission.class);
-
-//							if (mis.finished) {
-//								sub.delete();
-//								continue;
-//							}
-
 							mis.running = false;
 							mis.recovered = true;
-							insertMission(mis, false);
+							insertMission(mis);
 						}
 					}
 				}
@@ -174,7 +189,7 @@ public class DownloadManagerImpl implements DownloadManager
 		mission.user_agent = missionOptions.getUserAgent();
 		mission.timestamp = System.currentTimeMillis();
 		mission.threadCount = missionOptions.getThreadCount();
-		int i =  insertMission(mission, false);
+		int i =  insertMission(mission);
 		if (downloadManagerListener != null) {
 			downloadManagerListener.onMissionAdd();
 		}
@@ -184,7 +199,7 @@ public class DownloadManagerImpl implements DownloadManager
 	}
 
 	@Override
-	public int startMission(String url, String name, int threads, String cookie, String user_agent) {
+	public int startMission(String url, String name, int threads, String cookie, String userAgent) {
 		DownloadMission mission = new DownloadMission();
 		mission.uuid = UUID.randomUUID().toString();
 		mission.createTime = System.currentTimeMillis();
@@ -195,14 +210,14 @@ public class DownloadManagerImpl implements DownloadManager
 		mission.location = options.getDownloadPath();
 		mission.cookie = cookie;
 		mission.hasInit = false;
-		if (!TextUtils.isEmpty(user_agent)) {
-			mission.user_agent = user_agent;
+		if (!TextUtils.isEmpty(userAgent)) {
+			mission.user_agent = userAgent;
 		} else {
 			mission.user_agent = System.getProperty("http.agent");
 		}
 		mission.timestamp = System.currentTimeMillis();
 		mission.threadCount = threads;
-		int i =  insertMission(mission, false);
+		int i =  insertMission(mission);
 		if (downloadManagerListener != null) {
 			downloadManagerListener.onMissionAdd();
 		}
@@ -269,6 +284,9 @@ public class DownloadManagerImpl implements DownloadManager
 		d.pause();
 		d.delete();
 		mMissions.remove(i);
+		if (downloadManagerListener != null) {
+			downloadManagerListener.onMissionDelete();
+		}
 	}
 
 	@Override
@@ -277,6 +295,9 @@ public class DownloadManagerImpl implements DownloadManager
 		d.pause();
 		d.delete();
 		mMissions.remove(d);
+		if (downloadManagerListener != null) {
+			downloadManagerListener.onMissionDelete();
+		}
 	}
 
 	@Override
@@ -286,6 +307,9 @@ public class DownloadManagerImpl implements DownloadManager
 			mission.delete();
 		}
 		mMissions.clear();
+		if (downloadManagerListener != null) {
+			downloadManagerListener.onMissionDelete();
+		}
 	}
 
 	@Override
@@ -294,6 +318,9 @@ public class DownloadManagerImpl implements DownloadManager
 		d.pause();
 		d.deleteThisFromFile();
 		mMissions.remove(i);
+		if (downloadManagerListener != null) {
+			downloadManagerListener.onMissionDelete();
+		}
 	}
 
 	@Override
@@ -302,6 +329,9 @@ public class DownloadManagerImpl implements DownloadManager
 		d.pause();
 		d.deleteThisFromFile();
 		mMissions.remove(d);
+		if (downloadManagerListener != null) {
+			downloadManagerListener.onMissionDelete();
+		}
 	}
 
 	@Override
@@ -311,6 +341,9 @@ public class DownloadManagerImpl implements DownloadManager
 			mission.deleteThisFromFile();
 		}
 		mMissions.clear();
+		if (downloadManagerListener != null) {
+			downloadManagerListener.onMissionDelete();
+		}
 	}
 
 	@Override
@@ -333,7 +366,7 @@ public class DownloadManagerImpl implements DownloadManager
 		return mMissions.size();
 	}
 	
-	private int insertMission(DownloadMission mission, boolean isNew) {
+	private int insertMission(DownloadMission mission) {
 
 		Log.d("insertMission", "insertMission");
 
@@ -351,23 +384,15 @@ public class DownloadManagerImpl implements DownloadManager
 			i = 0;
 		}
 
-		if (isNew) {
-			while (!mission.hasInit) {
-				Log.d("insertMission", "wait to insertMission");
-			}
-		}
-
 		mission.initNotification();
 		mMissions.add(i, mission);
 		return i;
 	}
 	
 	private class Initializer extends Thread {
-//		private Context context;
 		private DownloadMission mission;
 		
 		public Initializer(DownloadMission mission) {
-//			this.context = context;
 			this.mission = mission;
 		}
 		
@@ -460,7 +485,7 @@ public class DownloadManagerImpl implements DownloadManager
 					return;
 				}
 
-				if (response.statusCode() != 206) {
+				if (response.statusCode() != ResponseCode.RESPONSE_206) {
 					// Fallback to single thread if no partial content support
 					mission.fallback = true;
 
@@ -528,18 +553,20 @@ public class DownloadManagerImpl implements DownloadManager
 	}
 
 	private boolean handleResponse(Connection.Response response, DownloadMission mission) {
-		if (response.statusCode() == 302 || response.statusCode() == 301 || response.statusCode() == 300) {
+		if (response.statusCode() == ResponseCode.RESPONSE_302
+				|| response.statusCode() == ResponseCode.RESPONSE_301
+				|| response.statusCode() == ResponseCode.RESPONSE_300) {
 			String redictUrl = response.header("location");
 			Log.d(TAG, "redictUrl=" + redictUrl);
 			if (redictUrl != null) {
 				mission.url = redictUrl;
 				mission.redictUrl = redictUrl;
 			}
-		} else if (response.statusCode() == 404){
-			mission.errCode = DownloadMission.ERROR_SERVER_404;
-			mission.notifyError(DownloadMission.ERROR_SERVER_404);
+		} else if (response.statusCode() == ErrorCode.ERROR_SERVER_404){
+			mission.errCode = ErrorCode.ERROR_SERVER_404;
+			mission.notifyError(ErrorCode.ERROR_SERVER_404);
 			return false;
-		} else if (response.statusCode() == 206){
+		} else if (response.statusCode() == ResponseCode.RESPONSE_206){
 			Log.d("statusCode11111111", "       " + response.statusCode());
 			String contentLength = response.header("Content-Length");
 			Log.d("response.headers()", "1111" + response.headers());
@@ -597,12 +624,12 @@ public class DownloadManagerImpl implements DownloadManager
 
 	private boolean checkLength(DownloadMission mission) {
 		if (mission.length <= 0) {
-			mission.errCode = DownloadMission.ERROR_SERVER_UNSUPPORTED;
-			mission.notifyError(DownloadMission.ERROR_SERVER_UNSUPPORTED);
+			mission.errCode = ErrorCode.ERROR_SERVER_UNSUPPORTED;
+			mission.notifyError(ErrorCode.ERROR_SERVER_UNSUPPORTED);
 			return false;
 		} else if (mission.length >= Utility.getAvailableSize()) {
-			mission.errCode = DownloadMission.ERROR_NO_ENOUGH_SPACE;
-			mission.notifyError(DownloadMission.ERROR_NO_ENOUGH_SPACE);
+			mission.errCode = ErrorCode.ERROR_NO_ENOUGH_SPACE;
+			mission.notifyError(ErrorCode.ERROR_NO_ENOUGH_SPACE);
 			return false;
 		}
 		return true;

@@ -8,6 +8,9 @@ import android.graphics.PixelFormat;
 import android.graphics.drawable.Drawable;
 import android.support.annotation.NonNull;
 
+/**
+ * @author Z-P-J
+ * */
 public class ProgressDrawable extends Drawable
 {
 	private float mProgress = 0.0f;

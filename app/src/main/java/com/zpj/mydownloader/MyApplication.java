@@ -5,6 +5,9 @@ import android.app.Application;
 import com.zpj.qxdownloader.QianXun;
 import com.zpj.qxdownloader.option.QianXunOptions;
 
+/**
+ * @author Z-P-J
+ * */
 public class MyApplication extends Application {
 
     @Override

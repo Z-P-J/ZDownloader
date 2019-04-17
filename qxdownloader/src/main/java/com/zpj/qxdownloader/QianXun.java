@@ -1,7 +1,7 @@
 package com.zpj.qxdownloader;
 
 import android.content.Context;
-import android.content.IntentFilter;
+import android.util.Log;
 
 import com.zpj.qxdownloader.get.DownloadManager;
 import com.zpj.qxdownloader.get.DownloadManagerImpl;
@@ -9,8 +9,12 @@ import com.zpj.qxdownloader.get.DownloadMission;
 import com.zpj.qxdownloader.notification.NotifyUtil;
 import com.zpj.qxdownloader.option.MissionOptions;
 import com.zpj.qxdownloader.option.QianXunOptions;
-import com.zpj.qxdownloader.util.NetworkChangeReceiver;
+import com.zpj.qxdownloader.util.content.SPHelper;
 
+/**
+ *
+ * @author Z-P-J
+ * */
 public class QianXun {
 
 //    private static DownloadManager mManager;
@@ -49,12 +53,14 @@ public class QianXun {
     public static void init(Context context) {
 //        register(context, null);
         NotifyUtil.init(context);
+        SPHelper.init(context);
         DownloadManagerImpl.register(context, QianXunOptions.with(context));
     }
 
     public static void init(QianXunOptions options) {
 //        register(context, null);
         Context context = options.getContext();
+        SPHelper.init(context);
         NotifyUtil.init(context);
         DownloadManagerImpl.register(context, options);
     }
@@ -93,11 +99,11 @@ public class QianXun {
     public static DownloadMission download(String url, MissionOptions options) {
 //        哈哈.apk
         int res = DownloadManagerImpl.getInstance().startMission(url, "", 5);
+        //Log.d("download", "文件已存在！！！");
         if (res == -1) {
-//            Log.d("download", "文件已存在！！！");
             return null;
         }
-        //        mBinder.onMissionAdded(downloadMission);
+        //mBinder.onMissionAdded(downloadMission);
         return DownloadManagerImpl.getInstance().getMission(res);
     }
 
@@ -108,9 +114,8 @@ public class QianXun {
 //            Log.d("download", "文件已存在！！！");
             return null;
         }
-        DownloadMission downloadMission = DownloadManagerImpl.getInstance().getMission(res);
-//        mBinder.onMissionAdded(downloadMission);
-        return downloadMission;
+        //        mBinder.onMissionAdded(downloadMission);
+        return DownloadManagerImpl.getInstance().getMission(res);
     }
 
     public static void pause(DownloadMission mission) {
@@ -146,6 +151,10 @@ public class QianXun {
     }
 
     public static void pauseAll() {
+        DownloadManagerImpl.getInstance().pauseAllMissions();
+    }
+
+    public static void waitingForInternet() {
         DownloadManagerImpl.getInstance().pauseAllMissions();
     }
 

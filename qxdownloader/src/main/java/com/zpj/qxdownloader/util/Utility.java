@@ -16,11 +16,18 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Locale;
 
+/**
+* @author Z-P-J
+* */
 public class Utility
 {
-	
+
 	public enum FileType {
+		/**
+		 * 文件类型
+		 */
 		APP,
 		VIDEO,
 		EXCEL,
@@ -30,28 +37,30 @@ public class Utility
 		ARCHIVE,
 		UNKNOWN
 	}
-	
+
+
+
 	public static String formatBytes(long bytes) {
 		if (bytes < 1024) {
-			return String.format("%d B", bytes);
+			return String.format(Locale.CHINA, "%d B", bytes);
 		} else if (bytes < 1024 * 1024) {
-			return String.format("%.2f kB", (float) bytes / 1024);
+			return String.format(Locale.CHINA, "%.2f kB", (float) bytes / 1024);
 		} else if (bytes < 1024 * 1024 * 1024) {
-			return String.format("%.2f MB", (float) bytes / 1024 / 1024);
+			return String.format(Locale.CHINA, "%.2f MB", (float) bytes / 1024 / 1024);
 		} else {
-			return String.format("%.2f GB", (float) bytes / 1024 / 1024 / 1024);
+			return String.format(Locale.CHINA, "%.2f GB", (float) bytes / 1024 / 1024 / 1024);
 		}
 	}
 	
 	public static String formatSpeed(double speed) {
 		if (speed < 1024) {
-			return String.format("%.2f B/s", speed);
+			return String.format(Locale.CHINA, "%.2f B/s", speed);
 		} else if (speed < 1024 * 1024) {
-			return String.format("%.2f kB/s", speed / 1024);
+			return String.format(Locale.CHINA, "%.2f kB/s", speed / 1024);
 		} else if (speed < 1024 * 1024 * 1024) {
-			return String.format("%.2f MB/s", speed / 1024 / 1024);
+			return String.format(Locale.CHINA, "%.2f MB/s", speed / 1024 / 1024);
 		} else {
-			return String.format("%.2f GB/s", speed / 1024 / 1024 / 1024);
+			return String.format(Locale.CHINA, "%.2f GB/s", speed / 1024 / 1024 / 1024);
 		}
 	}
 	

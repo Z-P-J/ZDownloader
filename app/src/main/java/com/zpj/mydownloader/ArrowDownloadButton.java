@@ -17,6 +17,7 @@ import java.util.List;
 
 /**
  * Created by liurongchan with love on 15/8/11.
+ * @author liurongchan
  */
 public class ArrowDownloadButton extends View {
 
@@ -568,9 +569,9 @@ public class ArrowDownloadButton extends View {
      * @return wave
      */
     private float calculateTri(float originalTime, float currentTime) {
-        if (progress < PROGRESS / 3) {
+        if (progress < PROGRESS / 3f) {
             waveHeight = MIN_WAVE_HEIGHT;
-        } else if (progress < PROGRESS * 2 / 3) {
+        } else if (progress < PROGRESS * 2f / 3f) {
             waveHeight = maxWaveHeight;
         } else {
             waveHeight = minWaveHeight;

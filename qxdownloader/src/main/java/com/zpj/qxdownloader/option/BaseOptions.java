@@ -2,19 +2,24 @@ package com.zpj.qxdownloader.option;
 
 import android.content.Context;
 
+/**
+ * @author Z-P-J
+ * */
 public class BaseOptions {
 
     private Context context;
 
-    protected String downloadPath = DefaultOptions.DOWNLOAD_PATH;
+    String downloadPath = DefaultOptions.DOWNLOAD_PATH;
 
-    protected int threadCount = DefaultOptions.THREAD_COUNT;
+    int threadCount = DefaultOptions.THREAD_COUNT;
 
-    protected int blockSize = DefaultOptions.BLOCK_SIZE;
+    int blockSize = DefaultOptions.BLOCK_SIZE;
 
-    protected String userAgent = DefaultOptions.USER_AGENT;
+    String userAgent = DefaultOptions.USER_AGENT;
 
-    protected int retryCount = DefaultOptions.RETRY_COUNT;
+    int retryCount = DefaultOptions.RETRY_COUNT;
+
+    int retryDelay = DefaultOptions.RETRY_DELAY;
 
     protected String cookie = "";
 
@@ -78,5 +83,14 @@ public class BaseOptions {
 
     public String getCookie() {
         return cookie;
+    }
+
+    public BaseOptions setRetryDelay(int retryDelay) {
+        this.retryDelay = retryDelay;
+        return this;
+    }
+
+    public int getRetryDelay() {
+        return retryDelay;
     }
 }

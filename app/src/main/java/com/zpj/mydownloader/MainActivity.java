@@ -36,6 +36,9 @@ import java.net.HttpURLConnection;
 import java.net.Proxy;
 import java.net.URL;
 
+/**
+ * @author Z-P-J
+ * */
 public class MainActivity extends AppCompatActivity implements MissionAdapter.DownloadCallback {
 
     private RecyclerView recyclerView;

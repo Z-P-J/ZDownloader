@@ -1,20 +1,4 @@
-package com.zpj.qxdownloader.io; /**
- * Licensed to the Apache Software Foundation (ASF) under one
- * or more contributor license agreements.  See the NOTICE file
- * distributed with this work for additional information
- * regarding copyright ownership.  The ASF licenses this file
- * to you under the Apache License, Version 2.0 (the
- * "License"); you may not use this file except in compliance
- * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
+package com.zpj.qxdownloader.io;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -173,6 +157,7 @@ public final class BufferedRandomAccessFile extends RandomAccessFile
 //          return getFilePointer() == length();
 //      }
 
+    @Override
     public void close() throws IOException
     {
         this.flush();
@@ -194,8 +179,9 @@ public final class BufferedRandomAccessFile extends RandomAccessFile
     {
         if (this.dirty_)
         {
-            if (this.diskPos_ != this.lo_)
+            if (this.diskPos_ != this.lo_) {
                 super.seek(this.lo_);
+            }
             int len = (int) (this.curr_ - this.lo_);
             super.write(this.buff_, 0, len);
             this.diskPos_ = this.curr_;
@@ -215,8 +201,9 @@ public final class BufferedRandomAccessFile extends RandomAccessFile
         while (rem > 0)
         {
             int n = super.read(this.buff_, cnt, rem);
-            if (n < 0)
+            if (n < 0) {
                 break;
+            }
             cnt += n;
             rem -= n;
         }
@@ -238,13 +225,15 @@ public final class BufferedRandomAccessFile extends RandomAccessFile
      * is at or past the end-of-file, which can only happen if the file was
      * opened in read-only mode.
      */
+    @Override
     public void seek(long pos) throws IOException
     {
         if (pos >= this.hi_ || pos < this.lo_)
         {
             // seeking outside of current buffer -- flush and read
             this.flushBuffer();
-            this.lo_ = pos & BuffMask_; // start at BuffSz boundary
+            // start at BuffSz boundary
+            this.lo_ = pos & BuffMask_;
             this.maxHi_ = this.lo_ + (long) this.buff_.length;
             if (this.diskPos_ != this.lo_)
             {
@@ -266,54 +255,64 @@ public final class BufferedRandomAccessFile extends RandomAccessFile
         this.curr_ = pos;
     }
 
+    @Override
     public long getFilePointer()
     {
         return this.curr_;
     }
 
+    @Override
     public long length() throws IOException
     {
         // max accounts for the case where we have written past the old file length, but not yet flushed our buffer
         return Math.max(this.curr_, super.length());
     }
 
+    @Override
     public int read() throws IOException
     {
         if (this.curr_ >= this.hi_)
         {
             // test for EOF
             // if (this.hi < this.maxHi) return -1;
-            if (this.hitEOF_)
+            if (this.hitEOF_) {
                 return -1;
+            }
 
             // slow path -- read another buffer
             this.seek(this.curr_);
-            if (this.curr_ == this.hi_)
+            if (this.curr_ == this.hi_) {
                 return -1;
+            }
         }
         byte res = this.buff_[(int) (this.curr_ - this.lo_)];
         this.curr_++;
-        return ((int) res) & 0xFF; // convert byte -> int
+        // convert byte -> int
+        return ((int) res) & 0xFF;
     }
 
+    @Override
     public int read(byte[] b) throws IOException
     {
         return this.read(b, 0, b.length);
     }
 
+    @Override
     public int read(byte[] b, int off, int len) throws IOException
     {
         if (this.curr_ >= this.hi_)
         {
             // test for EOF
             // if (this.hi < this.maxHi) return -1;
-            if (this.hitEOF_)
+            if (this.hitEOF_) {
                 return -1;
+            }
 
             // slow path -- read another buffer
             this.seek(this.curr_);
-            if (this.curr_ == this.hi_)
+            if (this.curr_ == this.hi_) {
                 return -1;
+            }
         }
         len = Math.min(len, (int) (this.hi_ - this.curr_));
         int buffOff = (int) (this.curr_ - this.lo_);
@@ -322,6 +321,7 @@ public final class BufferedRandomAccessFile extends RandomAccessFile
         return len;
     }
 
+    @Override
     public void write(int b) throws IOException
     {
         if (this.curr_ >= this.hi_)
@@ -348,11 +348,13 @@ public final class BufferedRandomAccessFile extends RandomAccessFile
         syncNeeded_ = true;
     }
 
+    @Override
     public void write(byte[] b) throws IOException
     {
         this.write(b, 0, b.length);
     }
 
+    @Override
     public void write(byte[] b, int off, int len) throws IOException
     {
         while (len > 0)

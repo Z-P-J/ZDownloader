@@ -13,6 +13,7 @@ public interface DownloadManager
 
 	interface DownloadManagerListener {
 		void onMissionAdd();
+		void onMissionDelete();
 	}
 	
 	int startMission(String url, String name, int threads);

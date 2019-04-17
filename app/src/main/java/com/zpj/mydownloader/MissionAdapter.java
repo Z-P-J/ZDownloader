@@ -18,25 +18,32 @@ import com.zpj.qxdownloader.QianXun;
 import com.zpj.qxdownloader.get.DownloadManager;
 import com.zpj.qxdownloader.get.DownloadMission;
 import com.zpj.qxdownloader.service.DownloadManagerService;
+import com.zpj.qxdownloader.util.FileUtil;
 import com.zpj.qxdownloader.util.Utility;
 
 import java.util.Locale;
 
+/**
+ * @author Z-P-J
+ * */
 public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHolder> implements DownloadManager.DownloadManagerListener {
 
-	private static final int backgroundColor = Color.parseColor("#FF9800");
-	private static final int foregroundColor = Color.parseColor("#EF6C00");
+	private static final int BACKGROUND_COLOR = Color.parseColor("#FF9800");
+	private static final int FOREGROUND_COLOR = Color.parseColor("#EF6C00");
+
+	private static final int DELTA_TIME_LIMIT = 1000;
 
 	private static final String STATUS_INIT = "初始化中...";
 	
 	private Context mContext;
 	private LayoutInflater mInflater;
 	private DownloadManager mManager;
-	private DownloadManagerService.DMBinder mBinder;
+//	private DownloadManagerService.DMBinder mBinder;
+
 	private int mLayout;
 	private DownloadCallback downloadCallback;
 	
-	public MissionAdapter(Context context, boolean isLinear) {
+	MissionAdapter(Context context, boolean isLinear) {
 		mContext = context;
 		mManager = QianXun.getDownloadManager();
 		mManager.setDownloadManagerListener(this);
@@ -47,25 +54,26 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		mLayout = isLinear ? R.layout.mission_item_linear : R.layout.mission_item;
 	}
 
+	@NonNull
 	@Override
-	public MissionAdapter.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+	public MissionAdapter.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
 		final ViewHolder h =  new ViewHolder(mInflater.inflate(mLayout, parent, false));
 
 		h.menu.setOnClickListener(v -> {
 			if (downloadCallback != null) {
-				downloadCallback.onMoreClicked(v, h, mBinder, mManager);
+				downloadCallback.onMoreClicked(v, h, null, mManager);
 			}
 		});
 
 		h.itemView.setOnClickListener(v -> {
 			if (downloadCallback != null) {
-				downloadCallback.onItemClicked(v, h, mBinder, mManager);
+				downloadCallback.onItemClicked(v, h, null, mManager);
 			}
 		});
 
 		h.itemView.setOnLongClickListener(v -> {
 			if (downloadCallback != null) {
-				downloadCallback.onItemLongClicked(v, h, mBinder, mManager);
+				downloadCallback.onItemLongClicked(v, h, null, mManager);
 			}
 			return true;
 		});
@@ -107,10 +115,10 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		h.position = pos;
 
 		
-		h.progress = new ProgressDrawable(backgroundColor, foregroundColor);
-		h.bkg.setBackgroundDrawable(h.progress);
+		h.progress = new ProgressDrawable(BACKGROUND_COLOR, FOREGROUND_COLOR);
+		h.bkg.setBackground(h.progress);
 
-		h.icon.setImageResource(R.mipmap.ic_launcher);
+		h.icon.setImageResource(FileUtil.getFileTypeIconId(mission.name));
 		if (TextUtils.isEmpty(mission.name)) {
 			h.name.setText(STATUS_INIT);
 		} else {
@@ -136,7 +144,9 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 	}
 	
 	private void updateProgress(ViewHolder h, boolean finished) {
-		if (h.mission == null) return;
+		if (h.mission == null) {
+			return;
+		}
 		
 		long now = System.currentTimeMillis();
 		
@@ -151,7 +161,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		long deltaTime = now - h.lastTimeStamp;
 		long deltaDone = h.mission.done - h.lastDone;
 		
-		if (deltaTime == 0 || deltaTime > 1000 || finished) {
+		if (deltaTime == 0 || deltaTime > DELTA_TIME_LIMIT || finished) {
 			int errorCode = h.mission.errCode;
 			if (errorCode > 0) {
 				switch (errorCode) {
@@ -166,14 +176,14 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 						break;
 				}
 			} else {
-				float progress = h.mission.getProgress();//(float) h.mission.done / h.mission.length;
+				float progress = h.mission.getProgress();
 				h.menu.setProgress(progress);
 				h.status.setText(String.format(Locale.CHINA, "%.2f%%", progress));
 				h.progress.setProgress(progress / 100);
 			}
 		}
 		
-		if (deltaTime > 1000 && deltaDone > 0) {
+		if (deltaTime > DELTA_TIME_LIMIT && deltaDone > 0) {
 			float speed = (float) deltaDone / deltaTime;
 			String speedStr = Utility.formatSpeed(speed * 1000);
 			String sizeStr = Utility.formatBytes(h.mission.length);
@@ -201,6 +211,11 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		notifyDataSetChanged();
 	}
 
+	@Override
+	public void onMissionDelete() {
+		notifyDataSetChanged();
+	}
+
 
 	static class ViewHolder extends RecyclerView.ViewHolder {
 		DownloadMission mission;
@@ -212,7 +227,6 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		TextView name;
 		TextView size;
 		View bkg;
-//		ImageView menu;
 		ArrowDownloadButton menu;
 		ProgressDrawable progress;
 		MissionObserver observer;
@@ -259,11 +273,16 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 
 		@Override
 		public void onWaiting() {
-
+			mHolder.status.setText("等待中。。。");
 		}
 
 		@Override
-		public void onProgressUpdate(long done, long total) {
+		public void onRetry() {
+			mHolder.status.setText("重试中。。。");
+		}
+
+		@Override
+		public void onProgress(long done, long total) {
 			if (TextUtils.equals(mHolder.name.getText().toString(), STATUS_INIT) && !TextUtils.isEmpty(mHolder.mission.name)) {
 				mHolder.name.setText(mHolder.mission.name);
 			}
@@ -272,9 +291,6 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 
 		@Override
 		public void onFinish() {
-			//mAdapter.mManager.deleteMission(mHolder.position);
-			// TODO Notification
-			//mAdapter.notifyDataSetChanged();
 			if (mHolder.mission != null) {
 				mHolder.size.setText(Utility.formatBytes(mHolder.mission.length));
 				mAdapter.updateProgress(mHolder, true);
@@ -289,15 +305,51 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 	}
 
 	public interface DownloadCallback {
+
+		/**
+		 * the downloading tasks are all complete
+		 * */
 		void onEmpty();
+
+		/**
+		 * notify change
+		 * */
 		void onNotifyChange();
+
+		/***
+		 *download finished
+		 */
 		void onDownloadFinished();
+
+		/**
+		 * on view clicked
+		 * @param holder the ViewHolder
+		 * @param mBinder the DMBinder
+		 * @param mManager  the DownloadManager
+		 * @param view the click view
+		 * */
 		void onItemClicked(View view, ViewHolder holder, DownloadManagerService.DMBinder mBinder, DownloadManager mManager);
+
+		/**
+		 * on view longCLicked
+		 * @param holder the ViewHolder
+		 * @param mBinder the DMBinder
+		 * @param mManager  the DownloadManager
+		 * @param view the click view
+		 * */
 		void onItemLongClicked(View view, ViewHolder holder, DownloadManagerService.DMBinder mBinder, DownloadManager mManager);
+
+		/**
+		 * on more clicked
+		 * @param holder the ViewHolder
+		 * @param mBinder the DMBinder
+		 * @param mManager  the DownloadManager
+		 * @param view the click view
+		 * */
 		void onMoreClicked(View view, ViewHolder holder, DownloadManagerService.DMBinder mBinder, DownloadManager mManager);
 	}
 
-	public void setMissionAdapterClickListener(DownloadCallback downloadCallback) {
+	void setMissionAdapterClickListener(DownloadCallback downloadCallback) {
 		this.downloadCallback = downloadCallback;
 	}
 }

@@ -7,12 +7,11 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.zpj.qxdownloader.io.BufferedRandomAccessFile;
-import com.zpj.qxdownloader.util.Utility;
+import com.zpj.qxdownloader.util.ErrorCode;
+import com.zpj.qxdownloader.util.ResponseCode;
 
 import java.io.BufferedInputStream;
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 
@@ -20,13 +19,15 @@ public class DownloadRunnable implements Runnable
 {
 	private static final String TAG = DownloadRunnable.class.getSimpleName();
 
+	private static final int BUFFER_SIZE = 512;
+
 	
 	private final DownloadMission mMission;
 	private int mId;
 
 	private Handler mHandler;
 
-	private final byte[] buf = new byte[1024];
+	private final byte[] buf = new byte[BUFFER_SIZE];
 
 	private BufferedRandomAccessFile f ;
 	
@@ -49,7 +50,10 @@ public class DownloadRunnable implements Runnable
 			public void handleMessage(Message msg) {
 				if (msg.what == 0) {
 					int obj = (int) msg.obj;
-					notifyProgress(obj, true);
+//					notifyProgress(obj);
+					synchronized (mMission) {
+						mMission.notifyProgress(obj);
+					}
 				}
 			}
 		};
@@ -72,21 +76,34 @@ public class DownloadRunnable implements Runnable
 //			conn.setRequestProperty("Pragma", "no-cache");
 //			conn.setRequestProperty("Cache-Control", "no-cache");
 
-				HttpURLConnection conn = getConnection(mMission.url, 0, mMission.length);
+				HttpURLConnection conn = getConnection(mMission.url);
 
-				if (conn.getResponseCode() != 200 && conn.getResponseCode() != 206) {
+				if (conn.getResponseCode() != ResponseCode.RESPONSE_200 && conn.getResponseCode() != ResponseCode.RESPONSE_206) {
 					Log.d("DownRunFallback", "error:206");
-					notifyError(DownloadMission.ERROR_SERVER_UNSUPPORTED);
+					notifyError(ErrorCode.ERROR_SERVER_UNSUPPORTED);
 				} else {
-					BufferedRandomAccessFile f = new BufferedRandomAccessFile(mMission.location + "/" + mMission.name, "rw");
+//					BufferedRandomAccessFile f = new BufferedRandomAccessFile(mMission.location + "/" + mMission.name, "rw");
 					f.seek(0);
 					BufferedInputStream ipt = new BufferedInputStream(conn.getInputStream());
 
-					int len = 0;
-
-					while ((len = ipt.read(buf, 0, 4 * 1024)) != -1 && mMission.running) {
+					int total = 0;
+					int lastTotal = 0;
+					while (mMission.running) {
+						int len  = ipt.read(buf, 0, BUFFER_SIZE);
+						if (len == -1) {
+							notifyProgress(0);
+							break;
+						}
+						total += len;
 						f.write(buf, 0, len);
-						notifyProgress(len, false);
+//						if (total % (256 * 1024) == 0) {
+//							notifyProgress(total - lastTotal);
+//							lastTotal = total;
+//						}
+						notifyProgress(total - lastTotal);
+						lastTotal = total;
+						mMission.length = total;
+
 
 						if (Thread.currentThread().isInterrupted()) {
 							break;
@@ -94,8 +111,9 @@ public class DownloadRunnable implements Runnable
 
 					}
 
-					f.close();
+//					f.close();
 					ipt.close();
+					conn.disconnect();
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -179,7 +197,9 @@ public class DownloadRunnable implements Runnable
 					Log.d(TAG, mId + ":" + conn.getRequestProperty("Range"));
 					Log.d(TAG, mId + ":Content-Length=" + conn.getContentLength() + " Code:" + conn.getResponseCode());
 
-					if (conn.getResponseCode() == 302 || conn.getResponseCode() == 301 || conn.getResponseCode() == 300) {
+					if (conn.getResponseCode() == ResponseCode.RESPONSE_302
+							|| conn.getResponseCode() == ResponseCode.RESPONSE_301
+							|| conn.getResponseCode() == ResponseCode.RESPONSE_300) {
 						String redictUrl = conn.getHeaderField("location");
 						Log.d(TAG, "redictUrl=" + redictUrl);
 						mMission.url = redictUrl;
@@ -189,10 +209,10 @@ public class DownloadRunnable implements Runnable
 					}
 
 					// A server may be ignoring the range requet
-					if (conn.getResponseCode() != 206) {
-						mMission.errCode = DownloadMission.ERROR_SERVER_UNSUPPORTED;
+					if (conn.getResponseCode() != ResponseCode.RESPONSE_206) {
+						mMission.errCode = ErrorCode.ERROR_SERVER_UNSUPPORTED;
 						Log.d("DownRun", "error:206");
-						notifyError(DownloadMission.ERROR_SERVER_UNSUPPORTED);
+						notifyError(ErrorCode.ERROR_SERVER_UNSUPPORTED);
 
 						Log.e(TAG, mId + ":Unsupported " + conn.getResponseCode());
 
@@ -232,10 +252,9 @@ public class DownloadRunnable implements Runnable
 					Log.d("timetimetimetime" + mId, "ttttttttt=" + (time_1 - time_0));
 
 					f.seek(start);
-
-					BufferedInputStream ipt = new BufferedInputStream(conn.getInputStream(), 64 * 1024);
-//					final byte[] buf = new byte[4 * 1024];
-
+//
+					BufferedInputStream ipt = new BufferedInputStream(conn.getInputStream());
+//
 					long time1 = System.currentTimeMillis();
 					Log.d("timetimetimetime" + mId, "hhhhhhhhhh=" + (time1 - time_1));
 					int i = 0;
@@ -243,10 +262,11 @@ public class DownloadRunnable implements Runnable
 					int tempTime2 = 0;
 					int tempTime3 = 0;
 					int tempTime4 = 0;
+
 					while (start < end && mMission.running) {
 						i++;
 						long time3 = System.currentTimeMillis();
-						final int len = ipt.read(buf, 0, 1024);
+						final int len = ipt.read(buf, 0, BUFFER_SIZE);
 						long timet = System.currentTimeMillis();
 						tempTime4 += (timet - time3);
 
@@ -268,16 +288,15 @@ public class DownloadRunnable implements Runnable
 							tempTime += (time5 - time3);
 						}
 					}
-					Message msg = new Message();
-					msg.obj = total;//(i - lastI) * 1024;
-//							lastI = i;
-					msg.what = 0;
-					mHandler.sendMessage(msg);
+
+
+					notifyProgress(total);
+
 					Log.d("timetimetimetime" + mId, "tempTime=" + tempTime);
 					Log.d("timetimetimetime" + mId, "tempTime2=" + tempTime2);
 					Log.d("timetimetimetime" + mId, "tempTime3=" + tempTime3);
 					Log.d("timetimetimetime" + mId, "tempTime4=" + tempTime4);
-					Log.d("timetimetimetime" + mId, "i=" + i);
+//					Log.d("timetimetimetime" + mId, "i=" + i);
 					ipt.close();
 					conn.disconnect();
 
@@ -293,7 +312,7 @@ public class DownloadRunnable implements Runnable
 					// TODO Retry count limit & notify error
 					retry = true;
 
-					notifyProgress(-total, true);
+					notifyProgress(-total);
 
 					Log.d(TAG, mId + ":position " + position + " retrying");
 				}
@@ -313,6 +332,7 @@ public class DownloadRunnable implements Runnable
 		}
 		try {
 			f.close();
+//			fileChannel.close();
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
@@ -330,11 +350,24 @@ public class DownloadRunnable implements Runnable
 		conn.setRequestProperty("Range", "bytes=" + start + "-" + end);
 		return conn;
 	}
-	
-	public void notifyProgress(final long len, boolean blockFinished) {
-		synchronized (mMission) {
-			mMission.notifyProgress(len, blockFinished);
+
+	private HttpURLConnection getConnection(String link) throws Exception {
+		URL url = new URL(link);
+		HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+		if (!TextUtils.isEmpty(mMission.cookie.trim())) {
+			conn.setRequestProperty("Cookie", mMission.cookie);
 		}
+		conn.setRequestProperty("User-Agent", mMission.user_agent);
+		conn.setRequestProperty("Accept", "*/*");
+		conn.setRequestProperty("Referer",mMission.url);
+		return conn;
+	}
+	
+	public void notifyProgress(final int len) {
+		Message msg = new Message();
+		msg.obj = len;
+		msg.what = 0;
+		mHandler.sendMessage(msg);
 	}
 	
 	private void notifyError(final int err) {

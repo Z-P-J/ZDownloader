@@ -8,6 +8,7 @@ import android.util.LongSparseArray;
 import com.google.gson.Gson;
 import com.zpj.qxdownloader.notification.NotifyUtil;
 import com.zpj.qxdownloader.notification.builder.ProgressBuilder;
+import com.zpj.qxdownloader.option.DefaultOptions;
 import com.zpj.qxdownloader.util.Utility;
 
 import java.io.File;
@@ -27,15 +28,11 @@ public class DownloadMission {
 		void onStart();
 		void onPause();
 		void onWaiting();
-		void onProgressUpdate(long done, long total);
+		void onRetry();
+		void onProgress(long done, long total);
 		void onFinish();
 		void onError(int errCode);
 	}
-	
-	public static final int ERROR_SERVER_UNSUPPORTED = 206;
-	public static final int ERROR_SERVER_404 = 404;
-	public static final int ERROR_UNKNOWN = 233;
-	public static final int ERROR_NO_ENOUGH_SPACE = 1000;
 
 	public String uuid = "";
 	public String name = "";
@@ -48,15 +45,18 @@ public class DownloadMission {
 	public long createTime = 0;
 	public int notifyId = 0;
 	public long blocks = 0;
-	public int block_size = DownloadManager.BLOCK_SIZE;
+	public int block_size = DefaultOptions.BLOCK_SIZE;
 	public long length = 0;
 	public long done = 0;
-	public int threadCount = 3;
+	public int threadCount = DefaultOptions.THREAD_COUNT;
 	public int finishCount = 0;
+	public int retryCount = DefaultOptions.RETRY_COUNT;
+	//单位毫秒
+	public int retryDelay = DefaultOptions.RETRY_DELAY;
 	public ArrayList<Long> threadPositions = new ArrayList<>();
-//	public final HashMap<Long, Boolean> blockState = new HashMap<Long, Boolean>();
 	public final LongSparseArray<Boolean> blockState = new LongSparseArray<>();
 	public boolean running = false;
+	public boolean waiting = false;
 	public boolean finished = false;
 	public boolean fallback = false;
 	public int errCode = -1;
@@ -71,7 +71,9 @@ public class DownloadMission {
 	private transient MissionListener missionListener;
 	private transient boolean mWritingToFile = false;
 
-	private transient ExecutorService executorService;// = Executors.newFixedThreadPool(3);
+	private transient int errorCount = 0;
+
+	private transient ExecutorService executorService;
 
 	private transient final ProgressBuilder progressBuilder = new ProgressBuilder();
 
@@ -93,6 +95,11 @@ public class DownloadMission {
 	}
 
 	public float getProgress() {
+		if (finished) {
+			return 100f;
+		} else if (fallback) {
+			return 0f;
+		}
 		float progress = (float) done / (float) length;
 		return progress * 100f;
 	}
@@ -112,8 +119,10 @@ public class DownloadMission {
 		return threadPositions.get(id);
 	}
 	
-	public synchronized void notifyProgress(long deltaLen, boolean blockFinished) {
-		if (!running) return;
+	public synchronized void notifyProgress(long deltaLen) {
+		if (!running) {
+			return;
+		}
 		
 		if (recovered) {
 			recovered = false;
@@ -127,10 +136,8 @@ public class DownloadMission {
 		
 		if (done != length) {
 			Log.d(TAG, "已下载");
-			if (blockFinished) {
-				writeThisToFile();
-				executorService.submit(progressRunnable);
-			}
+			writeThisToFile();
+			executorService.submit(progressRunnable);
 
 
 
@@ -179,7 +186,7 @@ public class DownloadMission {
 //				mWritingToFile = false;
 //			}
 			if (missionListener != null) {
-				missionListener.onProgressUpdate(done, length);
+				missionListener.onProgress(done, length);
 			}
 
 			progressBuilder
@@ -198,7 +205,9 @@ public class DownloadMission {
 	};
 	
 	public synchronized void notifyFinished() {
-		if (errCode > 0) return;
+		if (errCode > 0) {
+			return;
+		}
 		
 		finishCount++;
 		
@@ -208,15 +217,29 @@ public class DownloadMission {
 	}
 	
 	private void onFinish() {
-		if (errCode > 0) return;
+		if (errCode > 0) {
+			return;
+		}
 
 		Log.d(TAG, "onFinish");
-		
+
+		waiting = false;
 		running = false;
 		finished = true;
 		
 //		deleteThisFromFile();
 		writeThisToFile();
+
+		if (missionListener != null) {
+			MissionListener.handlerStore.get(missionListener).post(new Runnable() {
+				@Override
+				public void run() {
+					missionListener.onFinish();
+				}
+			});
+		}
+
+		DownloadManagerImpl.decreaseDownloadingCount();
 
 		NotifyUtil.cancel(getId());
 		executorService.submit(new Runnable() {
@@ -230,14 +253,6 @@ public class DownloadMission {
 			}
 		});
 
-		if (missionListener != null) {
-			MissionListener.handlerStore.get(missionListener).post(new Runnable() {
-				@Override
-				public void run() {
-					missionListener.onFinish();
-				}
-			});
-		}
 //		for (WeakReference<MissionListener> ref : mListeners) {
 //			final MissionListener listener = ref.get();
 //			if (listener != null) {
@@ -250,37 +265,63 @@ public class DownloadMission {
 //			}
 //		}
 	}
-	
-	public synchronized void notifyError(int err) {
-		errCode = err;
 
-		Log.d("eeeeeeeeeeeeeeeeeeee", "error:" + errCode);
-		
-		writeThisToFile();
-
-		NotifyUtil.cancel(getId());
-		progressBuilder
-				.setContentTitle("下载出错" + errCode + ":" + name)
-				.setPause(true)
-				.setId(getId())
-				.show();
+	public synchronized void onRetry() {
 		if (missionListener != null) {
 			MissionListener.handlerStore.get(missionListener).post(new Runnable() {
 				@Override
 				public void run() {
-					missionListener.onError(errCode);
+					missionListener.onRetry();
 				}
 			});
 		}
-//		for (WeakReference<MissionListener> ref : mListeners) {
-//			final MissionListener listener = ref.get();
-//			MissionListener.handlerStore.get(listener).post(new Runnable() {
-//				@Override
-//				public void run() {
-//					listener.onError(errCode);
-//				}
-//			});
-//		}
+	}
+
+	public synchronized void notifyError(int err) {
+		errorCount++;
+		if (errorCount == threadCount) {
+			retryCount--;
+			if (retryCount >= 0) {
+				pause();
+				onRetry();
+				new Handler().postDelayed(new Runnable() {
+					@Override
+					public void run() {
+						start();
+					}
+				}, retryDelay);
+				return;
+			}
+
+			errCode = err;
+
+			Log.d("eeeeeeeeeeeeeeeeeeee", "error:" + errCode);
+
+			writeThisToFile();
+
+			if (missionListener != null) {
+				MissionListener.handlerStore.get(missionListener).post(new Runnable() {
+					@Override
+					public void run() {
+						missionListener.onError(errCode);
+					}
+				});
+			}
+
+			DownloadManagerImpl.decreaseDownloadingCount();
+
+			NotifyUtil.cancel(getId());
+			progressBuilder
+					.setContentTitle("下载出错" + errCode + ":" + name)
+					.setPause(true)
+					.setId(getId())
+					.show();
+
+		}
+	}
+
+	public void notifyWaiting() {
+		waiting = true;
 	}
 	
 	public synchronized void addListener(MissionListener listener) {
@@ -303,9 +344,17 @@ public class DownloadMission {
 	}
 	
 	public void start() {
-
+		errorCount = 0;
 		if (!running && !finished) {
 
+			if (DownloadManagerImpl.getDownloadingCount() >= DefaultOptions.TONG_SHI) {
+				notifyWaiting();
+				return;
+			}
+
+			DownloadManagerImpl.increaseDownloadingCount();
+
+			waiting = false;
 			running = true;
 //			ExecutorService executorService;
 			if (!fallback) {
@@ -367,10 +416,22 @@ public class DownloadMission {
 			recovered = true;
 
 			writeThisToFile();
-			
-			// TODO: Notify & Write state to info file
-			// if (err)
+
 			Log.d(TAG, "已暂停");
+
+			if (missionListener != null) {
+				MissionListener.handlerStore.get(missionListener).post(new Runnable() {
+					@Override
+					public void run() {
+						missionListener.onPause();
+					}
+				});
+			}
+
+			if (!waiting) {
+				DownloadManagerImpl.decreaseDownloadingCount();
+			}
+
 			NotifyUtil.cancel(getId());
 			executorService.submit(new Runnable() {
 				@Override
@@ -382,26 +443,6 @@ public class DownloadMission {
 							.show();
 				}
 			});
-
-			if (missionListener != null) {
-				MissionListener.handlerStore.get(missionListener).post(new Runnable() {
-					@Override
-					public void run() {
-						missionListener.onPause();
-					}
-				});
-			}
-//			for (WeakReference<MissionListener> ref: mListeners) {
-//				final MissionListener listener = ref.get();
-//				if (listener != null) {
-//					MissionListener.handlerStore.get(listener).post(new Runnable() {
-//						@Override
-//						public void run() {
-//							listener.onPause();
-//						}
-//					});
-//				}
-//			}
 		}
 	}
 	

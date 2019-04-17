@@ -123,7 +123,12 @@ public class DownloadManagerService extends Service implements DownloadMission.M
 	}
 
 	@Override
-	public void onProgressUpdate(long done, long total) {
+	public void onRetry() {
+
+	}
+
+	@Override
+	public void onProgress(long done, long total) {
 
 		long now = System.currentTimeMillis();
 
