@@ -68,8 +68,9 @@ public class ThreadPoolConfig {
         return this;
     }
 
-    public void setWorkQueue(BlockingQueue<Runnable> workQueue) {
+    public ThreadPoolConfig setWorkQueue(BlockingQueue<Runnable> workQueue) {
         this.workQueue = workQueue;
+        return this;
     }
 
     @Deprecated
