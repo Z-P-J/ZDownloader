@@ -108,10 +108,29 @@ public class MyApplication extends Application {
         QianXunOptions options = QianXunOptions.with(this)
                 .setDownloadPath("") //设置默认下载路径
                 .setBlockSize(1024 * 1024) //设置下载块大小，默认为1024 * 1024
-                .setThreadCount(5) //设置线程大小，默认为3
+                .setBufferSize(1024) //设置缓存大小
+                //.setThreadCount(5) //设置线程大小，默认为3, 已过时，要修改线程数量请使用setThreadPoolConfig
+                .setThreadPoolConfig(
+                        ThreadPoolConfig.build()
+                        .setCorePoolSize(5) //设置线程池线程数
+                        .setMaximumPoolSize(36) //设置线程池最大线程数
+                        .setKeepAliveTime(60) // 设置空闲线程存活时间
+                        .setWorkQueue(new LinkedBlockingQueue<Runnable>()) //设置并发队列
+                        .setHandler(new ThreadPoolExecutor.AbortPolicy()) //设置拒绝策略
+                        .setThreadFactory(new ThreadFactory() { //设置创建新线程的线程工厂
+                            @Override
+                            public Thread newThread(Runnable r) {
+                                return new Thread(r);
+                            }
+                        })
+                )
                 .setRetryCount(10) //设置出错重试次数，默认为5
+                .setRetryDelay(10000) //设置重试延迟，单位为ms
                 .setUserAgent("") //设置UA，默认为系统自带UA
-                .setCookie(""); //设置下载任务cookie，默认为空
+                .setCookie("") //设置下载任务cookie，默认为空
+                .setConnectOutTime(10000) //设置连接超时，单位ms
+                .setReadOutTime(10000) //设置读取请求内容超时，单位ms
+                .setHeaders(new HashMap<>()); //设置请求头，若Map中含有key为cookie或user-agent的键值对，则会覆盖setCookie或setUserAgent的值
         QianXun.init(options); //初始化
     }
 
@@ -124,10 +143,29 @@ public class MyApplication extends Application {
 MissionOptions options = MissionOptions.with()
                 .setDownloadPath("") //单独设置任务下载路径
                 .setBlockSize(1024 * 1024) //单独设置下载块大小，默认为1024 * 1024
-                .setThreadCount(5) //单独设置线程大小，默认为3
-                .setRetryCount(10) //单独设置出错重试次数，默认为5
+                .setBufferSize(1024) //设置缓存大小
+                //.setThreadCount(5) //单独设置线程大小，默认为3，已过时
+                .setThreadPoolConfig(
+                        ThreadPoolConfig.build()
+                        .setCorePoolSize(5) //设置线程池线程数
+                        .setMaximumPoolSize(36) //设置线程池最大线程数
+                        .setKeepAliveTime(60) // 设置空闲线程存活时间
+                        .setWorkQueue(new LinkedBlockingQueue<Runnable>()) //设置并发队列
+                        .setHandler(new ThreadPoolExecutor.AbortPolicy()) //设置拒绝策略
+                        .setThreadFactory(new ThreadFactory() { //设置创建新线程的线程工厂
+                            @Override
+                            public Thread newThread(Runnable r) {
+                                return new Thread(r);
+                            }
+                        })
+                )
+                .setRetryCount(10) //设置出错重试次数，默认为5
+                .setRetryDelay(10000) //设置重试延迟，单位为ms
                 .setUserAgent("") //单独设置UA，默认为系统自带UA
                 .setCookie(""); //单独设置全局cookie，默认为空
+                .setConnectOutTime(10000) //设置连接超时，单位ms
+                .setReadOutTime(10000) //设置读取请求内容超时，单位ms
+                .setHeaders(new HashMap<>()); //设置请求头，若Map中含有key为cookie或user-agent的键值对，则会覆盖setCookie或setUserAgent的值
 QianXun.download("your download url", options);
 //下载进度监听同上
 ```
