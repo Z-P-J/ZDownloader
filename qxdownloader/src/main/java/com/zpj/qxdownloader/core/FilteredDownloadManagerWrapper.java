@@ -69,8 +69,8 @@
 //	}
 //
 //	@Override
-//	public int startMission(String url, String name, int threads, String cookie, String user_agent) {
-//		int ret = mManager.startMission(url, name, threads, cookie, user_agent);
+//	public int startMission(String url, String name, int threads, String cookie, String userAgent) {
+//		int ret = mManager.startMission(url, name, threads, cookie, userAgent);
 //		refreshMap();
 //		return toFakePosition(ret);
 //	}

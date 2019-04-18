@@ -1,14 +1,15 @@
 package com.zpj.qxdownloader;
 
 import android.content.Context;
-import android.util.Log;
+import android.content.IntentFilter;
 
-import com.zpj.qxdownloader.get.DownloadManager;
-import com.zpj.qxdownloader.get.DownloadManagerImpl;
-import com.zpj.qxdownloader.get.DownloadMission;
-import com.zpj.qxdownloader.notification.NotifyUtil;
-import com.zpj.qxdownloader.option.MissionOptions;
-import com.zpj.qxdownloader.option.QianXunOptions;
+import com.zpj.qxdownloader.core.DownloadManager;
+import com.zpj.qxdownloader.core.DownloadManagerImpl;
+import com.zpj.qxdownloader.core.DownloadMission;
+import com.zpj.qxdownloader.util.NetworkChangeReceiver;
+import com.zpj.qxdownloader.util.notification.NotifyUtil;
+import com.zpj.qxdownloader.config.MissionConfig;
+import com.zpj.qxdownloader.config.QianXunConfig;
 import com.zpj.qxdownloader.util.content.SPHelper;
 
 /**
@@ -51,18 +52,18 @@ public class QianXun {
 //    }
 
     public static void init(Context context) {
-//        register(context, null);
-        NotifyUtil.init(context);
-        SPHelper.init(context);
-        DownloadManagerImpl.register(context, QianXunOptions.with(context));
+        init(QianXunConfig.with(context));
     }
 
-    public static void init(QianXunOptions options) {
+    public static void init(QianXunConfig options) {
 //        register(context, null);
         Context context = options.getContext();
         SPHelper.init(context);
         NotifyUtil.init(context);
-        DownloadManagerImpl.register(context, options);
+        DownloadManagerImpl.register(options);
+        IntentFilter intentFilter = new IntentFilter();
+        intentFilter.addAction("android.net.conn.CONNECTIVITY_CHANGE");
+        options.getContext().registerReceiver(NetworkChangeReceiver.getInstance(), intentFilter);
     }
 
 //    public static void register(Context context, RegisterListener registerListener) {
@@ -87,7 +88,7 @@ public class QianXun {
 
     public static DownloadMission download(String url) {
 //        哈哈.apk
-        int res = DownloadManagerImpl.getInstance().startMission(url, "", 5);
+        int res = DownloadManagerImpl.getInstance().startMission(url);
         if (res == -1) {
 //            Log.d("download", "文件已存在！！！");
             return null;
@@ -96,9 +97,9 @@ public class QianXun {
         return DownloadManagerImpl.getInstance().getMission(res);
     }
 
-    public static DownloadMission download(String url, MissionOptions options) {
+    public static DownloadMission download(String url, MissionConfig options) {
 //        哈哈.apk
-        int res = DownloadManagerImpl.getInstance().startMission(url, "", 5);
+        int res = DownloadManagerImpl.getInstance().startMission(url, options);
         //Log.d("download", "文件已存在！！！");
         if (res == -1) {
             return null;
@@ -107,16 +108,16 @@ public class QianXun {
         return DownloadManagerImpl.getInstance().getMission(res);
     }
 
-    public static DownloadMission download(String url, int threadCount) {
-//        哈哈.apk
-        int res = DownloadManagerImpl.getInstance().startMission(url, "", threadCount);
-        if (res == -1) {
-//            Log.d("download", "文件已存在！！！");
-            return null;
-        }
-        //        mBinder.onMissionAdded(downloadMission);
-        return DownloadManagerImpl.getInstance().getMission(res);
-    }
+//    public static DownloadMission download(String url, int threadCount) {
+////        哈哈.apk
+//        int res = DownloadManagerImpl.getInstance().startMission(url, "", threadCount);
+//        if (res == -1) {
+////            Log.d("download", "文件已存在！！！");
+//            return null;
+//        }
+//        //        mBinder.onMissionAdded(downloadMission);
+//        return DownloadManagerImpl.getInstance().getMission(res);
+//    }
 
     public static void pause(DownloadMission mission) {
 //        mManager.pauseMission(mission.uuid);

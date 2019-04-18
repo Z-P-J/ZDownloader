@@ -1,4 +1,4 @@
-package com.zpj.qxdownloader.notification;
+package com.zpj.qxdownloader.util.notification;
 
 import android.app.Activity;
 import android.app.Notification;
@@ -8,9 +8,8 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
-import android.util.Log;
 
-import com.zpj.qxdownloader.notification.builder.ProgressBuilder;
+import com.zpj.qxdownloader.util.notification.builder.ProgressBuilder;
 
 import static android.support.v4.app.NotificationCompat.VISIBILITY_SECRET;
 

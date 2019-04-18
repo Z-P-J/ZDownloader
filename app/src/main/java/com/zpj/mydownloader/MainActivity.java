@@ -9,6 +9,7 @@ import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
+import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.util.Log;
 import android.view.Gravity;
@@ -25,8 +26,8 @@ import android.widget.Toast;
 import com.zpj.qianxundialoglib.IDialog;
 import com.zpj.qianxundialoglib.QianxunDialog;
 import com.zpj.qxdownloader.QianXun;
-import com.zpj.qxdownloader.get.DownloadManager;
-import com.zpj.qxdownloader.get.DownloadMission;
+import com.zpj.qxdownloader.core.DownloadManager;
+import com.zpj.qxdownloader.core.DownloadMission;
 import com.zpj.qxdownloader.service.DownloadManagerService;
 
 import org.jsoup.Connection;
@@ -41,14 +42,12 @@ import java.net.URL;
  * */
 public class MainActivity extends AppCompatActivity implements MissionAdapter.DownloadCallback {
 
-    private RecyclerView recyclerView;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        recyclerView = findViewById(R.id.recycler_view);
+        RecyclerView recyclerView = findViewById(R.id.recycler_view);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
         MissionAdapter missionAdapter = new MissionAdapter(MainActivity.this, true);
@@ -65,9 +64,8 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
 
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-            case R.id.action_add:
-                showDownloadDialog();
+        if (item.getItemId() == R.id.action_add) {
+            showDownloadDialog();
         }
         return super.onOptionsItemSelected(item);
     }
@@ -102,42 +100,49 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
     public void onItemLongClicked(View view, MissionAdapter.ViewHolder holder, DownloadManagerService.DMBinder mBinder, DownloadManager mManager) {
         DownloadMission mission = mManager.getMission(holder.position);
         QianxunDialog.with(this)
-                .setDialogView(R.layout.layout_dialog_share)//设置dialog布局
-                .setAnimStyle(R.style.slide_anim_style)//设置动画 默认没有动画
-                .setScreenWidthP(1.0f) //设置屏幕宽度比例 0.0f-1.0f
-                .setGravity(Gravity.BOTTOM)//设置Gravity
-                .setWindowBackgroundP(0.1f)//设置背景透明度 0.0f-1.0f 1.0f完全不透明
-                .setDialogCancelable(true)//设置是否屏蔽物理返回键 true不屏蔽  false屏蔽
-                .setCancelableOutSide(true)//设置dialog外点击是否可以让dialog消失
+                //设置dialog布局
+                .setDialogView(R.layout.layout_dialog_share)
+                //设置动画 默认没有动画
+                .setAnimStyle(R.style.slide_anim_style)
+                //设置屏幕宽度比例 0.0f-1.0f
+                .setScreenWidthP(1.0f)
+                //设置Gravity
+                .setGravity(Gravity.BOTTOM)
+                //设置背景透明度 0.0f-1.0f 1.0f完全不透明
+                .setWindowBackgroundP(0.1f)
+                //设置是否屏蔽物理返回键 true不屏蔽  false屏蔽
+                .setDialogCancelable(true)
+                //设置dialog外点击是否可以让dialog消失
+                .setCancelableOutSide(true)
                 .setBuildChildListener((dialog, view1, layoutRes) -> {
-                    LinearLayout pause_download = view1.findViewById(R.id.pause_download);
-                    LinearLayout resume_download = view1.findViewById(R.id.resume_download);
-                    LinearLayout delete_task = view1.findViewById(R.id.delete_task);
-                    LinearLayout copy_link = view1.findViewById(R.id.copy_link);
+                    LinearLayout pauseDownload = view1.findViewById(R.id.pause_download);
+                    LinearLayout resumeDownload = view1.findViewById(R.id.resume_download);
+                    LinearLayout deleteTask = view1.findViewById(R.id.delete_task);
+                    LinearLayout copyLink = view1.findViewById(R.id.copy_link);
 
-                    pause_download.setClickable(!mission.running);
-                    resume_download.setClickable(mission.running);
-                    delete_task.setClickable(true);
-                    copy_link.setClickable(true);
+                    pauseDownload.setClickable(!mission.running);
+                    resumeDownload.setClickable(mission.running);
+                    deleteTask.setClickable(true);
+                    copyLink.setClickable(true);
 
-                    pause_download.setOnClickListener(v1 -> {
+                    pauseDownload.setOnClickListener(v1 -> {
                         QianXun.pause(mission);
                         holder.lastTimeStamp = -1;
                         holder.lastDone = -1;
                         dialog.dismiss();
                     });
 
-                    resume_download.setOnClickListener(v1 -> {
+                    resumeDownload.setOnClickListener(v1 -> {
                         dialog.dismiss();
                         QianXun.resume(mission);
                     });
 
-                    delete_task.setOnClickListener(v1 -> {
+                    deleteTask.setOnClickListener(v1 -> {
                         QianXun.delete(mission);
                         dialog.dismiss();
                     });
 
-                    copy_link.setOnClickListener(v1 -> {
+                    copyLink.setOnClickListener(v1 -> {
                         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
                         ClipData mClipData = ClipData.newPlainText("Label", mission.url);
                         cm.setPrimaryClip(mClipData);
@@ -165,13 +170,20 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
 
     private void showDownloadDialog() {
         QianxunDialog.with(this)
+                //设置dialog布局
                 .setDialogView(R.layout.layout_dialog_download)
-                .setAnimStyle(R.style.slide_anim_style)//设置动画 默认没有动画
-                .setScreenWidthP(1.0f) //设置屏幕宽度比例 0.0f-1.0f
-                .setGravity(Gravity.BOTTOM)//设置Gravity
-                .setWindowBackgroundP(0.0f)//设置背景透明度 0.0f-1.0f 1.0f完全不透明
-                .setDialogCancelable(true)//设置是否屏蔽物理返回键 true不屏蔽  false屏蔽
-                .setCancelableOutSide(true)//设置dialog外点击是否可以让dialog消失
+                //设置动画 默认没有动画
+                .setAnimStyle(R.style.slide_anim_style)
+                //设置屏幕宽度比例 0.0f-1.0f
+                .setScreenWidthP(1.0f)
+                //设置Gravity
+                .setGravity(Gravity.BOTTOM)
+                //设置背景透明度 0.0f-1.0f 1.0f完全不透明
+                .setWindowBackgroundP(0.1f)
+                //设置是否屏蔽物理返回键 true不屏蔽  false屏蔽
+                .setDialogCancelable(true)
+                //设置dialog外点击是否可以让dialog消失
+                .setCancelableOutSide(true)
                 .setBuildChildListener(new IDialog.OnBuildListener() {
                     //设置子View
                     @Override
@@ -221,7 +233,7 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
 
                                 String url = text.getText().toString().trim();
 
-                                if (!url.equals("")) {
+                                if (!TextUtils.isEmpty(url)) {
                                     int index = url.lastIndexOf("/");
 
                                     if (index > 0) {

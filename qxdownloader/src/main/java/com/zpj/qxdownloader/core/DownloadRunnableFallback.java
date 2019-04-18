@@ -2,7 +2,7 @@
 //
 //import android.util.Log;
 //
-//import com.zpj.qxdownloader.io.BufferedRandomAccessFile;
+//import com.zpj.qxdownloader.util.io.BufferedRandomAccessFile;
 //
 //import java.io.BufferedInputStream;
 //import java.net.HttpURLConnection;
@@ -25,7 +25,7 @@
 //			URL url = new URL(mMission.url);
 //			HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 //			conn.setRequestProperty("Cookie", mMission.cookie);
-//			conn.setRequestProperty("User-Agent", mMission.user_agent);
+//			conn.setRequestProperty("User-Agent", mMission.userAgent);
 ////			conn.setRequestProperty("Accept", "*/*");
 ////			conn.setRequestProperty("Referer","https://pan.baidu.com/disk/home");
 ////			conn.setRequestProperty("Want-Digest", "SHA-512;q=1, SHA-256;q=1, SHA;q=0.1");

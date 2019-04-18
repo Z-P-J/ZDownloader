@@ -1,6 +1,10 @@
-package com.zpj.qxdownloader.get;
+package com.zpj.qxdownloader.core;
 
 import android.content.Context;
+
+import com.zpj.qxdownloader.config.MissionConfig;
+import com.zpj.qxdownloader.config.QianXunConfig;
+import com.zpj.qxdownloader.config.ThreadPoolConfig;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,15 +13,17 @@ public interface DownloadManager
 {
 	int BLOCK_SIZE = 1024 * 1024;
 
-	List<DownloadMission> mMissions = new ArrayList<>();
+	List<DownloadMission> ALL_MISSIONS = new ArrayList<>();
 
 	interface DownloadManagerListener {
 		void onMissionAdd();
 		void onMissionDelete();
 	}
-	
-	int startMission(String url, String name, int threads);
-	int startMission(String url, String name, int threads, String cookie, String user_agent);
+
+	int startMission(String url);
+	int startMission(String url, MissionConfig config);
+//	int startMission(String url, String name, int threads);
+//	int startMission(String url, String name, int threads, String cookie, String userAgent);
 
 	void resumeMission(int id);
 	void resumeMission(String uuid);
@@ -41,6 +47,10 @@ public interface DownloadManager
 	int getCount();
 
 	Context getContext();
+
+	QianXunConfig getQianXunConfig();
+
+	ThreadPoolConfig getThreadPoolConfig();
 
 //	String getDownloadPath();
 //

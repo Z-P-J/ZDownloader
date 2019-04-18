@@ -1,4 +1,4 @@
-package com.zpj.qxdownloader.io;
+package com.zpj.qxdownloader.util.io;
 
 import java.io.File;
 import java.io.FileNotFoundException;

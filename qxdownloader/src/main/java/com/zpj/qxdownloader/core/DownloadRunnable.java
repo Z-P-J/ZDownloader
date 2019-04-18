@@ -1,4 +1,4 @@
-package com.zpj.qxdownloader.get;
+package com.zpj.qxdownloader.core;
 
 import android.os.Handler;
 import android.os.HandlerThread;
@@ -6,14 +6,16 @@ import android.os.Message;
 import android.text.TextUtils;
 import android.util.Log;
 
-import com.zpj.qxdownloader.io.BufferedRandomAccessFile;
-import com.zpj.qxdownloader.util.ErrorCode;
-import com.zpj.qxdownloader.util.ResponseCode;
+import com.zpj.qxdownloader.util.io.BufferedRandomAccessFile;
+import com.zpj.qxdownloader.constant.ErrorCode;
+import com.zpj.qxdownloader.constant.ResponseCode;
 
 import java.io.BufferedInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.Map;
 
 public class DownloadRunnable implements Runnable
 {
@@ -35,7 +37,7 @@ public class DownloadRunnable implements Runnable
 		mMission = mission;
 		mId = id;
 		try {
-			f = new BufferedRandomAccessFile(mMission.location + "/" + mMission.name, "rw");
+			f = new BufferedRandomAccessFile(mMission.getDownloadPath() + File.separator + mMission.name, "rw");
 		} catch (IOException e) {
 			e.printStackTrace();
 			notifyError(1);
@@ -69,7 +71,7 @@ public class DownloadRunnable implements Runnable
 
 //				HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 //				conn.setRequestProperty("Cookie", mMission.cookie);
-//				conn.setRequestProperty("User-Agent", mMission.user_agent);
+//				conn.setRequestProperty("User-Agent", mMission.userAgent);
 //			conn.setRequestProperty("Accept", "*/*");
 //			conn.setRequestProperty("Referer","https://pan.baidu.com/disk/home");
 //			conn.setRequestProperty("Want-Digest", "SHA-512;q=1, SHA-256;q=1, SHA;q=0.1");
@@ -158,8 +160,8 @@ public class DownloadRunnable implements Runnable
 				mMission.preserveBlock(position);
 				mMission.setPosition(mId, position);
 
-				long start = position * mMission.block_size;
-				long end = start + mMission.block_size - 1;
+				long start = position * mMission.getBlockSize();
+				long end = start + mMission.getBlockSize() - 1;
 
 				if (start >= mMission.length) {
 					continue;
@@ -341,12 +343,13 @@ public class DownloadRunnable implements Runnable
 	private HttpURLConnection getConnection(String link, long start, long end) throws Exception {
 		URL url = new URL(link);
 		HttpURLConnection conn = (HttpURLConnection)url.openConnection();
-		if (!TextUtils.isEmpty(mMission.cookie.trim())) {
-			conn.setRequestProperty("Cookie", mMission.cookie);
-		}
-		conn.setRequestProperty("User-Agent", mMission.user_agent);
-		conn.setRequestProperty("Accept", "*/*");
-		conn.setRequestProperty("Referer",mMission.url);
+//		if (!TextUtils.isEmpty(mMission.getCookie().trim())) {
+//			conn.setRequestProperty("Cookie", mMission.getCookie());
+//		}
+//		conn.setRequestProperty("User-Agent", mMission.getUserAgent());
+//		conn.setRequestProperty("Accept", "*/*");
+//		conn.setRequestProperty("Referer",mMission.url);
+		wrapConnection(conn);
 		conn.setRequestProperty("Range", "bytes=" + start + "-" + end);
 		return conn;
 	}
@@ -354,13 +357,25 @@ public class DownloadRunnable implements Runnable
 	private HttpURLConnection getConnection(String link) throws Exception {
 		URL url = new URL(link);
 		HttpURLConnection conn = (HttpURLConnection)url.openConnection();
-		if (!TextUtils.isEmpty(mMission.cookie.trim())) {
-			conn.setRequestProperty("Cookie", mMission.cookie);
+		wrapConnection(conn);
+		return conn;
+	}
+
+	private void wrapConnection(HttpURLConnection conn) {
+		conn.setConnectTimeout(mMission.getConnectOutTime());
+		conn.setReadTimeout(mMission.getReadOutTime());
+		if (!TextUtils.isEmpty(mMission.getCookie().trim())) {
+			conn.setRequestProperty("Cookie", mMission.getCookie());
 		}
-		conn.setRequestProperty("User-Agent", mMission.user_agent);
+		conn.setRequestProperty("User-Agent", mMission.getUserAgent());
 		conn.setRequestProperty("Accept", "*/*");
 		conn.setRequestProperty("Referer",mMission.url);
-		return conn;
+		Map<String, String> headers = mMission.getHeaders();
+		if (!headers.isEmpty()) {
+			for (String key : headers.keySet()) {
+				conn.setRequestProperty(key, headers.get(key));
+			}
+		}
 	}
 	
 	public void notifyProgress(final int len) {

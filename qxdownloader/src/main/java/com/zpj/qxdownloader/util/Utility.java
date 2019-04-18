@@ -2,8 +2,6 @@ package com.zpj.qxdownloader.util;
 
 import android.os.Environment;
 import android.os.StatFs;
-import android.text.format.Formatter;
-import android.util.Log;
 
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -21,8 +19,13 @@ import java.util.Locale;
 /**
 * @author Z-P-J
 * */
-public class Utility
-{
+public class Utility {
+
+	private static final int NUM_1024 = 1024;
+
+	private static final int NUM_1024_1024 = 1024 << 10;
+
+	private static final int NUM_1024_1024_1024 = 1024 << 20;
 
 	public enum FileType {
 		/**
@@ -41,26 +44,26 @@ public class Utility
 
 
 	public static String formatBytes(long bytes) {
-		if (bytes < 1024) {
+		if (bytes < NUM_1024) {
 			return String.format(Locale.CHINA, "%d B", bytes);
-		} else if (bytes < 1024 * 1024) {
-			return String.format(Locale.CHINA, "%.2f kB", (float) bytes / 1024);
-		} else if (bytes < 1024 * 1024 * 1024) {
-			return String.format(Locale.CHINA, "%.2f MB", (float) bytes / 1024 / 1024);
+		} else if (bytes < NUM_1024_1024) {
+			return String.format(Locale.CHINA, "%.2f kB", (float) bytes / NUM_1024);
+		} else if (bytes < NUM_1024_1024_1024) {
+			return String.format(Locale.CHINA, "%.2f MB", (float) bytes / NUM_1024_1024);
 		} else {
-			return String.format(Locale.CHINA, "%.2f GB", (float) bytes / 1024 / 1024 / 1024);
+			return String.format(Locale.CHINA, "%.2f GB", (float) bytes / NUM_1024_1024_1024);
 		}
 	}
 	
 	public static String formatSpeed(double speed) {
-		if (speed < 1024) {
+		if (speed < NUM_1024) {
 			return String.format(Locale.CHINA, "%.2f B/s", speed);
-		} else if (speed < 1024 * 1024) {
-			return String.format(Locale.CHINA, "%.2f kB/s", speed / 1024);
-		} else if (speed < 1024 * 1024 * 1024) {
-			return String.format(Locale.CHINA, "%.2f MB/s", speed / 1024 / 1024);
+		} else if (speed < NUM_1024_1024) {
+			return String.format(Locale.CHINA, "%.2f kB/s", speed / NUM_1024);
+		} else if (speed < NUM_1024_1024_1024) {
+			return String.format(Locale.CHINA, "%.2f MB/s", speed / NUM_1024_1024);
 		} else {
-			return String.format(Locale.CHINA, "%.2f GB/s", speed / 1024 / 1024 / 1024);
+			return String.format(Locale.CHINA, "%.2f GB/s", speed / NUM_1024_1024_1024);
 		}
 	}
 	
@@ -100,18 +103,23 @@ public class Utility
 			if (!f.exists() || !f.canRead()) {
 				return null;
 			}
-			
-			BufferedInputStream ipt = new BufferedInputStream(new FileInputStream(f));
+
+			StringBuilder sb = new StringBuilder();
+			FileInputStream fileInputStream = new FileInputStream(f);
+
+			BufferedInputStream ipt = new BufferedInputStream(fileInputStream);
 			
 			byte[] buf = new byte[512];
-			StringBuilder sb = new StringBuilder();
+
 			
 			while (ipt.available() > 0) {
 				int len = ipt.read(buf, 0, 512);
 				sb.append(new String(buf, 0, len, StandardCharsets.UTF_8));
 			}
-			
+
 			ipt.close();
+			fileInputStream.close();
+
 			return sb.toString();
 		} catch (Exception e) {
 			return null;

@@ -1,4 +1,4 @@
-package com.zpj.qxdownloader.get;
+package com.zpj.qxdownloader.core;
 
 import android.os.Handler;
 import android.os.Looper;
@@ -6,23 +6,28 @@ import android.util.Log;
 import android.util.LongSparseArray;
 
 import com.google.gson.Gson;
-import com.zpj.qxdownloader.notification.NotifyUtil;
-import com.zpj.qxdownloader.notification.builder.ProgressBuilder;
-import com.zpj.qxdownloader.option.DefaultOptions;
+import com.zpj.qxdownloader.config.MissionConfig;
+import com.zpj.qxdownloader.constant.DefaultConstant;
+import com.zpj.qxdownloader.util.ThreadPoolFactory;
 import com.zpj.qxdownloader.util.Utility;
+import com.zpj.qxdownloader.util.notification.NotifyUtil;
+import com.zpj.qxdownloader.util.notification.builder.ProgressBuilder;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ThreadPoolExecutor;
 
+/**
+ * @author Z-P-J
+ */
 public class DownloadMission {
 	private static final String TAG = DownloadMission.class.getSimpleName();
 	
 	public interface MissionListener {
-		HashMap<MissionListener, Handler> handlerStore = new HashMap<>();
+		HashMap<MissionListener, Handler> HANDLER_STORE = new HashMap<>();
 
 		void onInit();
 		void onStart();
@@ -35,36 +40,67 @@ public class DownloadMission {
 	}
 
 	public String uuid = "";
+
 	public String name = "";
+
 	public String url = "";
+
 	public String redictUrl = "";
+
 	public String originUrl = "";
-	public String location = "";
-	public String cookie = "";
-	public String user_agent = "";
+
+//	public String location = "";
+//	public String cookie = "";
+//	public String userAgent = "";
+
 	public long createTime = 0;
+
 	public int notifyId = 0;
+
 	public long blocks = 0;
-	public int block_size = DefaultOptions.BLOCK_SIZE;
+//	public int bufferSize = DefaultConstant.BUFFER_SIZE;
+//	public int blockSize = DefaultConstant.BLOCK_SIZE;
+
 	public long length = 0;
+
 	public long done = 0;
-	public int threadCount = DefaultOptions.THREAD_COUNT;
+
 	public int finishCount = 0;
-	public int retryCount = DefaultOptions.RETRY_COUNT;
 	//单位毫秒
-	public int retryDelay = DefaultOptions.RETRY_DELAY;
-	public ArrayList<Long> threadPositions = new ArrayList<>();
+//	public int retryDelay = DefaultConstant.RETRY_DELAY;
+//	public int connectOutTime = DefaultConstant.CONNECT_OUT_TIME;
+//	public int readOutTime = DefaultConstant.READ_OUT_TIME;
+
+	public List<Long> threadPositions = new ArrayList<>();
+
+	public transient int a;
+//	public final LongSparseBooleanArray longSparseBooleanArray = new LongSparseBooleanArray();
+
 	public final LongSparseArray<Boolean> blockState = new LongSparseArray<>();
+
 	public boolean running = false;
+
 	public boolean waiting = false;
+
 	public boolean finished = false;
+
 	public boolean fallback = false;
+
 	public int errCode = -1;
+
 	public long timestamp = 0;
 
 	public boolean hasInit = false;
-	
+
+	public MissionConfig missionConfig = MissionConfig.with();
+
 	public transient boolean recovered = false;
+
+	public transient int currentRetryCount = missionConfig.getRetryCount();
+
+	public transient int threadCount = missionConfig.getThreadPoolConfig().getCorePoolSize();
+//	public transient int maximumPoolSize = missionConfig.getThreadPoolConfig().getMaximumPoolSize();
+//	public transient int keepAliveTime = missionConfig.getThreadPoolConfig().getKeepAliveTime();
 	
 //	private transient ArrayList<WeakReference<MissionListener>> mListeners = new ArrayList<>();
 //	private transient WeakReference<MissionListener> missionListener;
@@ -73,7 +109,7 @@ public class DownloadMission {
 
 	private transient int errorCount = 0;
 
-	private transient ExecutorService executorService;
+	private transient ThreadPoolExecutor threadPoolExecutor;
 
 	private transient final ProgressBuilder progressBuilder = new ProgressBuilder();
 
@@ -93,6 +129,13 @@ public class DownloadMission {
 			blockState.put(block, true);
 		}
 	}
+
+//	public void setThreadPoolConfig(ThreadPoolConfig config) {
+//		this.config = config;
+////		threadCount = config.getCorePoolSize();
+////		keepAliveTime = config.getKeepAliveTime();
+////		maximumPoolSize = config.getMaximumPoolSize();
+//	}
 
 	public float getProgress() {
 		if (finished) {
@@ -137,7 +180,7 @@ public class DownloadMission {
 		if (done != length) {
 			Log.d(TAG, "已下载");
 			writeThisToFile();
-			executorService.submit(progressRunnable);
+			threadPoolExecutor.submit(progressRunnable);
 
 
 
@@ -158,14 +201,14 @@ public class DownloadMission {
 //			Log.d("timetimetimetime0", "tempTime3=" + (time2 - time1));
 
 //			if (missionListener != null) {
-//				MissionListener.handlerStore.get(missionListener).post(progressRunnable);
+//				MissionListener.HANDLER_STORE.get(missionListener).post(progressRunnable);
 //			}
 
 //			Log.d("timetimetimetime0", "mListeners.size=" + mListeners.size());
 //			for (WeakReference<MissionListener> ref: mListeners) {
 //				final MissionListener listener = ref.get();
 //				if (listener != null) {
-//					MissionListener.handlerStore.get(listener).post(new Runnable() {
+//					MissionListener.HANDLER_STORE.get(listener).post(new Runnable() {
 //						@Override
 //						public void run() {
 //							listener.onProgressUpdate(done, length);
@@ -231,7 +274,7 @@ public class DownloadMission {
 		writeThisToFile();
 
 		if (missionListener != null) {
-			MissionListener.handlerStore.get(missionListener).post(new Runnable() {
+			MissionListener.HANDLER_STORE.get(missionListener).post(new Runnable() {
 				@Override
 				public void run() {
 					missionListener.onFinish();
@@ -242,7 +285,7 @@ public class DownloadMission {
 		DownloadManagerImpl.decreaseDownloadingCount();
 
 		NotifyUtil.cancel(getId());
-		executorService.submit(new Runnable() {
+		threadPoolExecutor.submit(new Runnable() {
 			@Override
 			public void run() {
 				progressBuilder
@@ -256,7 +299,7 @@ public class DownloadMission {
 //		for (WeakReference<MissionListener> ref : mListeners) {
 //			final MissionListener listener = ref.get();
 //			if (listener != null) {
-//				MissionListener.handlerStore.get(listener).post(new Runnable() {
+//				MissionListener.HANDLER_STORE.get(listener).post(new Runnable() {
 //					@Override
 //					public void run() {
 //						listener.onFinish();
@@ -268,7 +311,7 @@ public class DownloadMission {
 
 	public synchronized void onRetry() {
 		if (missionListener != null) {
-			MissionListener.handlerStore.get(missionListener).post(new Runnable() {
+			MissionListener.HANDLER_STORE.get(missionListener).post(new Runnable() {
 				@Override
 				public void run() {
 					missionListener.onRetry();
@@ -280,8 +323,8 @@ public class DownloadMission {
 	public synchronized void notifyError(int err) {
 		errorCount++;
 		if (errorCount == threadCount) {
-			retryCount--;
-			if (retryCount >= 0) {
+			currentRetryCount--;
+			if (currentRetryCount >= 0) {
 				pause();
 				onRetry();
 				new Handler().postDelayed(new Runnable() {
@@ -289,9 +332,11 @@ public class DownloadMission {
 					public void run() {
 						start();
 					}
-				}, retryDelay);
+				}, missionConfig.getRetryDelay());
 				return;
 			}
+
+			currentRetryCount = missionConfig.getRetryCount();
 
 			errCode = err;
 
@@ -300,7 +345,7 @@ public class DownloadMission {
 			writeThisToFile();
 
 			if (missionListener != null) {
-				MissionListener.handlerStore.get(missionListener).post(new Runnable() {
+				MissionListener.HANDLER_STORE.get(missionListener).post(new Runnable() {
 					@Override
 					public void run() {
 						missionListener.onError(errCode);
@@ -326,7 +371,7 @@ public class DownloadMission {
 	
 	public synchronized void addListener(MissionListener listener) {
 		Handler handler = new Handler(Looper.getMainLooper());
-		MissionListener.handlerStore.put(listener, handler);
+		MissionListener.HANDLER_STORE.put(listener, handler);
 //		mListeners.add(new WeakReference<>(listener));
 		missionListener = listener;
 	}
@@ -346,8 +391,8 @@ public class DownloadMission {
 	public void start() {
 		errorCount = 0;
 		if (!running && !finished) {
-
-			if (DownloadManagerImpl.getDownloadingCount() >= DefaultOptions.TONG_SHI) {
+			initCurrentRetryCount();
+			if (DownloadManagerImpl.getDownloadingCount() >= DefaultConstant.TONG_SHI) {
 				notifyWaiting();
 				return;
 			}
@@ -368,6 +413,7 @@ public class DownloadMission {
 //				}
 			} else {
 				// In fallback mode, resuming is not supported.
+				missionConfig.getThreadPoolConfig().setCorePoolSize(1);
 				threadCount = 1;
 				done = 0;
 				blocks = 0;
@@ -375,20 +421,20 @@ public class DownloadMission {
 //				executorService.submit(new DownloadRunnableFallback(this));
 			}
 
-			if (executorService == null || ((ThreadPoolExecutor)executorService).getCorePoolSize() != 2 * threadCount) {
-				executorService = Executors.newFixedThreadPool(2 * threadCount);
+			if (threadPoolExecutor == null || threadPoolExecutor.getCorePoolSize() != 2 * threadCount) {
+				threadPoolExecutor = ThreadPoolFactory.newFixedThreadPool(missionConfig.getThreadPoolConfig());
 			}
 			for (int i = 0; i < threadCount; i++) {
 				if (threadPositions.size() <= i && !recovered) {
 					threadPositions.add((long) i);
 				}
-				executorService.submit(new DownloadRunnable(this, i));
+				threadPoolExecutor.submit(new DownloadRunnable(this, i));
 			}
 
 			writeThisToFile();
 
 			if (missionListener != null) {
-				MissionListener.handlerStore.get(missionListener).post(new Runnable() {
+				MissionListener.HANDLER_STORE.get(missionListener).post(new Runnable() {
 					@Override
 					public void run() {
 						missionListener.onStart();
@@ -399,7 +445,7 @@ public class DownloadMission {
 //			for (WeakReference<MissionListener> ref: mListeners) {
 //				final MissionListener listener = ref.get();
 //				if (listener != null) {
-//					MissionListener.handlerStore.get(listener).post(new Runnable() {
+//					MissionListener.HANDLER_STORE.get(listener).post(new Runnable() {
 //						@Override
 //						public void run() {
 //							listener.onStart();
@@ -411,6 +457,7 @@ public class DownloadMission {
 	}
 	
 	public void pause() {
+		initCurrentRetryCount();
 		if (running) {
 			running = false;
 			recovered = true;
@@ -420,7 +467,7 @@ public class DownloadMission {
 			Log.d(TAG, "已暂停");
 
 			if (missionListener != null) {
-				MissionListener.handlerStore.get(missionListener).post(new Runnable() {
+				MissionListener.HANDLER_STORE.get(missionListener).post(new Runnable() {
 					@Override
 					public void run() {
 						missionListener.onPause();
@@ -433,7 +480,7 @@ public class DownloadMission {
 			}
 
 			NotifyUtil.cancel(getId());
-			executorService.submit(new Runnable() {
+			threadPoolExecutor.submit(new Runnable() {
 				@Override
 				public void run() {
 					progressBuilder
@@ -448,7 +495,7 @@ public class DownloadMission {
 	
 	public void delete() {
 		deleteThisFromFile();
-		new File(location + "/" + name).delete();
+		new File(missionConfig.getDownloadPath() + File.separator + name).delete();
 	}
 
 	private Runnable runnable = new Runnable() {
@@ -462,20 +509,68 @@ public class DownloadMission {
 	public void writeThisToFile() {
 		if (!mWritingToFile) {
 			mWritingToFile = true;
-			if (executorService == null) {
-				executorService = Executors.newFixedThreadPool(2 * threadCount);
+			if (threadPoolExecutor == null) {
+				threadPoolExecutor = ThreadPoolFactory.newFixedThreadPool(missionConfig.getThreadPoolConfig());
 			}
-			executorService.submit(runnable);
+			threadPoolExecutor.submit(runnable);
 		}
 	}
 	
 	private void doWriteThisToFile() {
 		synchronized (blockState) {
-			Utility.writeToFile(DownloadManagerImpl.TASK_PATH + "/" + uuid + ".zpj", new Gson().toJson(this));
+//			try {
+//				Codec<DownloadMission> downloadMissionCodec = ProtobufProxy.create(DownloadMission.class);
+//				// 序列化
+//				byte[] bb = downloadMissionCodec.encode(this);
+//				Log.d(TAG, Arrays.toString(bb));
+//				// 反序列化
+//				DownloadMission newStt = downloadMissionCodec.decode(bb);
+//				Log.d(TAG, new Gson().toJson(newStt));
+//			} catch (IOException e) {
+//				e.printStackTrace();
+//			}
+
+			Utility.writeToFile(DownloadManagerImpl.TASK_PATH + File.separator + uuid + ".zpj", new Gson().toJson(this));
 		}
 	}
 	
 	public void deleteThisFromFile() {
-		new File(DownloadManagerImpl.TASK_PATH + "/" + uuid + ".zpj").delete();
+		new File(DownloadManagerImpl.TASK_PATH + File.separator + uuid + ".zpj").delete();
 	}
+
+	private void initCurrentRetryCount() {
+		if (currentRetryCount != missionConfig.getRetryCount()) {
+			currentRetryCount = missionConfig.getRetryCount();
+		}
+	}
+
+	public String getDownloadPath() {
+		return missionConfig.getDownloadPath();
+	}
+
+	public String getUserAgent() {
+		return missionConfig.getUserAgent();
+	}
+
+	public String getCookie() {
+		return missionConfig.getCookie();
+	}
+
+	public int getBlockSize() {
+		return missionConfig.getBlockSize();
+	}
+
+	public int getConnectOutTime() {
+		return missionConfig.getConnectOutTime();
+	}
+
+	public int getReadOutTime() {
+		return missionConfig.getReadOutTime();
+	}
+
+	Map<String, String> getHeaders() {
+		return missionConfig.getHeaders();
+	}
+
+
 }

@@ -15,8 +15,8 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.zpj.qxdownloader.QianXun;
-import com.zpj.qxdownloader.get.DownloadManager;
-import com.zpj.qxdownloader.get.DownloadMission;
+import com.zpj.qxdownloader.core.DownloadManager;
+import com.zpj.qxdownloader.core.DownloadMission;
 import com.zpj.qxdownloader.service.DownloadManagerService;
 import com.zpj.qxdownloader.util.FileUtil;
 import com.zpj.qxdownloader.util.Utility;

@@ -1,4 +1,4 @@
-package com.zpj.qxdownloader.notification.builder;
+package com.zpj.qxdownloader.util.notification.builder;
 
 import android.app.Notification;
 import android.support.v4.app.NotificationCompat;

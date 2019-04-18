@@ -11,6 +11,9 @@ import android.widget.Toast;
 
 import com.zpj.qxdownloader.QianXun;
 
+/**
+ * @author Z-P-J
+ */
 public class NetworkChangeReceiver extends BroadcastReceiver {
 
     private static NetworkChangeReceiver networkChangeReceiver;

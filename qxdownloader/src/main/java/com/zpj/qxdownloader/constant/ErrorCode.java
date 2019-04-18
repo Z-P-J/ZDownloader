@@ -1,4 +1,4 @@
-package com.zpj.qxdownloader.util;
+package com.zpj.qxdownloader.constant;
 
 public class ErrorCode {
 

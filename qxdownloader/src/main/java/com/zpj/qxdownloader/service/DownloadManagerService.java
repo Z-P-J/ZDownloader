@@ -11,9 +11,9 @@ import android.os.IBinder;
 import android.os.Message;
 import android.util.Log;
 
-import com.zpj.qxdownloader.get.DownloadManager;
-import com.zpj.qxdownloader.get.DownloadManagerImpl;
-import com.zpj.qxdownloader.get.DownloadMission;
+import com.zpj.qxdownloader.core.DownloadManager;
+import com.zpj.qxdownloader.core.DownloadManagerImpl;
+import com.zpj.qxdownloader.core.DownloadMission;
 
 public class DownloadManagerService extends Service implements DownloadMission.MissionListener
 {

@@ -1,4 +1,4 @@
-package com.zpj.qxdownloader.notification.builder;
+package com.zpj.qxdownloader.util.notification.builder;
 
 import android.app.Notification;
 import android.app.PendingIntent;
@@ -8,9 +8,8 @@ import android.os.Build;
 import android.support.annotation.RequiresApi;
 import android.support.v4.app.NotificationCompat;
 import android.text.TextUtils;
-import android.util.Log;
 
-import com.zpj.qxdownloader.notification.NotifyUtil;
+import com.zpj.qxdownloader.util.notification.NotifyUtil;
 
 import java.util.ArrayList;
 import java.util.List;
