@@ -3,14 +3,15 @@ package com.zpj.qxdownloader;
 import android.content.Context;
 import android.content.IntentFilter;
 
+import com.zpj.qxdownloader.config.MissionConfig;
+import com.zpj.qxdownloader.config.QianXunConfig;
 import com.zpj.qxdownloader.core.DownloadManager;
 import com.zpj.qxdownloader.core.DownloadManagerImpl;
 import com.zpj.qxdownloader.core.DownloadMission;
 import com.zpj.qxdownloader.util.NetworkChangeReceiver;
-import com.zpj.qxdownloader.util.notification.NotifyUtil;
-import com.zpj.qxdownloader.config.MissionConfig;
-import com.zpj.qxdownloader.config.QianXunConfig;
 import com.zpj.qxdownloader.util.content.SPHelper;
+import com.zpj.qxdownloader.util.notification.NotifyUtil;
+import com.zpj.qxdownloader.util.permission.PermissionUtil;
 
 /**
  *
@@ -39,6 +40,8 @@ public class QianXun {
 //
 //    private static RegisterListener registerListener;
 
+    private static volatile boolean isRunning = true;
+
     private QianXun() {
 
     }
@@ -55,9 +58,13 @@ public class QianXun {
         init(QianXunConfig.with(context));
     }
 
-    public static void init(QianXunConfig options) {
+    public static void init(final QianXunConfig options) {
 //        register(context, null);
-        Context context = options.getContext();
+
+        final Context context = options.getContext();
+
+        PermissionUtil.grandStoragePermission(context);
+
         SPHelper.init(context);
         NotifyUtil.init(context);
         DownloadManagerImpl.register(options);
@@ -178,4 +185,5 @@ public class QianXun {
     public static DownloadManager getDownloadManager() {
         return DownloadManagerImpl.getInstance();
     }
+
 }

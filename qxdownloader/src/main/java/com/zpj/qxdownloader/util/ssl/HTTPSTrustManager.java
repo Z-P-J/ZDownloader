@@ -1,4 +1,4 @@
-package com.zpj.qxdownloader.util;
+package com.zpj.qxdownloader.util.ssl;
 
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;

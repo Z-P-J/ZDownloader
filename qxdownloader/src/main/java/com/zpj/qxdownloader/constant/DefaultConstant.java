@@ -20,7 +20,7 @@ public class DefaultConstant {
     // 单位毫秒
     public static final int RETRY_DELAY = 10 * 1000;
 
-    public static final int TONG_SHI = 3;
+    public static final int CONCURRENT_MISSION_COUNT = 3;
 
     public static final int CONNECT_OUT_TIME = 10000;
     public static final int READ_OUT_TIME = 20000;

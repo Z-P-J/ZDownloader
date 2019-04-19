@@ -28,10 +28,9 @@ import com.zpj.qianxundialoglib.QianxunDialog;
 import com.zpj.qxdownloader.QianXun;
 import com.zpj.qxdownloader.core.DownloadManager;
 import com.zpj.qxdownloader.core.DownloadMission;
+import com.zpj.qxdownloader.jsoup.Jsoup;
+import com.zpj.qxdownloader.jsoup.connection.Connection;
 import com.zpj.qxdownloader.service.DownloadManagerService;
-
-import org.jsoup.Connection;
-import org.jsoup.Jsoup;
 
 import java.net.HttpURLConnection;
 import java.net.Proxy;
@@ -46,6 +45,20 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+//        QianXun.grandStoragePermission(this);
+
+//        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
+//                != PackageManager.PERMISSION_GRANTED
+//                || ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+//                != PackageManager.PERMISSION_GRANTED)
+//        {
+//
+//            ActivityCompat.requestPermissions(this,
+//                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE,
+//                            Manifest.permission.WRITE_EXTERNAL_STORAGE},
+//                    100);
+//        }
 
         RecyclerView recyclerView = findViewById(R.id.recycler_view);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -297,7 +310,7 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
                         .timeout(20000)
                         .ignoreContentType(true)
 //                        .ignoreHttpErrors(true)
-                        .validateTLSCertificates(false)
+//                        .validateTLSCertificates(false)
                         .maxBodySize(0)
                         .execute();
                 print(response);
@@ -319,7 +332,7 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
                         .timeout(10000)
                         .ignoreContentType(true)
 //                        .ignoreHttpErrors(true)
-                        .validateTLSCertificates(false)
+//                        .validateTLSCertificates(false)
                         .maxBodySize(0)
                         .execute();
                 print(response);

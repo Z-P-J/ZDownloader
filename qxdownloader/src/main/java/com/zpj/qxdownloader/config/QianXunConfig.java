@@ -2,6 +2,9 @@ package com.zpj.qxdownloader.config;
 
 import android.content.Context;
 
+import com.zpj.qxdownloader.constant.DefaultConstant;
+
+import java.net.Proxy;
 import java.util.Map;
 
 
@@ -9,6 +12,8 @@ import java.util.Map;
 * @author Z-P-J
 * */
 public class QianXunConfig extends BaseConfig {
+
+    private int concurrentMissionCount = DefaultConstant.CONCURRENT_MISSION_COUNT;
 
     private QianXunConfig() {
 
@@ -93,4 +98,18 @@ public class QianXunConfig extends BaseConfig {
         return this;
     }
 
+    @Override
+    public QianXunConfig setProxy(Proxy proxy) {
+        this.proxy = proxy;
+        return this;
+    }
+
+    public int getConcurrentMissionCount() {
+        return concurrentMissionCount;
+    }
+
+    public QianXunConfig setConcurrentMissionCount(int concurrentMissionCount) {
+        this.concurrentMissionCount = concurrentMissionCount;
+        return this;
+    }
 }

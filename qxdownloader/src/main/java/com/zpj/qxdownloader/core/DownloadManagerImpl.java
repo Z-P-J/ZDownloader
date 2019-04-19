@@ -1,7 +1,6 @@
 package com.zpj.qxdownloader.core;
 
 import android.content.Context;
-import android.content.IntentFilter;
 import android.text.TextUtils;
 import android.util.Log;
 
@@ -16,8 +15,8 @@ import com.zpj.qxdownloader.util.NetworkChangeReceiver;
 import com.zpj.qxdownloader.util.Utility;
 import com.zpj.qxdownloader.util.io.BufferedRandomAccessFile;
 
-import org.jsoup.Connection;
-import org.jsoup.Jsoup;
+import com.zpj.qxdownloader.jsoup.connection.Connection;
+import com.zpj.qxdownloader.jsoup.Jsoup;
 
 import java.io.File;
 import java.net.Proxy;
@@ -464,6 +463,7 @@ public class DownloadManagerImpl implements DownloadManager {
 						.header("Referer",mission.url)
 //						.header("Access-Control-Expose-Headers", "Content-Disposition")
 //						.header("Range", "bytes=0-")
+						.headers(mission.getHeaders())
 						.timeout(options.getConnectOutTime())
 						.ignoreContentType(true)
 						.ignoreHttpErrors(true)
@@ -487,6 +487,7 @@ public class DownloadManagerImpl implements DownloadManager {
 						.header("Pragma", "no-cache")
 						.header("Range", "bytes=0-")
 						.header("Cache-Control", "no-cache")
+						.headers(mission.getHeaders())
 						.timeout(options.getConnectOutTime())
 						.ignoreContentType(true)
 						.ignoreHttpErrors(true)
@@ -579,6 +580,11 @@ public class DownloadManagerImpl implements DownloadManager {
 				throw new RuntimeException(e);
 			}
 		}
+	}
+
+	@Override
+	public boolean shouldMissionWaiting() {
+		return DownloadManagerImpl.getDownloadingCount() >= getQianXunConfig().getConcurrentMissionCount();
 	}
 
 	private boolean handleResponse(Connection.Response response, DownloadMission mission) {

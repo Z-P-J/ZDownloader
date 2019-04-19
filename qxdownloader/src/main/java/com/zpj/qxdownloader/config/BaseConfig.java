@@ -4,6 +4,7 @@ import android.content.Context;
 
 import com.zpj.qxdownloader.constant.DefaultConstant;
 
+import java.net.Proxy;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -35,6 +36,8 @@ abstract class BaseConfig {
     String cookie = "";
 
     Map<String, String> headers = new HashMap<>();
+
+    transient Proxy proxy;
 
     void setContext(Context context) {
         this.context = context;
@@ -123,5 +126,11 @@ abstract class BaseConfig {
 
     public Map<String, String> getHeaders() {
         return headers;
+    }
+
+    public abstract BaseConfig setProxy(Proxy proxy);
+
+    public Proxy getProxy() {
+        return proxy;
     }
 }

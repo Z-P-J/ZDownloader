@@ -10,6 +10,7 @@
 
         <service android:name=".service.DownloadManagerService"/>
 
+        <activity android:name=".util.permission.bridge.BridgeActivity" />
     </application>
 
 </manifest>

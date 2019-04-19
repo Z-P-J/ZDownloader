@@ -52,6 +52,8 @@ public interface DownloadManager
 
 	ThreadPoolConfig getThreadPoolConfig();
 
+	boolean shouldMissionWaiting();
+
 //	String getDownloadPath();
 //
 //	void setDownloadPath(String downloadPath);

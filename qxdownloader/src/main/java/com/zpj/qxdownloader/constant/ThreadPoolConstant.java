@@ -12,6 +12,10 @@ import java.util.concurrent.ThreadPoolExecutor;
  */
 public class ThreadPoolConstant {
 
+    private ThreadPoolConstant() {
+
+    }
+
     /**
      * corePoolSiz
      */

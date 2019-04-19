@@ -3,19 +3,17 @@ package com.zpj.qxdownloader.core;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
-import android.text.TextUtils;
 import android.util.Log;
 
-import com.zpj.qxdownloader.util.io.BufferedRandomAccessFile;
 import com.zpj.qxdownloader.constant.ErrorCode;
 import com.zpj.qxdownloader.constant.ResponseCode;
+import com.zpj.qxdownloader.util.io.BufferedRandomAccessFile;
+import com.zpj.qxdownloader.util.permission.PermissionUtil;
 
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.net.URL;
-import java.util.Map;
 
 public class DownloadRunnable implements Runnable
 {
@@ -40,7 +38,13 @@ public class DownloadRunnable implements Runnable
 			f = new BufferedRandomAccessFile(mMission.getDownloadPath() + File.separator + mMission.name, "rw");
 		} catch (IOException e) {
 			e.printStackTrace();
-			notifyError(1);
+//			PermissionUtil.hasPermissions(DownloadManagerImpl.getInstance().getContext(), Permission.Group.STORAGE);
+			if (PermissionUtil.checkStoragePermissions(DownloadManagerImpl.getInstance().getContext())) {
+				notifyError(ErrorCode.ERROR_FILE_NOT_FOUND);
+			} else {
+				notifyError(ErrorCode.ERROR_NOT_HAVE_STORAGE_PERMISSIONS);
+			}
+
 			return;
 		}
 
@@ -78,7 +82,7 @@ public class DownloadRunnable implements Runnable
 //			conn.setRequestProperty("Pragma", "no-cache");
 //			conn.setRequestProperty("Cache-Control", "no-cache");
 
-				HttpURLConnection conn = getConnection(mMission.url);
+				HttpURLConnection conn = HttpUrlConnectionFactory.getConnection(mMission);
 
 				if (conn.getResponseCode() != ResponseCode.RESPONSE_200 && conn.getResponseCode() != ResponseCode.RESPONSE_206) {
 					Log.d("DownRunFallback", "error:206");
@@ -194,7 +198,7 @@ public class DownloadRunnable implements Runnable
 //				Response res = client.newCall(request).execute();
 
 
-					conn = getConnection(mMission.url, start, end);
+					conn = HttpUrlConnectionFactory.getConnection(mMission, start, end);
 
 					Log.d(TAG, mId + ":" + conn.getRequestProperty("Range"));
 					Log.d(TAG, mId + ":Content-Length=" + conn.getContentLength() + " Code:" + conn.getResponseCode());
@@ -207,7 +211,7 @@ public class DownloadRunnable implements Runnable
 						mMission.url = redictUrl;
 						mMission.redictUrl = redictUrl;
 						conn.disconnect();
-						conn = getConnection(redictUrl, start, end);
+						conn = HttpUrlConnectionFactory.getConnection(mMission, start, end);
 					}
 
 					// A server may be ignoring the range requet
@@ -340,43 +344,49 @@ public class DownloadRunnable implements Runnable
 		}
 	}
 
-	private HttpURLConnection getConnection(String link, long start, long end) throws Exception {
-		URL url = new URL(link);
-		HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+//	private HttpURLConnection getConnection(String link, long start, long end) throws Exception {
+//		URL url = new URL(link);
+//		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+//		wrapConnection(conn);
+//		conn.setRequestProperty("Range", "bytes=" + start + "-" + end);
+//		return conn;
+//	}
+//
+//	private HttpURLConnection getConnection(String link) throws Exception {
+//		URL url = new URL(link);
+//		HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+//		wrapConnection(conn);
+//		return conn;
+//	}
+//
+//	private void wrapConnection(HttpURLConnection conn) {
+//		if (conn instanceof HttpsURLConnection) {
+////			HttpsURLConnection httpsURLConnection = (HttpsURLConnection) conn;
+//			SSLContext sslContext =
+//					SSLContextUtil.getSSLContext(DownloadManagerImpl.getInstance().getContext(), SSLContextUtil.CA_ALIAS, SSLContextUtil.CA_PATH);
+//			if (sslContext == null) {
+//				sslContext = SSLContextUtil.getDefaultSLLContext();
+//			}
+//			SSLSocketFactory ssf = sslContext.getSocketFactory();
+//			((HttpsURLConnection) conn).setSSLSocketFactory(ssf);
+//			((HttpsURLConnection) conn).setHostnameVerifier(SSLContextUtil.HOSTNAME_VERIFIER);
+//		}
+//		conn.setInstanceFollowRedirects(false);
+//		conn.setConnectTimeout(mMission.getConnectOutTime());
+//		conn.setReadTimeout(mMission.getReadOutTime());
 //		if (!TextUtils.isEmpty(mMission.getCookie().trim())) {
 //			conn.setRequestProperty("Cookie", mMission.getCookie());
 //		}
 //		conn.setRequestProperty("User-Agent", mMission.getUserAgent());
 //		conn.setRequestProperty("Accept", "*/*");
 //		conn.setRequestProperty("Referer",mMission.url);
-		wrapConnection(conn);
-		conn.setRequestProperty("Range", "bytes=" + start + "-" + end);
-		return conn;
-	}
-
-	private HttpURLConnection getConnection(String link) throws Exception {
-		URL url = new URL(link);
-		HttpURLConnection conn = (HttpURLConnection)url.openConnection();
-		wrapConnection(conn);
-		return conn;
-	}
-
-	private void wrapConnection(HttpURLConnection conn) {
-		conn.setConnectTimeout(mMission.getConnectOutTime());
-		conn.setReadTimeout(mMission.getReadOutTime());
-		if (!TextUtils.isEmpty(mMission.getCookie().trim())) {
-			conn.setRequestProperty("Cookie", mMission.getCookie());
-		}
-		conn.setRequestProperty("User-Agent", mMission.getUserAgent());
-		conn.setRequestProperty("Accept", "*/*");
-		conn.setRequestProperty("Referer",mMission.url);
-		Map<String, String> headers = mMission.getHeaders();
-		if (!headers.isEmpty()) {
-			for (String key : headers.keySet()) {
-				conn.setRequestProperty(key, headers.get(key));
-			}
-		}
-	}
+//		Map<String, String> headers = mMission.getHeaders();
+//		if (!headers.isEmpty()) {
+//			for (String key : headers.keySet()) {
+//				conn.setRequestProperty(key, headers.get(key));
+//			}
+//		}
+//	}
 	
 	public void notifyProgress(final int len) {
 		Message msg = new Message();
@@ -387,8 +397,8 @@ public class DownloadRunnable implements Runnable
 	
 	private void notifyError(final int err) {
 		synchronized (mMission) {
-			mMission.notifyError(err);
 			mMission.pause();
+			mMission.notifyError(err);
 		}
 	}
 	

@@ -1,5 +1,6 @@
 package com.zpj.qxdownloader.core;
 
+import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -8,6 +9,7 @@ import android.util.LongSparseArray;
 import com.google.gson.Gson;
 import com.zpj.qxdownloader.config.MissionConfig;
 import com.zpj.qxdownloader.constant.DefaultConstant;
+import com.zpj.qxdownloader.constant.ErrorCode;
 import com.zpj.qxdownloader.util.ThreadPoolFactory;
 import com.zpj.qxdownloader.util.Utility;
 import com.zpj.qxdownloader.util.notification.NotifyUtil;
@@ -321,48 +323,50 @@ public class DownloadMission {
 	}
 
 	public synchronized void notifyError(int err) {
-		errorCount++;
-		if (errorCount == threadCount) {
-			currentRetryCount--;
-			if (currentRetryCount >= 0) {
-				pause();
-				onRetry();
-				new Handler().postDelayed(new Runnable() {
-					@Override
-					public void run() {
-						start();
-					}
-				}, missionConfig.getRetryDelay());
-				return;
+
+		if (!(err == ErrorCode.ERROR_NOT_HAVE_STORAGE_PERMISSIONS || err == ErrorCode.ERROR_FILE_NOT_FOUND)) {
+			errorCount++;
+			if (errorCount == threadCount) {
+				currentRetryCount--;
+				if (currentRetryCount >= 0) {
+					pause();
+					onRetry();
+					new Handler().postDelayed(new Runnable() {
+						@Override
+						public void run() {
+							start();
+						}
+					}, missionConfig.getRetryDelay());
+					return;
+				}
 			}
-
-			currentRetryCount = missionConfig.getRetryCount();
-
-			errCode = err;
-
-			Log.d("eeeeeeeeeeeeeeeeeeee", "error:" + errCode);
-
-			writeThisToFile();
-
-			if (missionListener != null) {
-				MissionListener.HANDLER_STORE.get(missionListener).post(new Runnable() {
-					@Override
-					public void run() {
-						missionListener.onError(errCode);
-					}
-				});
-			}
-
-			DownloadManagerImpl.decreaseDownloadingCount();
-
-			NotifyUtil.cancel(getId());
-			progressBuilder
-					.setContentTitle("下载出错" + errCode + ":" + name)
-					.setPause(true)
-					.setId(getId())
-					.show();
-
 		}
+
+		currentRetryCount = missionConfig.getRetryCount();
+
+		errCode = err;
+
+		Log.d("eeeeeeeeeeeeeeeeeeee", "error:" + errCode);
+
+		writeThisToFile();
+
+		if (missionListener != null) {
+			MissionListener.HANDLER_STORE.get(missionListener).post(new Runnable() {
+				@Override
+				public void run() {
+					missionListener.onError(errCode);
+				}
+			});
+		}
+
+		DownloadManagerImpl.decreaseDownloadingCount();
+
+		NotifyUtil.cancel(getId());
+		progressBuilder
+				.setContentTitle("下载出错" + errCode + ":" + name)
+				.setPause(true)
+				.setId(getId())
+				.show();
 	}
 
 	public void notifyWaiting() {
@@ -392,7 +396,7 @@ public class DownloadMission {
 		errorCount = 0;
 		if (!running && !finished) {
 			initCurrentRetryCount();
-			if (DownloadManagerImpl.getDownloadingCount() >= DefaultConstant.TONG_SHI) {
+			if (DownloadManagerImpl.getInstance().shouldMissionWaiting()) {
 				notifyWaiting();
 				return;
 			}

@@ -2,6 +2,7 @@ package com.zpj.qxdownloader.config;
 
 import com.zpj.qxdownloader.core.DownloadManagerImpl;
 
+import java.net.Proxy;
 import java.util.Map;
 
 /**
@@ -101,6 +102,12 @@ public class MissionConfig extends BaseConfig {
     @Override
     public MissionConfig setHeaders(Map<String, String> headers) {
         this.headers = headers;
+        return this;
+    }
+
+    @Override
+    public MissionConfig setProxy(Proxy proxy) {
+        this.proxy = proxy;
         return this;
     }
 
