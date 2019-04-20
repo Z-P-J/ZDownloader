@@ -48,8 +48,6 @@ public final class BridgeActivity extends Activity {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             requestPermissions(PermissionUtil.STORAGE, 100);
-        } else {
-
         }
     }
 

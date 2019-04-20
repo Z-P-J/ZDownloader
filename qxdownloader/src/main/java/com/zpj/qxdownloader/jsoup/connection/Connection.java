@@ -2,7 +2,6 @@ package com.zpj.qxdownloader.jsoup.connection;
 
 import com.zpj.qxdownloader.jsoup.Jsoup;
 import com.zpj.qxdownloader.jsoup.exception.HttpStatusException;
-import com.zpj.qxdownloader.jsoup.exception.UncheckedIOException;
 import com.zpj.qxdownloader.jsoup.exception.UnsupportedMimeTypeException;
 
 import java.io.BufferedInputStream;

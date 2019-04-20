@@ -45,5 +45,6 @@ public final class BridgeRequest {
     public interface Callback {
 
         void onCallback();
+
     }
 }

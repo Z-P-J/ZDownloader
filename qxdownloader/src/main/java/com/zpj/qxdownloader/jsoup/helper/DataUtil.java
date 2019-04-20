@@ -19,7 +19,6 @@ import java.util.regex.Pattern;
 public final class DataUtil {
     private static final Pattern charsetPattern = Pattern.compile("(?i)\\bcharset=\\s*(?:[\"'])?([^\\s,;\"']*)");
     public static final String defaultCharset = "UTF-8"; // used if not found in header or meta charset
-    private static final int firstReadBufferSize = 1024 * 5;
     public static final int bufferSize = 1024 * 32;
     private static final char[] mimeBoundaryChars =
             "-_1234567890abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ".toCharArray();
@@ -40,20 +39,6 @@ public final class DataUtil {
             out.write(buffer, 0, len);
         }
     }
-
-//    /**
-//     * Read the input stream into a byte buffer. To deal with slow input streams, you may interrupt the thread this
-//     * method is executing on. The data read until being interrupted will be available.
-//     * @param inStream the input stream to read from
-//     * @param maxSize the maximum size in bytes to read from the stream. Set to 0 to be unlimited.
-//     * @return the filled byte buffer
-//     * @throws IOException if an exception occurs whilst reading from the input stream.
-//     */
-//    public static ByteBuffer readToByteBuffer(InputStream inStream, int maxSize) throws IOException {
-//        Validate.isTrue(maxSize >= 0, "maxSize must be 0 (unlimited) or larger");
-//        final ConstrainableInputStream input = ConstrainableInputStream.wrap(inStream, bufferSize, maxSize);
-//        return input.readToByteBuffer(maxSize);
-//    }
 
     public static ByteBuffer emptyByteBuffer() {
         return ByteBuffer.allocate(0);
@@ -101,34 +86,4 @@ public final class DataUtil {
         return StringUtil.releaseBuilder(mime);
     }
 
-    private static BomCharset detectCharsetFromBom(final ByteBuffer byteData) {
-        final Buffer buffer = byteData; // .mark and rewind used to return Buffer, now ByteBuffer, so cast for backward compat
-        buffer.mark();
-        byte[] bom = new byte[4];
-        if (byteData.remaining() >= bom.length) {
-            byteData.get(bom);
-            buffer.rewind();
-        }
-        if (bom[0] == 0x00 && bom[1] == 0x00 && bom[2] == (byte) 0xFE && bom[3] == (byte) 0xFF || // BE
-            bom[0] == (byte) 0xFF && bom[1] == (byte) 0xFE && bom[2] == 0x00 && bom[3] == 0x00) { // LE
-            return new BomCharset("UTF-32", false); // and I hope it's on your system
-        } else if (bom[0] == (byte) 0xFE && bom[1] == (byte) 0xFF || // BE
-            bom[0] == (byte) 0xFF && bom[1] == (byte) 0xFE) {
-            return new BomCharset("UTF-16", false); // in all Javas
-        } else if (bom[0] == (byte) 0xEF && bom[1] == (byte) 0xBB && bom[2] == (byte) 0xBF) {
-            return new BomCharset("UTF-8", true); // in all Javas
-            // 16 and 32 decoders consume the BOM to determine be/le; utf-8 should be consumed here
-        }
-        return null;
-    }
-
-    private static class BomCharset {
-        private final String charset;
-        private final boolean offset;
-
-        public BomCharset(String charset, boolean offset) {
-            this.charset = charset;
-            this.offset = offset;
-        }
-    }
 }

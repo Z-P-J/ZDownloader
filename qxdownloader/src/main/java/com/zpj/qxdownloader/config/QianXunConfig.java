@@ -4,6 +4,7 @@ import android.content.Context;
 
 import com.zpj.qxdownloader.constant.DefaultConstant;
 
+import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.util.Map;
 
@@ -101,6 +102,12 @@ public class QianXunConfig extends BaseConfig {
     @Override
     public QianXunConfig setProxy(Proxy proxy) {
         this.proxy = proxy;
+        return this;
+    }
+
+    @Override
+    public QianXunConfig setProxy(String host, int port) {
+        this.proxy = new Proxy(Proxy.Type.HTTP, InetSocketAddress.createUnresolved(host, port));
         return this;
     }
 

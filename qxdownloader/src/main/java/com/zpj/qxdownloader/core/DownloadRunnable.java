@@ -94,7 +94,7 @@ public class DownloadRunnable implements Runnable
 
 					int total = 0;
 					int lastTotal = 0;
-					while (mMission.running) {
+					while (mMission.isRunning()) {
 						int len  = ipt.read(buf, 0, BUFFER_SIZE);
 						if (len == -1) {
 							notifyProgress(0);
@@ -133,7 +133,7 @@ public class DownloadRunnable implements Runnable
 
 			mMission.errCode = -1;
 
-			while (mMission.errCode == -1 && mMission.running && position < mMission.blocks) {
+			while (mMission.errCode == -1 && mMission.isRunning() && position < mMission.blocks) {
 
 				Log.d("timetimetimetime" + mId, "----------------------------start-------------------------");
 				long time0 = System.currentTimeMillis();
@@ -269,7 +269,7 @@ public class DownloadRunnable implements Runnable
 					int tempTime3 = 0;
 					int tempTime4 = 0;
 
-					while (start < end && mMission.running) {
+					while (start < end && mMission.isRunning()) {
 						i++;
 						long time3 = System.currentTimeMillis();
 						final int len = ipt.read(buf, 0, BUFFER_SIZE);
@@ -328,12 +328,12 @@ public class DownloadRunnable implements Runnable
 
 		Log.d(TAG, "thread " + mId + " exited main loop");
 
-		if (mMission.errCode == -1 && mMission.running) {
+		if (mMission.errCode == -1 && mMission.isRunning()) {
 			Log.d(TAG, "no error has happened, notifying");
 			notifyFinished();
 		}
 
-		if (!mMission.running) {
+		if (!mMission.isRunning()) {
 			Log.d(TAG, "The mission has been paused. Passing.");
 		}
 		try {

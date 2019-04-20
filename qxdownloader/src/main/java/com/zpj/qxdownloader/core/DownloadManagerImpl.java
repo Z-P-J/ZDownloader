@@ -11,6 +11,7 @@ import com.zpj.qxdownloader.config.ThreadPoolConfig;
 import com.zpj.qxdownloader.constant.DefaultConstant;
 import com.zpj.qxdownloader.constant.ErrorCode;
 import com.zpj.qxdownloader.constant.ResponseCode;
+import com.zpj.qxdownloader.util.FileUtil;
 import com.zpj.qxdownloader.util.NetworkChangeReceiver;
 import com.zpj.qxdownloader.util.Utility;
 import com.zpj.qxdownloader.util.io.BufferedRandomAccessFile;
@@ -95,7 +96,7 @@ public class DownloadManagerImpl implements DownloadManager {
 	static synchronized void decreaseDownloadingCount() {
 		downloadingCount--;
 		for (DownloadMission mission : ALL_MISSIONS) {
-			if (!mission.finished && mission.waiting) {
+			if (!mission.isFinished() && mission.isWaiting()) {
 				mission.start();
 			}
 		}
@@ -152,7 +153,7 @@ public class DownloadManagerImpl implements DownloadManager {
 //							Log.d(TAG, "loading mission " + sub.getName());
 //							Log.d(TAG, str);
 							DownloadMission mis = new Gson().fromJson(str, DownloadMission.class);
-							mis.running = false;
+//							mis.running = false;
 							mis.recovered = true;
 							insertMission(mis);
 						}
@@ -176,43 +177,35 @@ public class DownloadManagerImpl implements DownloadManager {
 	public void setDownloadManagerListener(DownloadManagerListener downloadManagerListener) {
 		this.downloadManagerListener = downloadManagerListener;
 	}
-	
-//	@Override
-//	public int startMission(String url, String name, int threads) {
-//		Log.d("startMission", "开始下载");
-//		return startMission(url, name, threads, "", "");
-//	}
 
 	@Override
-	public int startMission(String url) {
-		return startMission(url, MissionConfig.with());
+	public DownloadManagerListener getDownloadManagerListener() {
+		return downloadManagerListener;
 	}
 
 	@Override
-	public int startMission(String url, MissionConfig config) {
+	public int startMission(String url) {
+		return startMission(url, "");
+	}
+
+	@Override
+	public int startMission(String url, String name) {
+		return startMission(url, name, MissionConfig.with());
+	}
+
+	@Override
+	public int startMission(String url, String name, MissionConfig config) {
 		DownloadMission mission = new DownloadMission();
 		mission.url = url;
 		mission.originUrl = url;
+		mission.name = name;
 		mission.uuid = UUID.randomUUID().toString();
 		mission.createTime = System.currentTimeMillis();
 		mission.timestamp = mission.createTime;
 		mission.notifyId = (int)(mission.createTime / 10000) + (int) (mission.createTime % 10000) * 100000;
-		mission.hasInit = false;
+		mission.missionState = DownloadMission.MissionState.INITING;
 
 		mission.missionConfig = config;
-//		mission.location = config.getDownloadPath();
-//		mission.cookie = config.getCookie();
-//		mission.userAgent = config.getUserAgent();
-//		mission.bufferSize = config.getBufferSize();
-//		mission.blockSize = config.getBlockSize();
-//		mission.retryCount = config.getRetryCount();
-//		mission.retryDelay = config.getRetryDelay();
-//		mission.connectOutTime = config.getConnectOutTime();
-//		mission.readOutTime = config.getReadOutTime();
-//		mission.setThreadPoolConfig(config.getThreadPoolConfig());
-//		mission.threadCount = config.getThreadCount();
-//		mission.keepAliveTime = config.getKeepAliveTime();
-//		mission.maximumPoolSize = config.getMaximumPoolSize();
 
 		int i = insertMission(mission);
 		if (downloadManagerListener != null) {
@@ -253,52 +246,38 @@ public class DownloadManagerImpl implements DownloadManager {
 	@Override
 	public void resumeMission(int i) {
 		DownloadMission d = getMission(i);
-//		 && d.errCode == -1
-		if (!d.running) {
-			d.start();
-		}
+		d.start();
 	}
 
 	@Override
 	public void resumeMission(String uuid) {
 		DownloadMission d = getMission(uuid);
-//		 && d.errCode == -1
-		if (!d.running) {
-			d.start();
-		}
+		d.start();
 	}
 
 	@Override
 	public void resumeAllMissions() {
 		for (DownloadMission downloadMission : ALL_MISSIONS) {
-			if (downloadMission.running) {
-				downloadMission.start();
-			}
+			downloadMission.start();
 		}
 	}
 
 	@Override
 	public void pauseMission(int i) {
 		DownloadMission d = getMission(i);
-		if (d.running) {
-			d.pause();
-		}
+		d.pause();
 	}
 
 	@Override
 	public void pauseMission(String uuid) {
 		DownloadMission d = getMission(uuid);
-		if (d.running) {
-			d.pause();
-		}
+		d.pause();
 	}
 
 	@Override
 	public void pauseAllMissions() {
 		for (DownloadMission downloadMission : ALL_MISSIONS) {
-			if (downloadMission.running) {
-				downloadMission.pause();
-			}
+			downloadMission.pause();
 		}
 	}
 	
@@ -319,6 +298,16 @@ public class DownloadManagerImpl implements DownloadManager {
 		d.pause();
 		d.delete();
 		ALL_MISSIONS.remove(d);
+		if (downloadManagerListener != null) {
+			downloadManagerListener.onMissionDelete();
+		}
+	}
+
+	@Override
+	public void deleteMission(DownloadMission mission) {
+		mission.pause();
+		mission.delete();
+		ALL_MISSIONS.remove(mission);
 		if (downloadManagerListener != null) {
 			downloadManagerListener.onMissionDelete();
 		}
@@ -416,7 +405,7 @@ public class DownloadManagerImpl implements DownloadManager {
 	private class Initializer extends Thread {
 		private DownloadMission mission;
 		
-		public Initializer(DownloadMission mission) {
+		Initializer(DownloadMission mission) {
 			this.mission = mission;
 		}
 		
@@ -524,21 +513,22 @@ public class DownloadManagerImpl implements DownloadManager {
 
 				Log.d("mission.name", "mission.name444=" + mission.name);
 				if (TextUtils.isEmpty(mission.name)) {
-					mission.name = getMissionNameFromUrl(mission.url);
+					mission.name = getMissionNameFromUrl(mission, mission.url);
 				}
 
 				Log.d("mission.name", "mission.name555=" + mission.name);
 
 				for (DownloadMission downloadMission : ALL_MISSIONS) {
-					if (mission.hasInit && TextUtils.equals(mission.name, downloadMission.name) &&
+					if (!downloadMission.isIniting() && TextUtils.equals(mission.name, downloadMission.name) &&
 							(TextUtils.equals(downloadMission.originUrl.trim(), mission.url.trim()) ||
 									TextUtils.equals(downloadMission.redictUrl.trim(), mission.url.trim()))) {
-						if (downloadMission.finished || downloadMission.running) {
-							Log.d("startMission", "finished");
-						} else {
-							Log.d("startMission", "start");
-							downloadMission.start();
-						}
+//						if (downloadMission.isIniting()) {
+//							Log.d("startMission", "finished");
+//						} else {
+//							Log.d("startMission", "start");
+//							downloadMission.start();
+//						}
+						downloadMission.start();
 						return;
 					}
 				}
@@ -635,7 +625,7 @@ public class DownloadManagerImpl implements DownloadManager {
 		return "";
 	}
 
-	private String getMissionNameFromUrl(String url) {
+	private String getMissionNameFromUrl(DownloadMission mission, String url) {
 		if (!TextUtils.isEmpty(url)) {
 			int index = url.lastIndexOf("/");
 
@@ -647,7 +637,14 @@ public class DownloadManagerImpl implements DownloadManager {
 				}
 
 				String name = url.substring(index + 1, end);
-				if (name.contains(".")) {
+				if (!TextUtils.isEmpty(mission.originUrl) && TextUtils.equals(url, mission.originUrl)) {
+					String originName = getMissionNameFromUrl(mission, mission.originUrl);
+					if (FileUtil.checkFileType(originName) != FileUtil.FILE_TYPE.UNKNOWN) {
+						return originName;
+					}
+				}
+
+				if (FileUtil.checkFileType(name) != FileUtil.FILE_TYPE.UNKNOWN || name.contains(".")) {
 					return name;
 				} else {
 					return name + ".ext";

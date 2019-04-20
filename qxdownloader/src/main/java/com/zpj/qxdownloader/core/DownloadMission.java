@@ -1,6 +1,5 @@
 package com.zpj.qxdownloader.core;
 
-import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -8,7 +7,6 @@ import android.util.LongSparseArray;
 
 import com.google.gson.Gson;
 import com.zpj.qxdownloader.config.MissionConfig;
-import com.zpj.qxdownloader.constant.DefaultConstant;
 import com.zpj.qxdownloader.constant.ErrorCode;
 import com.zpj.qxdownloader.util.ThreadPoolFactory;
 import com.zpj.qxdownloader.util.Utility;
@@ -39,6 +37,15 @@ public class DownloadMission {
 		void onProgress(long done, long total);
 		void onFinish();
 		void onError(int errCode);
+	}
+
+	public enum MissionState {
+		INITING,
+		RUNNING,
+		WAITING,
+		PAUSE,
+		FINISHED,
+		ERROR
 	}
 
 	public String uuid = "";
@@ -80,11 +87,13 @@ public class DownloadMission {
 
 	public final LongSparseArray<Boolean> blockState = new LongSparseArray<>();
 
-	public boolean running = false;
+	public MissionState missionState = MissionState.INITING;
 
-	public boolean waiting = false;
-
-	public boolean finished = false;
+//	public boolean running = false;
+//
+//	public boolean waiting = false;
+//
+//	public boolean finished = false;
 
 	public boolean fallback = false;
 
@@ -140,7 +149,7 @@ public class DownloadMission {
 //	}
 
 	public float getProgress() {
-		if (finished) {
+		if (missionState == MissionState.FINISHED) {
 			return 100f;
 		} else if (fallback) {
 			return 0f;
@@ -165,7 +174,7 @@ public class DownloadMission {
 	}
 	
 	public synchronized void notifyProgress(long deltaLen) {
-		if (!running) {
+		if (missionState != MissionState.RUNNING) {
 			return;
 		}
 		
@@ -268,9 +277,10 @@ public class DownloadMission {
 
 		Log.d(TAG, "onFinish");
 
-		waiting = false;
-		running = false;
-		finished = true;
+//		waiting = false;
+//		running = false;
+//		finished = true;
+		missionState = MissionState.FINISHED;
 		
 //		deleteThisFromFile();
 		writeThisToFile();
@@ -342,6 +352,8 @@ public class DownloadMission {
 			}
 		}
 
+		missionState = MissionState.ERROR;
+
 		currentRetryCount = missionConfig.getRetryCount();
 
 		errCode = err;
@@ -369,8 +381,14 @@ public class DownloadMission {
 				.show();
 	}
 
-	public void notifyWaiting() {
-		waiting = true;
+	public void waiting() {
+		pause();
+		notifyWaiting();
+	}
+
+	private void notifyWaiting() {
+//		waiting = true;
+		missionState = MissionState.WAITING;
 	}
 	
 	public synchronized void addListener(MissionListener listener) {
@@ -394,17 +412,19 @@ public class DownloadMission {
 	
 	public void start() {
 		errorCount = 0;
-		if (!running && !finished) {
+		if (!isRunning() && !isFinished()) {
 			initCurrentRetryCount();
 			if (DownloadManagerImpl.getInstance().shouldMissionWaiting()) {
-				notifyWaiting();
+				waiting();
 				return;
 			}
 
 			DownloadManagerImpl.increaseDownloadingCount();
 
-			waiting = false;
-			running = true;
+//			waiting = false;
+//			running = true;
+			missionState = MissionState.RUNNING;
+
 //			ExecutorService executorService;
 			if (!fallback) {
 //				executorService = Executors.newFixedThreadPool(threadCount);
@@ -462,8 +482,9 @@ public class DownloadMission {
 	
 	public void pause() {
 		initCurrentRetryCount();
-		if (running) {
-			running = false;
+		if (isRunning() || isWaiting()) {
+//			running = false;
+			missionState = MissionState.PAUSE;
 			recovered = true;
 
 			writeThisToFile();
@@ -479,7 +500,7 @@ public class DownloadMission {
 				});
 			}
 
-			if (!waiting) {
+			if (missionState != MissionState.WAITING) {
 				DownloadManagerImpl.decreaseDownloadingCount();
 			}
 
@@ -576,5 +597,28 @@ public class DownloadMission {
 		return missionConfig.getHeaders();
 	}
 
+	public boolean isIniting() {
+		return missionState == MissionState.INITING;
+	}
+
+	public boolean isRunning() {
+		return missionState == MissionState.RUNNING;
+	}
+
+	public boolean isWaiting() {
+		return missionState == MissionState.WAITING;
+	}
+
+	public boolean isPause() {
+		return missionState == MissionState.PAUSE;
+	}
+
+	public boolean isFinished() {
+		return missionState == MissionState.FINISHED;
+	}
+
+	public boolean isError() {
+		return missionState == MissionState.ERROR;
+	}
 
 }

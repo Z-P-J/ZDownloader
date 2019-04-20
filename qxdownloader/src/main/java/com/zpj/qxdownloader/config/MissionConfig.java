@@ -2,6 +2,7 @@ package com.zpj.qxdownloader.config;
 
 import com.zpj.qxdownloader.core.DownloadManagerImpl;
 
+import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.util.Map;
 
@@ -108,6 +109,12 @@ public class MissionConfig extends BaseConfig {
     @Override
     public MissionConfig setProxy(Proxy proxy) {
         this.proxy = proxy;
+        return this;
+    }
+
+    @Override
+    public MissionConfig setProxy(String host, int port) {
+        this.proxy = new Proxy(Proxy.Type.HTTP, InetSocketAddress.createUnresolved(host, port));
         return this;
     }
 

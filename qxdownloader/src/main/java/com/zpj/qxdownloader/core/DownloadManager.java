@@ -21,7 +21,8 @@ public interface DownloadManager
 	}
 
 	int startMission(String url);
-	int startMission(String url, MissionConfig config);
+	int startMission(String url, String name);
+	int startMission(String url, String name, MissionConfig config);
 //	int startMission(String url, String name, int threads);
 //	int startMission(String url, String name, int threads, String cookie, String userAgent);
 
@@ -35,6 +36,7 @@ public interface DownloadManager
 
 	void deleteMission(int id);
 	void deleteMission(String uuid);
+	void deleteMission(DownloadMission mission);
 	void deleteAllMissions();
 
 	void clearMission(int i);
@@ -61,6 +63,8 @@ public interface DownloadManager
 	void loadMissions();
 
 	void setDownloadManagerListener(DownloadManagerListener downloadManagerListener);
+
+	public DownloadManagerListener getDownloadManagerListener();
 
 	List<DownloadMission> getMissions();
 }

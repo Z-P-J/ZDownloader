@@ -1,7 +1,6 @@
 package com.zpj.qxdownloader.jsoup.connection;
 
 import com.zpj.qxdownloader.jsoup.exception.HttpStatusException;
-import com.zpj.qxdownloader.jsoup.exception.UncheckedIOException;
 import com.zpj.qxdownloader.jsoup.exception.UnsupportedMimeTypeException;
 import com.zpj.qxdownloader.jsoup.helper.ConstrainableInputStream;
 import com.zpj.qxdownloader.jsoup.helper.DataUtil;
@@ -22,7 +21,6 @@ import java.net.Proxy;
 import java.net.URI;
 import java.net.URL;
 import java.net.URLEncoder;
-import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
 import java.nio.charset.IllegalCharsetNameException;
 import java.nio.charset.StandardCharsets;
@@ -33,15 +31,11 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Pattern;
-import java.util.zip.GZIPInputStream;
-import java.util.zip.Inflater;
-import java.util.zip.InflaterInputStream;
 
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLSocketFactory;
 
 import static com.zpj.qxdownloader.jsoup.connection.Connection.Method.HEAD;
-import static com.zpj.qxdownloader.jsoup.helper.Normalizer.lowerCase;
 
 /**
  * Implementation of {@link Connection}.
@@ -459,7 +453,6 @@ public class HttpConnection implements Connection {
         }
 
         private List<String> getHeadersCaseInsensitive(String name) {
-            Validate.notNull(name);
 
             for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
                 if (name.equalsIgnoreCase(entry.getKey()))
@@ -470,16 +463,15 @@ public class HttpConnection implements Connection {
         }
 
         private Map.Entry<String, List<String>> scanHeaders(String name) {
-            String lc = lowerCase(name);
+            String lc = name.toLowerCase();
             for (Map.Entry<String, List<String>> entry : headers.entrySet()) {
-                if (lowerCase(entry.getKey()).equals(lc))
+                if (entry.getKey().toLowerCase().equals(lc))
                     return entry;
             }
             return null;
         }
 
         public String cookie(String name) {
-            Validate.notEmpty(name, "Cookie name must not be empty");
             return cookies.get(name);
         }
 

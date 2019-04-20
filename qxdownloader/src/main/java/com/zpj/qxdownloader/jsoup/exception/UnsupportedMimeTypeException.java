@@ -15,10 +15,6 @@ public class UnsupportedMimeTypeException extends IOException {
         this.url = url;
     }
 
-    public String getMimeType() {
-        return mimeType;
-    }
-
     public String getUrl() {
         return url;
     }

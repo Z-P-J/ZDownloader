@@ -36,9 +36,12 @@ public class NetworkChangeReceiver extends BroadcastReceiver {
             } else if (networkInfo.getType() == ConnectivityManager.TYPE_WIFI) {
                 Toast.makeText(context, "正在使用WIFI", Toast.LENGTH_SHORT).show();
             }
+            if (QianXun.isWaitingForInternet()) {
+                QianXun.resumeAll();
+            }
         } else {
             Toast.makeText(context, "当前网络不可用", Toast.LENGTH_SHORT).show();
-            QianXun.pauseAll();
+            QianXun.waitingForInternet();
         }
     }
 

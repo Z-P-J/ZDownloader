@@ -37,7 +37,7 @@ abstract class BaseConfig {
 
     Map<String, String> headers = new HashMap<>();
 
-    transient Proxy proxy;
+    Proxy proxy;
 
     void setContext(Context context) {
         this.context = context;
@@ -129,6 +129,8 @@ abstract class BaseConfig {
     }
 
     public abstract BaseConfig setProxy(Proxy proxy);
+
+    public abstract BaseConfig setProxy(String host, int port);
 
     public Proxy getProxy() {
         return proxy;

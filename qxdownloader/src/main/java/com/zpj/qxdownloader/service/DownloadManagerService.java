@@ -65,7 +65,7 @@ public class DownloadManagerService extends Service implements DownloadMission.M
 					int runningCount = 0;
 					
 					for (int i = 0; i < mManager.getCount(); i++) {
-						if (mManager.getMission(i).running) {
+						if (mManager.getMission(i).isRunning()) {
 							runningCount++;
 						}
 					}

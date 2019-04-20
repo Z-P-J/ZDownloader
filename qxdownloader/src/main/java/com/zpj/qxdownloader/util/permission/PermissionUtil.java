@@ -16,26 +16,15 @@
 package com.zpj.qxdownloader.util.permission;
 
 import android.Manifest;
-import android.app.Activity;
 import android.content.Context;
-import android.content.ContextWrapper;
-import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.os.Build;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
-import android.widget.Toast;
 
-import com.zpj.qxdownloader.util.permission.runtime.Action;
-import com.zpj.qxdownloader.util.permission.runtime.LRequest;
-import com.zpj.qxdownloader.util.permission.runtime.MRequest;
 import com.zpj.qxdownloader.util.permission.runtime.PermissionRequest;
-import com.zpj.qxdownloader.util.permission.source.ActivitySource;
-import com.zpj.qxdownloader.util.permission.source.ContextSource;
-import com.zpj.qxdownloader.util.permission.source.Source;
 
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 /**
@@ -48,68 +37,30 @@ import java.util.List;
  */
 public class PermissionUtil {
 
-    public static final String READ_EXTERNAL_STORAGE = "android.permission.READ_EXTERNAL_STORAGE";
-    public static final String WRITE_EXTERNAL_STORAGE = "android.permission.WRITE_EXTERNAL_STORAGE";
+    private static final String READ_EXTERNAL_STORAGE = "android.permission.READ_EXTERNAL_STORAGE";
+    private static final String WRITE_EXTERNAL_STORAGE = "android.permission.WRITE_EXTERNAL_STORAGE";
 
     public static final String[] STORAGE = new String[] {READ_EXTERNAL_STORAGE, WRITE_EXTERNAL_STORAGE};
 
-//    /**
-//     * With context.
-//     *
-//     * @param context {@link Context}.
-//     *
-//     * @return {@link Option}.
-//     */
-//    public static Option with(Context context) {
-//        return new Boot(getContextSource(context));
-//    }
+    public static final List<String> STORAGE_LIST = Arrays.asList(STORAGE);
 
     public static void grandStoragePermission(Context context) {
-        Log.d("check", "" + checkStoragePermissions(context));
         if (!checkStoragePermissions(context)) {
-            Source mSource = getContextSource(context);
-//            if (sAppPermissions == null) sAppPermissions = getManifestPermissions(mSource.getContext());
-            PermissionRequest request;
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                request = new MRequest(mSource);
+
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M) {
+                throw  new RuntimeException("must grant storage permission");
             } else {
-                request = new LRequest(mSource);
+                PermissionRequest.with(context)
+                        .setPermissionRequestListener(new PermissionRequest.PermissionRequestListener() {
+                            @Override
+                            public void onDenied() {
+                                throw  new RuntimeException("must grant storage permission");
+                            }
+                        })
+                        .start();
             }
-
-            request.onDenied(new Action<List<String>>() {
-                @Override
-                public void onAction(List<String> data) {
-                    throw  new RuntimeException("must grant Permission");
-                }
-            }).start();
         }
     }
-
-    private static Source getContextSource(Context context) {
-        if (context instanceof Activity) {
-            return new ActivitySource((Activity)context);
-        } else if (context instanceof ContextWrapper) {
-            return getContextSource(((ContextWrapper)context).getBaseContext());
-        }
-        return new ContextSource(context);
-    }
-
-    /**
-     * Get a list of permissions in the manifest.
-     */
-//    private static List<String> getManifestPermissions(Context context) {
-//        try {
-//            PackageInfo packageInfo = context.getPackageManager()
-//                    .getPackageInfo(context.getPackageName(), PackageManager.GET_PERMISSIONS);
-//            String[] permissions = packageInfo.requestedPermissions;
-//            if (permissions == null || permissions.length == 0) {
-//                throw new IllegalStateException("You did not register any permissions in the manifest.xml.");
-//            }
-//            return Collections.unmodifiableList(Arrays.asList(permissions));
-//        } catch (PackageManager.NameNotFoundException e) {
-//            throw new AssertionError("Package name cannot be found.");
-//        }
-//    }
 
     public static boolean checkStoragePermissions(Context context) {
         return ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE)

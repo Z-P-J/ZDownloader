@@ -14,7 +14,6 @@ public class TokenQueue {
      @param data string of data to back queue.
      */
     public TokenQueue(String data) {
-        Validate.notNull(data);
         queue = data;
     }
 

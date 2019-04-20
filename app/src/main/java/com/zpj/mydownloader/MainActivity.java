@@ -41,6 +41,8 @@ import java.net.URL;
  * */
 public class MainActivity extends AppCompatActivity implements MissionAdapter.DownloadCallback {
 
+    private MissionAdapter missionAdapter;
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -63,7 +65,7 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
         RecyclerView recyclerView = findViewById(R.id.recycler_view);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
 
-        MissionAdapter missionAdapter = new MissionAdapter(MainActivity.this, true);
+        missionAdapter = new MissionAdapter(MainActivity.this, true);
         missionAdapter.setMissionAdapterClickListener(MainActivity.this);
         recyclerView.setAdapter(missionAdapter);
 
@@ -128,34 +130,71 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
                 //设置dialog外点击是否可以让dialog消失
                 .setCancelableOutSide(true)
                 .setBuildChildListener((dialog, view1, layoutRes) -> {
+                    LinearLayout openFile = view1.findViewById(R.id.open_file);
                     LinearLayout pauseDownload = view1.findViewById(R.id.pause_download);
                     LinearLayout resumeDownload = view1.findViewById(R.id.resume_download);
                     LinearLayout deleteTask = view1.findViewById(R.id.delete_task);
                     LinearLayout copyLink = view1.findViewById(R.id.copy_link);
 
-                    pauseDownload.setClickable(!mission.running);
-                    resumeDownload.setClickable(mission.running);
-                    deleteTask.setClickable(true);
-                    copyLink.setClickable(true);
+//                    switch (mission.missionState) {
+//                        case ERROR:
+//                            break;
+//                        case PAUSE:
+//                            break;
+//                        case INITING:
+//                            break;
+//                        case RUNNING:
+//                            break;
+//                        case WAITING:
+//                            break;
+//                        case FINISHED:
+//                            break;
+//                        default:
+//                            break;
+//                    }
 
-                    pauseDownload.setOnClickListener(v1 -> {
+                    openFile.setVisibility(View.GONE);
+                    if (mission.isFinished()){
+                        openFile.setVisibility(View.VISIBLE);
+                        pauseDownload.setVisibility(View.GONE);
+                        resumeDownload.setVisibility(View.GONE);
+                    } else if (mission.isRunning()) {
+                        resumeDownload.setVisibility(View.GONE);
+                    } else if (mission.isWaiting()) {
+                        resumeDownload.setVisibility(View.GONE);
+                    } else if (mission.isError()) {
+                        pauseDownload.setVisibility(View.GONE);
+                    } else if (mission.isIniting()) {
+                        pauseDownload.setVisibility(View.GONE);
+                        resumeDownload.setVisibility(View.GONE);
+                    } else if (mission.isPause()) {
+                        pauseDownload.setVisibility(View.GONE);
+                    }
+
+                    openFile.setOnClickListener(v -> {
+                        QianXun.openFile(mission);
+                        dialog.dismiss();
+                    });
+
+                    pauseDownload.setOnClickListener(v -> {
                         QianXun.pause(mission);
                         holder.lastTimeStamp = -1;
                         holder.lastDone = -1;
                         dialog.dismiss();
                     });
 
-                    resumeDownload.setOnClickListener(v1 -> {
-                        dialog.dismiss();
+                    resumeDownload.setOnClickListener(v -> {
                         QianXun.resume(mission);
-                    });
-
-                    deleteTask.setOnClickListener(v1 -> {
-                        QianXun.delete(mission);
                         dialog.dismiss();
                     });
 
-                    copyLink.setOnClickListener(v1 -> {
+                    deleteTask.setOnClickListener(v -> {
+                        QianXun.delete(mission);
+                        missionAdapter.notifyDataSetChanged();
+                        dialog.dismiss();
+                    });
+
+                    copyLink.setOnClickListener(v -> {
                         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
                         ClipData mClipData = ClipData.newPlainText("Label", mission.url);
                         cm.setPrimaryClip(mClipData);
@@ -168,7 +207,7 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
     @Override
     public void onMoreClicked(View view, MissionAdapter.ViewHolder holder, DownloadManagerService.DMBinder mBinder, DownloadManager mManager) {
         DownloadMission mission = mManager.getMission(holder.position);
-        if (mission.running) {
+        if (mission.isRunning()) {
             Toast.makeText(this, "暂停下载", Toast.LENGTH_SHORT).show();
             mManager.pauseMission(holder.position);
 //            mBinder.onMissionRemoved(mission);

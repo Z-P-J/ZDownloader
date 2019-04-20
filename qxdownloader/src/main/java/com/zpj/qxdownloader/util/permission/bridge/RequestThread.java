@@ -22,13 +22,8 @@ import java.util.concurrent.BlockingQueue;
  */
 public final class RequestThread extends Thread implements Messenger.Callback {
 
-//    private final BlockingQueue<BridgeRequest> mQueue;
     private final BridgeRequest mRequest;
     private Messenger mMessenger;
-//
-//    public RequestThread(BlockingQueue<BridgeRequest> queue) {
-//        this.mQueue = queue;
-//    }
 
     public RequestThread(BridgeRequest queue) {
         mRequest = queue;
