@@ -64,8 +64,8 @@ QianXun.download("your download url")
 ```java
 @Override
 protected void onDestroy() {
-    QianXun.unInit();
     super.onDestroy();
+    QianXun.unInit();
 }
 ```
 
@@ -94,6 +94,12 @@ QianXun.deleteAll();
 
 //删除所有下载任务(不包含下载文件)
 QianXun.clearAll();
+
+//打开下载完成的文件
+QianXun.penFile(mission);
+
+//重命名文件
+QianXun.rename(mission, newName);
 ```
 
 ## 二. 高级使用
@@ -110,6 +116,15 @@ public class MyApplication extends Application {
                 .setBlockSize(1024 * 1024) //设置下载块大小，默认为1024 * 1024
                 .setBufferSize(1024) //设置缓存大小
                 //.setThreadCount(5) //设置线程大小，默认为3, 已过时，要修改线程数量请使用setThreadPoolConfig
+                .setRetryCount(10) //设置出错重试次数，默认为5
+                .setRetryDelay(10000) //设置重试延迟，单位为ms
+                .setUserAgent("") //设置UA，默认为系统自带UA
+                .setCookie("") //设置下载任务cookie，默认为空
+                .setConnectOutTime(10000) //设置连接超时，单位ms
+                .setReadOutTime(10000) //设置读取请求内容超时，单位ms
+                .setHeaders(new HashMap<>()) //设置请求头，若Map中含有key为cookie或user-agent的键值对，则会覆盖setCookie或setUserAgent的值
+                .setProxy(Proxy.NO_PROXY) //设置代理
+                //.setProxy("127.0.0.1", 80) //设置代理
                 .setThreadPoolConfig(
                         ThreadPoolConfig.build()
                         .setCorePoolSize(5) //设置线程池线程数
@@ -123,14 +138,7 @@ public class MyApplication extends Application {
                                 return new Thread(r);
                             }
                         })
-                )
-                .setRetryCount(10) //设置出错重试次数，默认为5
-                .setRetryDelay(10000) //设置重试延迟，单位为ms
-                .setUserAgent("") //设置UA，默认为系统自带UA
-                .setCookie("") //设置下载任务cookie，默认为空
-                .setConnectOutTime(10000) //设置连接超时，单位ms
-                .setReadOutTime(10000) //设置读取请求内容超时，单位ms
-                .setHeaders(new HashMap<>()); //设置请求头，若Map中含有key为cookie或user-agent的键值对，则会覆盖setCookie或setUserAgent的值
+                );
         QianXun.init(options); //初始化
     }
 
@@ -145,6 +153,15 @@ MissionOptions options = MissionOptions.with()
                 .setBlockSize(1024 * 1024) //单独设置下载块大小，默认为1024 * 1024
                 .setBufferSize(1024) //设置缓存大小
                 //.setThreadCount(5) //单独设置线程大小，默认为3，已过时
+                .setRetryCount(10) //设置出错重试次数，默认为5
+                .setRetryDelay(10000) //设置重试延迟，单位为ms
+                .setUserAgent("") //单独设置UA，默认为系统自带UA
+                .setCookie(""); //单独设置全局cookie，默认为空
+                .setConnectOutTime(10000) //设置连接超时，单位ms
+                .setReadOutTime(10000) //设置读取请求内容超时，单位ms
+                .setHeaders(new HashMap<>()) //设置请求头，若Map中含有key为cookie或user-agent的键值对，则会覆盖setCookie或setUserAgent的值
+                .setProxy(Proxy.NO_PROXY) //设置代理
+                //.setProxy("127.0.0.1", 80) //设置代理
                 .setThreadPoolConfig(
                         ThreadPoolConfig.build()
                         .setCorePoolSize(5) //设置线程池线程数
@@ -158,14 +175,7 @@ MissionOptions options = MissionOptions.with()
                                 return new Thread(r);
                             }
                         })
-                )
-                .setRetryCount(10) //设置出错重试次数，默认为5
-                .setRetryDelay(10000) //设置重试延迟，单位为ms
-                .setUserAgent("") //单独设置UA，默认为系统自带UA
-                .setCookie(""); //单独设置全局cookie，默认为空
-                .setConnectOutTime(10000) //设置连接超时，单位ms
-                .setReadOutTime(10000) //设置读取请求内容超时，单位ms
-                .setHeaders(new HashMap<>()); //设置请求头，若Map中含有key为cookie或user-agent的键值对，则会覆盖setCookie或setUserAgent的值
+                );
 QianXun.download("your download url", options);
 //下载进度监听同上
 ```
