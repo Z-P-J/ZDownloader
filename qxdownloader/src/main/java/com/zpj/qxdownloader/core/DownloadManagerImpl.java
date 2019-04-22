@@ -25,6 +25,7 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author Z-P-J
@@ -45,11 +46,11 @@ public class DownloadManagerImpl implements DownloadManager {
 
 	private QianXunConfig options;
 
-	private static volatile int downloadingCount = 0;
+	private static AtomicInteger downloadingCount = new AtomicInteger(0);;
 
 
 	private DownloadManagerImpl() {
-
+ 
 	}
 
 	private DownloadManagerImpl(Context context, QianXunConfig options) {
@@ -86,15 +87,15 @@ public class DownloadManagerImpl implements DownloadManager {
 	}
 
 	static int getDownloadingCount() {
-		return downloadingCount;
+		return downloadingCount.get();
 	}
 
 	private static String getDownloadPath() {
 		return DOWNLOAD_PATH;
 	}
 
-	static synchronized void decreaseDownloadingCount() {
-		downloadingCount--;
+	static void decreaseDownloadingCount() {
+		downloadingCount.decrementAndGet();
 		for (DownloadMission mission : ALL_MISSIONS) {
 			if (!mission.isFinished() && mission.isWaiting()) {
 				mission.start();
@@ -102,8 +103,8 @@ public class DownloadManagerImpl implements DownloadManager {
 		}
 	}
 
-	static synchronized void increaseDownloadingCount() {
-		downloadingCount++;
+	static void increaseDownloadingCount() {
+		downloadingCount.incrementAndGet();
 	}
 
 	@Override
