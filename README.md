@@ -96,7 +96,7 @@ QianXun.deleteAll();
 QianXun.clearAll();
 
 //打开下载完成的文件
-QianXun.penFile(mission);
+QianXun.openFile(mission);
 
 //重命名文件
 QianXun.rename(mission, newName);
@@ -115,7 +115,7 @@ public class MyApplication extends Application {
                 .setDownloadPath("") //设置默认下载路径
                 .setBlockSize(1024 * 1024) //设置下载块大小，默认为1024 * 1024
                 .setBufferSize(1024) //设置缓存大小
-                //.setThreadCount(5) //设置线程大小，默认为3, 已过时，要修改线程数量请使用setThreadPoolConfig
+                //.setThreadCount(5) //已过时。设置线程大小，默认为3，要修改线程数量请使用setThreadPoolConfig
                 .setRetryCount(10) //设置出错重试次数，默认为5
                 .setRetryDelay(10000) //设置重试延迟，单位为ms
                 .setUserAgent("") //设置UA，默认为系统自带UA

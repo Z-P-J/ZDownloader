@@ -50,7 +50,7 @@ public class DownloadManagerImpl implements DownloadManager {
 
 
 	private DownloadManagerImpl() {
- 
+
 	}
 
 	private DownloadManagerImpl(Context context, QianXunConfig options) {
