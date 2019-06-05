@@ -227,7 +227,7 @@ public class QianXun {
 //                            intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
 
 //                intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-                Uri contentUri = FileProvider.getUriForFile(context, "com.zpj.baidupan.fileprovider", file);
+                Uri contentUri = FileProvider.getUriForFile(context, FileUtil.getFileProviderName(context), file);
                 intent.setDataAndType(contentUri, FileUtil.getMIMEType(file));
             } else {
                 intent.setDataAndType(Uri.fromFile(file), FileUtil.getMIMEType(file));

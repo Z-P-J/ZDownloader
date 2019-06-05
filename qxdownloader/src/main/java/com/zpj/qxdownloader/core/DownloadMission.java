@@ -1,5 +1,6 @@
 package com.zpj.qxdownloader.core;
 
+import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.Log;
@@ -122,11 +123,11 @@ public class DownloadMission {
 
 	private transient ThreadPoolExecutor threadPoolExecutor;
 
-	private transient final ProgressBuilder progressBuilder = new ProgressBuilder();
+//	private transient final ProgressBuilder progressBuilder = new ProgressBuilder();
 
 	public void initNotification() {
-		progressBuilder.setId(getId());
-		progressBuilder.setSmallIcon(android.R.mipmap.sym_def_app_icon);
+//		progressBuilder.setId(getId());
+//		progressBuilder.setSmallIcon(android.R.mipmap.sym_def_app_icon);
 	}
 	
 	public boolean isBlockPreserved(long block) {
@@ -243,10 +244,10 @@ public class DownloadMission {
 				missionListener.onProgress(done, length);
 			}
 
-			progressBuilder
+			NotifyUtil.with(getContext())
+					.buildProgressNotify()
 					.setProgressAndFormat(getProgress(),false, "")
-					.setContentTitle("已下载：" + name)
-					.setPause(false)
+					.setContentTitle(name)
 					.setId(getId())
 					.show();
 //			if (!mWritingToFile) {
@@ -269,6 +270,18 @@ public class DownloadMission {
 			onFinish();
 		}
 	}
+
+	private Runnable finishedRunnable = new Runnable() {
+		@Override
+		public void run() {
+			NotifyUtil.with(getContext())
+					.buildNotify()
+					.setContentTitle(name)
+					.setContentText("下载已完成")
+					.setId(getId())
+					.show();
+		}
+	};
 	
 	private void onFinish() {
 		if (errCode > 0) {
@@ -296,17 +309,7 @@ public class DownloadMission {
 
 		DownloadManagerImpl.decreaseDownloadingCount();
 
-		NotifyUtil.cancel(getId());
-		threadPoolExecutor.submit(new Runnable() {
-			@Override
-			public void run() {
-				progressBuilder
-						.setContentTitle("已完成：" + name)
-						.setId(getId())
-						.setPause(true)
-						.show();
-			}
-		});
+		threadPoolExecutor.submit(finishedRunnable);
 
 //		for (WeakReference<MissionListener> ref : mListeners) {
 //			final MissionListener listener = ref.get();
@@ -321,7 +324,7 @@ public class DownloadMission {
 //		}
 	}
 
-	public synchronized void onRetry() {
+	private synchronized void onRetry() {
 		if (missionListener != null) {
 			MissionListener.HANDLER_STORE.get(missionListener).post(new Runnable() {
 				@Override
@@ -332,7 +335,7 @@ public class DownloadMission {
 		}
 	}
 
-	public synchronized void notifyError(int err) {
+	synchronized void notifyError(int err) {
 
 		if (!(err == ErrorCode.ERROR_NOT_HAVE_STORAGE_PERMISSIONS || err == ErrorCode.ERROR_FILE_NOT_FOUND)) {
 			errorCount++;
@@ -374,9 +377,9 @@ public class DownloadMission {
 		DownloadManagerImpl.decreaseDownloadingCount();
 
 		NotifyUtil.cancel(getId());
-		progressBuilder
+		NotifyUtil.with(getContext())
+				.buildNotify()
 				.setContentTitle("下载出错" + errCode + ":" + name)
-				.setPause(true)
 				.setId(getId())
 				.show();
 	}
@@ -479,6 +482,18 @@ public class DownloadMission {
 //			}
 		}
 	}
+
+	private Runnable pauseRunnable = new Runnable() {
+		@Override
+		public void run() {
+			NotifyUtil.with(getContext())
+					.buildProgressNotify()
+					.setProgressAndFormat(getProgress(),false, "")
+					.setId(getId())
+					.setContentTitle("已暂停：" + name)
+					.show();
+		}
+	};
 	
 	public void pause() {
 		initCurrentRetryCount();
@@ -505,16 +520,7 @@ public class DownloadMission {
 			}
 
 			NotifyUtil.cancel(getId());
-			threadPoolExecutor.submit(new Runnable() {
-				@Override
-				public void run() {
-					progressBuilder
-							.setContentTitle("已暂停：" + name)
-							.setPause(true)
-							.setId(getId())
-							.show();
-				}
-			});
+			threadPoolExecutor.submit(pauseRunnable);
 		}
 	}
 	
@@ -523,7 +529,7 @@ public class DownloadMission {
 		new File(missionConfig.getDownloadPath() + File.separator + name).delete();
 	}
 
-	private Runnable runnable = new Runnable() {
+	private Runnable writeRunnable = new Runnable() {
 		@Override
 		public void run() {
 			doWriteThisToFile();
@@ -537,24 +543,12 @@ public class DownloadMission {
 			if (threadPoolExecutor == null) {
 				threadPoolExecutor = ThreadPoolFactory.newFixedThreadPool(missionConfig.getThreadPoolConfig());
 			}
-			threadPoolExecutor.submit(runnable);
+			threadPoolExecutor.submit(writeRunnable);
 		}
 	}
 	
 	private void doWriteThisToFile() {
 		synchronized (blockState) {
-//			try {
-//				Codec<DownloadMission> downloadMissionCodec = ProtobufProxy.create(DownloadMission.class);
-//				// 序列化
-//				byte[] bb = downloadMissionCodec.encode(this);
-//				Log.d(TAG, Arrays.toString(bb));
-//				// 反序列化
-//				DownloadMission newStt = downloadMissionCodec.decode(bb);
-//				Log.d(TAG, new Gson().toJson(newStt));
-//			} catch (IOException e) {
-//				e.printStackTrace();
-//			}
-
 			Utility.writeToFile(DownloadManagerImpl.TASK_PATH + File.separator + uuid + ".zpj", new Gson().toJson(this));
 		}
 	}
@@ -567,6 +561,10 @@ public class DownloadMission {
 		if (currentRetryCount != missionConfig.getRetryCount()) {
 			currentRetryCount = missionConfig.getRetryCount();
 		}
+	}
+
+	private Context getContext() {
+		return DownloadManagerImpl.getInstance().getContext();
 	}
 
 	public String getDownloadPath() {

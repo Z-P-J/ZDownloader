@@ -20,6 +20,7 @@ import com.zpj.qxdownloader.jsoup.connection.Connection;
 import com.zpj.qxdownloader.jsoup.Jsoup;
 
 import java.io.File;
+import java.io.IOException;
 import java.net.Proxy;
 import java.util.Collections;
 import java.util.Comparator;
@@ -33,6 +34,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class DownloadManagerImpl implements DownloadManager {
 
 	private static final String TAG = DownloadManagerImpl.class.getSimpleName();
+
+	private static final String MISSIONS_PATH = "missions";
 
 	private static String DOWNLOAD_PATH = DefaultConstant.DOWNLOAD_PATH;
 
@@ -56,7 +59,13 @@ public class DownloadManagerImpl implements DownloadManager {
 	private DownloadManagerImpl(Context context, QianXunConfig options) {
 		mContext = context;
 		this.options = options;
-		TASK_PATH = mContext.getExternalFilesDir("tasks").getAbsolutePath();
+
+		File path = new File(context.getFilesDir(), MISSIONS_PATH);
+		if (!path.exists()) {
+			path.mkdirs();
+		}
+//		TASK_PATH = mContext.getExternalFilesDir("tasks").getAbsolutePath();
+		TASK_PATH = path.getPath();
 		File file = new File(getDownloadPath());
 		if (!file.exists()) {
 			file.mkdirs();
@@ -135,34 +144,34 @@ public class DownloadManagerImpl implements DownloadManager {
 		if (TASK_PATH != null) {
 			f = new File(TASK_PATH);
 		} else {
-			f = mContext.getExternalFilesDir("tasks");
+			f = new File(getContext().getFilesDir(), MISSIONS_PATH);
 		}
 
 
-		if (f != null) {
-			if (f.exists() && f.isDirectory()) {
-				File[] subs = f.listFiles();
+		if (f.exists() && f.isDirectory()) {
+			File[] subs = f.listFiles();
 
-				for (File sub : subs) {
-					if (sub.isDirectory()) {
-						continue;
-					}
+			for (final File sub : subs) {
+				if (sub.isDirectory()) {
+					continue;
+				}
 
-					if (sub.getName().endsWith(".zpj")) {
-						String str = Utility.readFromFile(sub.getAbsolutePath());
-						if (!TextUtils.isEmpty(str)) {
+				if (sub.getName().endsWith(".zpj")) {
+//					final File newFile = new File(mContext.getExternalFilesDir(MISSIONS_PATH).getAbsolutePath(), sub.getName());
+//					FileUtil.copyFile(sub, newFile);
+					String str = Utility.readFromFile(sub.getAbsolutePath());
+					if (!TextUtils.isEmpty(str)) {
 //							Log.d(TAG, "loading mission " + sub.getName());
 //							Log.d(TAG, str);
-							DownloadMission mis = new Gson().fromJson(str, DownloadMission.class);
+						DownloadMission mis = new Gson().fromJson(str, DownloadMission.class);
 //							mis.running = false;
-							mis.recovered = true;
-							insertMission(mis);
-						}
+						mis.recovered = true;
+						insertMission(mis);
 					}
 				}
-			} else {
-				f.mkdirs();
 			}
+		} else {
+			f.mkdirs();
 		}
 		Collections.sort(ALL_MISSIONS, new Comparator<DownloadMission>() {
 			@Override
@@ -398,7 +407,7 @@ public class DownloadManagerImpl implements DownloadManager {
 //			i = 0;
 //		}
 
-		mission.initNotification();
+//		mission.initNotification();
 		ALL_MISSIONS.add(mission);
 		return ALL_MISSIONS.size() - 1;
 	}
@@ -460,7 +469,7 @@ public class DownloadManagerImpl implements DownloadManager {
 						.maxBodySize(0)
 						.execute();
 
-				if (!handleResponse(response, mission)) {
+				if (handleResponse(response, mission)) {
 					return;
 				}
 
@@ -501,7 +510,7 @@ public class DownloadManagerImpl implements DownloadManager {
 //					return;
 //				}
 
-				if (!handleResponse(response, mission)) {
+				if (handleResponse(response, mission)) {
 					return;
 				}
 
@@ -591,7 +600,7 @@ public class DownloadManagerImpl implements DownloadManager {
 		} else if (response.statusCode() == ErrorCode.ERROR_SERVER_404){
 			mission.errCode = ErrorCode.ERROR_SERVER_404;
 			mission.notifyError(ErrorCode.ERROR_SERVER_404);
-			return false;
+			return true;
 		} else if (response.statusCode() == ResponseCode.RESPONSE_206){
 			Log.d("statusCode11111111", "       " + response.statusCode());
 			String contentLength = response.header("Content-Length");
@@ -606,9 +615,9 @@ public class DownloadManagerImpl implements DownloadManager {
 
 			Log.d("mission.length", "mission.length=" + mission.length);
 
-			return checkLength(mission);
+			return !checkLength(mission);
 		}
-		return true;
+		return false;
 	}
 
 	private String getMissionNameFromResponse(Connection.Response response) {

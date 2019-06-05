@@ -10,23 +10,27 @@ import android.os.Environment;
 import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.text.TextUtils;
+import android.util.Log;
 
 import com.zpj.qxdownloader.R;
 
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.security.MessageDigest;
 import java.util.zip.CRC32;
 
 /**
  * @author Z-P-J
- * */
+ */
 public class FileUtil {
 
-    public enum FILE_TYPE{
+    public enum FILE_TYPE {
         /**
          * 文件类型
-         * */
+         */
         VIDEO,
         MUSIC,
         IMAGE,
@@ -45,97 +49,94 @@ public class FileUtil {
         UNKNOWN
     }
 
-    private static final String[] IMG = { ".bmp", ".jpg", ".jpeg", ".png", ".tiff", ".gif", ".pcx", ".tga", ".exif", ".fpx", ".svg", ".psd",
-            ".cdr", ".pcd", ".dxf", ".ufo", ".eps", ".ai", ".raw", ".wmf" };
-    private static final String[] VIDEO = { ".mp4", ".avi", ".mov", ".wmv", ".asf", ".navi", ".3gp", ".mkv", ".f4v", ".rmvb", ".webm", ".flv", ".rm", ".ts", ".vob", ".m2ts" };
-    private static final String[] MUSIC = { ".mp3", ".wma", ".wav", ".mod", ".ra", ".cd", ".md", ".asf", ".aac", ".vqf", ".ape", ".mid", ".ogg", ".m4a", ".vqf", ".flac", ".ape", ".midi" };
-    private static final String[] ARCHIVE = { ".zip", ".rar", ".7z", ".iso" };
-    private static final String[] EBOOK = { ".epub", ".umb", ".wmlc", ".pdb", ".mdx", ".xps" };
+    private static final String[] IMG = {".bmp", ".jpg", ".jpeg", ".png", ".tiff", ".gif", ".pcx", ".tga", ".exif", ".fpx", ".svg", ".psd",
+            ".cdr", ".pcd", ".dxf", ".ufo", ".eps", ".ai", ".raw", ".wmf"};
+    private static final String[] VIDEO = {".mp4", ".avi", ".mov", ".wmv", ".asf", ".navi", ".3gp", ".mkv", ".f4v", ".rmvb", ".webm", ".flv", ".rm", ".ts", ".vob", ".m2ts"};
+    private static final String[] MUSIC = {".mp3", ".wma", ".wav", ".mod", ".ra", ".cd", ".md", ".asf", ".aac", ".vqf", ".ape", ".mid", ".ogg", ".m4a", ".vqf", ".flac", ".ape", ".midi"};
+    private static final String[] ARCHIVE = {".zip", ".rar", ".7z", ".iso"};
+    private static final String[] EBOOK = {".epub", ".umb", ".wmlc", ".pdb", ".mdx", ".xps"};
 
     //static String document[] = { ".txt", ".doc", ".docx", ".xls", ".htm", ".html", ".jsp", ".rtf", ".wpd", ".pdf", ".ppt" };
 
-    private static final String[][] MIME_MAP_TABLE={
+    private static final String[][] MIME_MAP_TABLE = {
             //{后缀名， MIME类型}
-            {".3gp",    "video/3gpp"},
-            {".apk",    "application/vnd.android.package-archive"},
-            {".asf",    "video/x-ms-asf"},
-            {".avi",    "video/x-msvideo"},
-            {".bin",    "application/octet-stream"},
-            {".bmp",    "image/bmp"},
-            {".c",  "text/plain"},
-            {".class",  "application/octet-stream"},
-            {".conf",   "text/plain"},
-            {".cpp",    "text/plain"},
-            {".doc",    "application/msword"},
-            {".docx",   "application/vnd.openxmlformats-officedocument.wordprocessingml.document"},
-            {".xls",    "application/vnd.ms-excel"},
-            {".xlsx",   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
-            {".exe",    "application/octet-stream"},
-            {".gif",    "image/gif"},
-            {".gtar",   "application/x-gtar"},
+            {".3gp", "video/3gpp"},
+            {".apk", "application/vnd.android.package-archive"},
+            {".asf", "video/x-ms-asf"},
+            {".avi", "video/x-msvideo"},
+            {".bin", "application/octet-stream"},
+            {".bmp", "image/bmp"},
+            {".c", "text/plain"},
+            {".class", "application/octet-stream"},
+            {".conf", "text/plain"},
+            {".cpp", "text/plain"},
+            {".doc", "application/msword"},
+            {".docx", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"},
+            {".xls", "application/vnd.ms-excel"},
+            {".xlsx", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"},
+            {".exe", "application/octet-stream"},
+            {".gif", "image/gif"},
+            {".gtar", "application/x-gtar"},
             {".gz", "application/x-gzip"},
-            {".h",  "text/plain"},
-            {".htm",    "text/html"},
-            {".html",   "text/html"},
-            {".jar",    "application/java-archive"},
-            {".java",   "text/plain"},
-            {".jpeg",   "image/jpeg"},
-            {".jpg",    "image/jpeg"},
+            {".h", "text/plain"},
+            {".htm", "text/html"},
+            {".html", "text/html"},
+            {".jar", "application/java-archive"},
+            {".java", "text/plain"},
+            {".jpeg", "image/jpeg"},
+            {".jpg", "image/jpeg"},
             {".js", "application/x-javascript"},
-            {".log",    "text/plain"},
-            {".m3u",    "audio/x-mpegurl"},
-            {".m4a",    "audio/mp4a-latm"},
-            {".m4b",    "audio/mp4a-latm"},
-            {".m4p",    "audio/mp4a-latm"},
-            {".m4u",    "video/vnd.mpegurl"},
-            {".m4v",    "video/x-m4v"},
-            {".mov",    "video/quicktime"},
-            {".mp2",    "audio/x-mpeg"},
-            {".mp3",    "audio/x-mpeg"},
-            {".mp4",    "video/mp4"},
-            {".mpc",    "application/vnd.mpohun.certificate"},
-            {".mpe",    "video/mpeg"},
-            {".mpeg",   "video/mpeg"},
-            {".mpg",    "video/mpeg"},
-            {".mpg4",   "video/mp4"},
-            {".mpga",   "audio/mpeg"},
-            {".msg",    "application/vnd.ms-outlook"},
-            {".ogg",    "audio/ogg"},
-            {".pdf",    "application/pdf"},
-            {".png",    "image/png"},
-            {".pps",    "application/vnd.ms-powerpoint"},
-            {".ppt",    "application/vnd.ms-powerpoint"},
-            {".pptx",   "application/vnd.openxmlformats-officedocument.presentationml.presentation"},
-            {".prop",   "text/plain"},
+            {".log", "text/plain"},
+            {".m3u", "audio/x-mpegurl"},
+            {".m4a", "audio/mp4a-latm"},
+            {".m4b", "audio/mp4a-latm"},
+            {".m4p", "audio/mp4a-latm"},
+            {".m4u", "video/vnd.mpegurl"},
+            {".m4v", "video/x-m4v"},
+            {".mov", "video/quicktime"},
+            {".mp2", "audio/x-mpeg"},
+            {".mp3", "audio/x-mpeg"},
+            {".mp4", "video/mp4"},
+            {".mpc", "application/vnd.mpohun.certificate"},
+            {".mpe", "video/mpeg"},
+            {".mpeg", "video/mpeg"},
+            {".mpg", "video/mpeg"},
+            {".mpg4", "video/mp4"},
+            {".mpga", "audio/mpeg"},
+            {".msg", "application/vnd.ms-outlook"},
+            {".ogg", "audio/ogg"},
+            {".pdf", "application/pdf"},
+            {".png", "image/png"},
+            {".pps", "application/vnd.ms-powerpoint"},
+            {".ppt", "application/vnd.ms-powerpoint"},
+            {".pptx", "application/vnd.openxmlformats-officedocument.presentationml.presentation"},
+            {".prop", "text/plain"},
             {".rc", "text/plain"},
-            {".rmvb",   "audio/x-pn-realaudio"},
-            {".rtf",    "application/rtf"},
+            {".rmvb", "audio/x-pn-realaudio"},
+            {".rtf", "application/rtf"},
             {".sh", "text/plain"},
-            {".tar",    "application/x-tar"},
-            {".tgz",    "application/x-compressed"},
-            {".txt",    "text/plain"},
-            {".wav",    "audio/x-wav"},
-            {".wma",    "audio/x-ms-wma"},
-            {".wmv",    "audio/x-ms-wmv"},
-            {".wps",    "application/vnd.ms-works"},
-            {".xml",    "text/plain"},
-            {".z",  "application/x-compress"},
-            {".zip",    "application/x-zip-compressed"},
+            {".tar", "application/x-tar"},
+            {".tgz", "application/x-compressed"},
+            {".txt", "text/plain"},
+            {".wav", "audio/x-wav"},
+            {".wma", "audio/x-ms-wma"},
+            {".wmv", "audio/x-ms-wmv"},
+            {".wps", "application/vnd.ms-works"},
+            {".xml", "text/plain"},
+            {".z", "application/x-compress"},
+            {".zip", "application/x-zip-compressed"},
             {".torrent", "application/x-bittorrent"},
-            {"",        "*/*"}
+            {"", "*/*"}
     };
-
-
-
 
 
     /**
      * Get the value of the data column for this Uri. This is useful for
      * MediaStore Uris, and other file-based ContentProviders.
      *
-     * @param context The context.
-     * @param uri The Uri to query.
-     * @param selection (Optional) Filter used in the query.
+     * @param context       The context.
+     * @param uri           The Uri to query.
+     * @param selection     (Optional) Filter used in the query.
      * @param selectionArgs (Optional) Selection arguments used in the query.
      * @return The value of the _data column, which is typically a file path.
      */
@@ -162,7 +163,7 @@ public class FileUtil {
      * other file-based ContentProviders.
      *
      * @param context The context.
-     * @param uri The Uri to query.
+     * @param uri     The Uri to query.
      * @author paulburke
      */
     public static String getPath(final Context context, final Uri uri) {
@@ -207,7 +208,7 @@ public class FileUtil {
                 }
 
                 final String selection = "_id=?";
-                final String[] selectionArgs = new String[] {
+                final String[] selectionArgs = new String[]{
                         split[1]
                 };
 
@@ -300,7 +301,6 @@ public class FileUtil {
     }
 
 
-
     private static String bytesToHexString(byte[] src) {
         StringBuilder stringBuilder = new StringBuilder("");
         if (src == null || src.length <= 0) {
@@ -360,7 +360,7 @@ public class FileUtil {
 //        return size;
 //    }
 
-    public static FILE_TYPE checkFileType(String fileName){
+    public static FILE_TYPE checkFileType(String fileName) {
         fileName = fileName.toLowerCase();
         if (fileName.endsWith(".torrent")) {
             return FILE_TYPE.TORRENT;
@@ -412,7 +412,7 @@ public class FileUtil {
         return FILE_TYPE.UNKNOWN;
     }
 
-    public static int getFileTypeIconId(String fileName){
+    public static int getFileTypeIconId(String fileName) {
         FILE_TYPE fileType = checkFileType(fileName);
         if (fileType.equals(FILE_TYPE.TORRENT)) {
             return R.drawable.wechat_icon_bt;
@@ -448,7 +448,7 @@ public class FileUtil {
         return R.drawable.wechat_icon_others;
     }
 
-    public static void openFile(Context context, File file){
+    public static void openFile(Context context, File file) {
 
         Intent intent = new Intent();
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -459,7 +459,7 @@ public class FileUtil {
         //设置intent的data和Type属性。
         intent.setDataAndType(/*uri*/Uri.fromFile(file), type);
         //跳转
-        try{
+        try {
             context.startActivity(intent);
         } catch (Exception e) {
             e.printStackTrace();
@@ -468,19 +468,20 @@ public class FileUtil {
 
     /**
      * 根据文件后缀名获得对应的MIME类型。
+     *
      * @param file the file
      */
     public static String getMIMEType(File file) {
-        String type="*/*";
+        String type = "*/*";
         String fName = file.getName();
         //获取后缀名前的分隔符"."在fName中的位置。
         int dotIndex = fName.lastIndexOf(".");
-        if(dotIndex < 0){
+        if (dotIndex < 0) {
             return type;
         }
         /* 获取文件的后缀名*/
-        String end = fName.substring(dotIndex,fName.length()).toLowerCase();
-        if(TextUtils.isEmpty(end)) {
+        String end = fName.substring(dotIndex, fName.length()).toLowerCase();
+        if (TextUtils.isEmpty(end)) {
             return type;
         }
         //在MIME和文件类型的匹配表中找到对应的MIME类型。
@@ -490,5 +491,63 @@ public class FileUtil {
             }
         }
         return type;
+    }
+
+    public static String getFileProviderName(Context context) {
+        return context.getPackageName() + ".fileprovider";
+    }
+
+    public static void writeFile(Context context, String fileName, String content) throws Exception {
+        FileOutputStream outStream = context.openFileOutput(fileName, Context.MODE_PRIVATE);
+        outStream.write(content.getBytes());
+        outStream.close();
+    }
+
+    public static String readFile(Context context, String fileName) throws FileNotFoundException {
+        FileInputStream inStream = null;
+        inStream = context.openFileInput(fileName);
+        //输出到内存
+        ByteArrayOutputStream outStream = new ByteArrayOutputStream();
+        int len = 0;
+        byte[] buffer = new byte[1024];
+        try {
+            while ((len = inStream.read(buffer)) != -1) {
+                outStream.write(buffer, 0, len);
+            }
+            byte[] contentByte = outStream.toByteArray();
+            return new String(contentByte);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public static boolean copyFile(File oldFile, File newFile) {
+        try {
+            if (!oldFile.exists()) {
+                Log.e("--Method--", "copyFile:  oldFile not exist.");
+                return false;
+            } else if (!oldFile.isFile()) {
+                Log.e("--Method--", "copyFile:  oldFile not file.");
+                return false;
+            } else if (!oldFile.canRead()) {
+                Log.e("--Method--", "copyFile:  oldFile cannot read.");
+                return false;
+            }
+
+            FileInputStream fileInputStream = new FileInputStream(oldFile);
+            FileOutputStream fileOutputStream = new FileOutputStream(newFile);
+            byte[] buffer = new byte[1024];
+            int byteRead;
+            while (-1 != (byteRead = fileInputStream.read(buffer))) {
+                fileOutputStream.write(buffer, 0, byteRead);
+            }
+            fileInputStream.close();
+            fileOutputStream.flush();
+            fileOutputStream.close();
+            return true;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 }
