@@ -1,2 +1,3 @@
-include ':app', ':qxdownloader', ':dialoglib'
-rootProject.name='MyDownloader'
+include ':app',
+        ':qxdownloader',
+        ':dialoglib'
