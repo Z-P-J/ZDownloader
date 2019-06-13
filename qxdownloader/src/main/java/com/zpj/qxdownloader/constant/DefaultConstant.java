@@ -7,7 +7,7 @@ import android.os.Environment;
  * */
 public class DefaultConstant {
 
-    public static final String DOWNLOAD_PATH = Environment.getExternalStorageDirectory().getAbsolutePath() + "/QianXun/";
+    public static final String DOWNLOAD_PATH = Environment.getExternalStorageDirectory().getAbsolutePath() + "/QXDownloader/";
 
     public static final int BUFFER_SIZE = 1024;
 

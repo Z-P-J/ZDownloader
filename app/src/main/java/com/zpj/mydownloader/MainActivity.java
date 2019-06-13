@@ -25,7 +25,7 @@ import android.widget.Toast;
 
 import com.zpj.qianxundialoglib.IDialog;
 import com.zpj.qianxundialoglib.QianxunDialog;
-import com.zpj.qxdownloader.QianXun;
+import com.zpj.qxdownloader.QXDownloader;
 import com.zpj.qxdownloader.core.DownloadManager;
 import com.zpj.qxdownloader.core.DownloadMission;
 import com.zpj.qxdownloader.jsoup.Jsoup;
@@ -47,20 +47,6 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-//        QianXun.grandStoragePermission(this);
-
-//        if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)
-//                != PackageManager.PERMISSION_GRANTED
-//                || ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-//                != PackageManager.PERMISSION_GRANTED)
-//        {
-//
-//            ActivityCompat.requestPermissions(this,
-//                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE,
-//                            Manifest.permission.WRITE_EXTERNAL_STORAGE},
-//                    100);
-//        }
 
         RecyclerView recyclerView = findViewById(R.id.recycler_view);
         recyclerView.setLayoutManager(new LinearLayoutManager(this));
@@ -87,7 +73,7 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
 
     @Override
     protected void onDestroy() {
-        QianXun.unInit();
+        QXDownloader.unInit();
         super.onDestroy();
     }
 
@@ -172,24 +158,24 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
                     }
 
                     openFile.setOnClickListener(v -> {
-                        QianXun.openFile(mission);
+                        QXDownloader.openFile(mission);
                         dialog.dismiss();
                     });
 
                     pauseDownload.setOnClickListener(v -> {
-                        QianXun.pause(mission);
+                        QXDownloader.pause(mission);
                         holder.lastTimeStamp = -1;
                         holder.lastDone = -1;
                         dialog.dismiss();
                     });
 
                     resumeDownload.setOnClickListener(v -> {
-                        QianXun.resume(mission);
+                        QXDownloader.resume(mission);
                         dialog.dismiss();
                     });
 
                     deleteTask.setOnClickListener(v -> {
-                        QianXun.delete(mission);
+                        QXDownloader.delete(mission);
                         missionAdapter.notifyDataSetChanged();
                         dialog.dismiss();
                     });
@@ -313,7 +299,7 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
 
                         ok.setOnClickListener(v -> {
                             //todo
-                            QianXun.download(text.getText().toString());
+                            QXDownloader.download(text.getText().toString());
                             dialog.dismiss();
                         });
                     }

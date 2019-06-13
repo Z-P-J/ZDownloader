@@ -4,12 +4,10 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
-import android.net.Network;
 import android.net.NetworkInfo;
-import android.os.Build;
 import android.widget.Toast;
 
-import com.zpj.qxdownloader.QianXun;
+import com.zpj.qxdownloader.QXDownloader;
 
 /**
  * @author Z-P-J
@@ -36,12 +34,12 @@ public class NetworkChangeReceiver extends BroadcastReceiver {
             } else if (networkInfo.getType() == ConnectivityManager.TYPE_WIFI) {
                 Toast.makeText(context, "正在使用WIFI", Toast.LENGTH_SHORT).show();
             }
-            if (QianXun.isWaitingForInternet()) {
-                QianXun.resumeAll();
+            if (QXDownloader.isWaitingForInternet()) {
+                QXDownloader.resumeAll();
             }
         } else {
             Toast.makeText(context, "当前网络不可用", Toast.LENGTH_SHORT).show();
-            QianXun.waitingForInternet();
+            QXDownloader.waitingForInternet();
         }
     }
 

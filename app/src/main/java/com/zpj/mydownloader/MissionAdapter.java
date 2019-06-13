@@ -7,6 +7,7 @@ import android.support.annotation.NonNull;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -14,7 +15,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.zpj.qxdownloader.QianXun;
+import com.zpj.qxdownloader.QXDownloader;
 import com.zpj.qxdownloader.core.DownloadManager;
 import com.zpj.qxdownloader.core.DownloadMission;
 import com.zpj.qxdownloader.service.DownloadManagerService;
@@ -45,7 +46,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 	
 	MissionAdapter(Context context, boolean isLinear) {
 		mContext = context;
-		mManager = QianXun.getDownloadManager();
+		mManager = QXDownloader.getDownloadManager();
 		mManager.setDownloadManagerListener(this);
 //		mBinder = binder;
 		
@@ -177,6 +178,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 				}
 			} else {
 				float progress = h.mission.getProgress();
+				Log.d("progress", "progress=" + progress);
 				h.menu.setProgress(progress);
 				h.status.setText(String.format(Locale.CHINA, "%.2f%%", progress));
 				h.progress.setProgress(progress / 100);

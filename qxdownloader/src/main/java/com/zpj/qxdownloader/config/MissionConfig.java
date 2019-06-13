@@ -30,7 +30,8 @@ public class MissionConfig extends BaseConfig {
                 .setConnectOutTime(config.connectOutTime)
                 .setReadOutTime(config.readOutTime)
                 .setUserAgent(config.userAgent)
-                .setCookie(config.cookie);
+                .setCookie(config.cookie)
+                .setEnableNotification(config.enableNotification);
     }
 
     @Override
@@ -115,6 +116,12 @@ public class MissionConfig extends BaseConfig {
     @Override
     public MissionConfig setProxy(String host, int port) {
         this.proxy = new Proxy(Proxy.Type.HTTP, InetSocketAddress.createUnresolved(host, port));
+        return this;
+    }
+
+    @Override
+    public MissionConfig setEnableNotification(boolean enableNotification) {
+        this.enableNotification = enableNotification;
         return this;
     }
 

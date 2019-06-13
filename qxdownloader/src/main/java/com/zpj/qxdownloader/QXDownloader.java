@@ -5,7 +5,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.net.Uri;
 import android.os.Build;
-import android.os.Environment;
 import android.support.v4.content.FileProvider;
 import android.text.TextUtils;
 import android.widget.Toast;
@@ -27,7 +26,7 @@ import java.io.File;
  *
  * @author Z-P-J
  * */
-public class QianXun {
+public class QXDownloader {
 
 //    private static DownloadManager mManager;
 //    private static DownloadManagerService.DMBinder mBinder;
@@ -54,7 +53,7 @@ public class QianXun {
 
     private static boolean waitingForInternet = false;
 
-    private QianXun() {
+    private QXDownloader() {
 
     }
 
@@ -87,7 +86,7 @@ public class QianXun {
 
 //    public static void register(Context context, RegisterListener registerListener) {
 //        NotifyUtil.init(context);
-//        QianXun.registerListener = registerListener;
+//        QXDownloader.registerListener = registerListener;
 //        if (mManager == null || mBinder == null) {
 //            Intent intent = new Intent();
 //            intent.setClass(context, DownloadManagerService.class);
@@ -177,7 +176,7 @@ public class QianXun {
     public static void clear(DownloadMission mission) {
 //        mManager.clearMission(mission.uuid);
         mission.pause();
-        mission.deleteThisFromFile();
+        mission.deleteMissionInfo();
         DownloadManagerImpl.getInstance().getMissions().remove(mission);
 //        mBinder.onMissionRemoved(mission);
     }
@@ -197,7 +196,7 @@ public class QianXun {
         boolean success = file.renameTo(file2Rename);
         if (success) {
             mission.name = name;
-            mission.writeThisToFile();
+            mission.writeMissionInfo();
             DownloadManager.DownloadManagerListener downloadManagerListener =  DownloadManagerImpl.getInstance().getDownloadManagerListener();
             if (downloadManagerListener != null) {
                 downloadManagerListener.onMissionAdd();

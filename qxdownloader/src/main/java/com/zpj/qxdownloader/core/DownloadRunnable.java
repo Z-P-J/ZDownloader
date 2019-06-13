@@ -20,7 +20,6 @@ public class DownloadRunnable implements Runnable
 	private static final String TAG = DownloadRunnable.class.getSimpleName();
 
 	private static final int BUFFER_SIZE = 512;
-
 	
 	private final DownloadMission mMission;
 	private int mId;
@@ -35,14 +34,14 @@ public class DownloadRunnable implements Runnable
 		mMission = mission;
 		mId = id;
 		try {
-			f = new BufferedRandomAccessFile(mMission.getDownloadPath() + File.separator + mMission.name, "rw");
+			f = new BufferedRandomAccessFile(mMission.getFilePath(), "rw");
 		} catch (IOException e) {
 			e.printStackTrace();
 //			PermissionUtil.hasPermissions(DownloadManagerImpl.getInstance().getContext(), Permission.Group.STORAGE);
 			if (PermissionUtil.checkStoragePermissions(DownloadManagerImpl.getInstance().getContext())) {
 				notifyError(ErrorCode.ERROR_FILE_NOT_FOUND);
 			} else {
-				notifyError(ErrorCode.ERROR_NOT_HAVE_STORAGE_PERMISSIONS);
+				notifyError(ErrorCode.ERROR_WITHOUT_STORAGE_PERMISSIONS);
 			}
 
 			return;
@@ -56,7 +55,6 @@ public class DownloadRunnable implements Runnable
 			public void handleMessage(Message msg) {
 				if (msg.what == 0) {
 					int obj = (int) msg.obj;
-//					notifyProgress(obj);
 					synchronized (mMission) {
 						mMission.notifyProgress(obj);
 					}
@@ -343,52 +341,9 @@ public class DownloadRunnable implements Runnable
 			e.printStackTrace();
 		}
 	}
-
-//	private HttpURLConnection getConnection(String link, long start, long end) throws Exception {
-//		URL url = new URL(link);
-//		HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-//		wrapConnection(conn);
-//		conn.setRequestProperty("Range", "bytes=" + start + "-" + end);
-//		return conn;
-//	}
-//
-//	private HttpURLConnection getConnection(String link) throws Exception {
-//		URL url = new URL(link);
-//		HttpURLConnection conn = (HttpURLConnection)url.openConnection();
-//		wrapConnection(conn);
-//		return conn;
-//	}
-//
-//	private void wrapConnection(HttpURLConnection conn) {
-//		if (conn instanceof HttpsURLConnection) {
-////			HttpsURLConnection httpsURLConnection = (HttpsURLConnection) conn;
-//			SSLContext sslContext =
-//					SSLContextUtil.getSSLContext(DownloadManagerImpl.getInstance().getContext(), SSLContextUtil.CA_ALIAS, SSLContextUtil.CA_PATH);
-//			if (sslContext == null) {
-//				sslContext = SSLContextUtil.getDefaultSLLContext();
-//			}
-//			SSLSocketFactory ssf = sslContext.getSocketFactory();
-//			((HttpsURLConnection) conn).setSSLSocketFactory(ssf);
-//			((HttpsURLConnection) conn).setHostnameVerifier(SSLContextUtil.HOSTNAME_VERIFIER);
-//		}
-//		conn.setInstanceFollowRedirects(false);
-//		conn.setConnectTimeout(mMission.getConnectOutTime());
-//		conn.setReadTimeout(mMission.getReadOutTime());
-//		if (!TextUtils.isEmpty(mMission.getCookie().trim())) {
-//			conn.setRequestProperty("Cookie", mMission.getCookie());
-//		}
-//		conn.setRequestProperty("User-Agent", mMission.getUserAgent());
-//		conn.setRequestProperty("Accept", "*/*");
-//		conn.setRequestProperty("Referer",mMission.url);
-//		Map<String, String> headers = mMission.getHeaders();
-//		if (!headers.isEmpty()) {
-//			for (String key : headers.keySet()) {
-//				conn.setRequestProperty(key, headers.get(key));
-//			}
-//		}
-//	}
 	
 	public void notifyProgress(final int len) {
+		Log.d("notifyProgress", "len=" + len);
 		Message msg = new Message();
 		msg.obj = len;
 		msg.what = 0;

@@ -15,6 +15,6 @@ public class ErrorCode {
 
     public static final int ERROR_FILE_NOT_FOUND = 1;
 
-    public static final int ERROR_NOT_HAVE_STORAGE_PERMISSIONS = 2;
+    public static final int ERROR_WITHOUT_STORAGE_PERMISSIONS = 2;
 
 }

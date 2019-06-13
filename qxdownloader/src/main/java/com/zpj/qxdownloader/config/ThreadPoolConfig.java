@@ -73,7 +73,6 @@ public class ThreadPoolConfig {
         return this;
     }
 
-    @Deprecated
     public BlockingQueue<Runnable> getWorkQueue() {
         return workQueue;
     }
@@ -83,7 +82,6 @@ public class ThreadPoolConfig {
         return this;
     }
 
-    @Deprecated
     public ThreadFactory getThreadFactory() {
         return threadFactory;
     }
@@ -93,7 +91,6 @@ public class ThreadPoolConfig {
         return this;
     }
 
-    @Deprecated
     public RejectedExecutionHandler getHandler() {
         return handler;
     }

@@ -20,7 +20,6 @@ import com.zpj.qxdownloader.jsoup.connection.Connection;
 import com.zpj.qxdownloader.jsoup.Jsoup;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.Proxy;
 import java.util.Collections;
 import java.util.Comparator;
@@ -41,6 +40,8 @@ public class DownloadManagerImpl implements DownloadManager {
 
 	static String TASK_PATH;
 
+	static String MISSION_INFO_FILE_SUFFIX_NAME = ".zpj";
+
 	private static DownloadManager mManager;
 	
 	private Context mContext;
@@ -49,7 +50,7 @@ public class DownloadManagerImpl implements DownloadManager {
 
 	private QianXunConfig options;
 
-	private static AtomicInteger downloadingCount = new AtomicInteger(0);;
+	private static AtomicInteger downloadingCount = new AtomicInteger(0);
 
 
 	private DownloadManagerImpl() {
@@ -95,7 +96,7 @@ public class DownloadManagerImpl implements DownloadManager {
 		DownloadManagerImpl.DOWNLOAD_PATH = downloadPath;
 	}
 
-	static int getDownloadingCount() {
+	private static int getDownloadingCount() {
 		return downloadingCount.get();
 	}
 
@@ -156,7 +157,7 @@ public class DownloadManagerImpl implements DownloadManager {
 					continue;
 				}
 
-				if (sub.getName().endsWith(".zpj")) {
+				if (sub.getName().endsWith(MISSION_INFO_FILE_SUFFIX_NAME)) {
 //					final File newFile = new File(mContext.getExternalFilesDir(MISSIONS_PATH).getAbsolutePath(), sub.getName());
 //					FileUtil.copyFile(sub, newFile);
 					String str = Utility.readFromFile(sub.getAbsolutePath());
@@ -165,7 +166,9 @@ public class DownloadManagerImpl implements DownloadManager {
 //							Log.d(TAG, str);
 						DownloadMission mis = new Gson().fromJson(str, DownloadMission.class);
 //							mis.running = false;
+						Log.d("initMissions", "mis=null? " + (mis == null));
 						mis.recovered = true;
+						mis.init();
 						insertMission(mis);
 					}
 				}
@@ -221,8 +224,8 @@ public class DownloadManagerImpl implements DownloadManager {
 		if (downloadManagerListener != null) {
 			downloadManagerListener.onMissionAdd();
 		}
-		mission.writeThisToFile();
-		new Initializer(mission).start();
+//		new Initializer(mission).start();
+		mission.init();
 		return i;
 	}
 
@@ -248,7 +251,7 @@ public class DownloadManagerImpl implements DownloadManager {
 //		if (downloadManagerListener != null) {
 //			downloadManagerListener.onMissionAdd();
 //		}
-//		mission.writeThisToFile();
+//		mission.writeMissionInfo();
 //		new Initializer(mission).start();
 //		return i;
 //	}
@@ -339,7 +342,7 @@ public class DownloadManagerImpl implements DownloadManager {
 	public void clearMission(int i) {
 		DownloadMission d = getMission(i);
 		d.pause();
-		d.deleteThisFromFile();
+		d.deleteMissionInfo();
 		ALL_MISSIONS.remove(i);
 		if (downloadManagerListener != null) {
 			downloadManagerListener.onMissionDelete();
@@ -350,7 +353,7 @@ public class DownloadManagerImpl implements DownloadManager {
 	public void clearMission(String uuid) {
 		DownloadMission d = getMission(uuid);
 		d.pause();
-		d.deleteThisFromFile();
+		d.deleteMissionInfo();
 		ALL_MISSIONS.remove(d);
 		if (downloadManagerListener != null) {
 			downloadManagerListener.onMissionDelete();
@@ -361,7 +364,7 @@ public class DownloadManagerImpl implements DownloadManager {
 	public void clearAllMissions() {
 		for (DownloadMission mission : ALL_MISSIONS) {
 			mission.pause();
-			mission.deleteThisFromFile();
+			mission.deleteMissionInfo();
 		}
 		ALL_MISSIONS.clear();
 		if (downloadManagerListener != null) {

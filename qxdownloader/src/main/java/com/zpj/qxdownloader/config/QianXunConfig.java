@@ -111,6 +111,12 @@ public class QianXunConfig extends BaseConfig {
         return this;
     }
 
+    @Override
+    public QianXunConfig setEnableNotification(boolean enableNotification) {
+        this.enableNotification = enableNotification;
+        return this;
+    }
+
     public int getConcurrentMissionCount() {
         return concurrentMissionCount;
     }
