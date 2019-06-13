@@ -13,7 +13,7 @@ public class MyApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        QianXun.init(this); //初始化
+        QXDownloader.init(this); //初始化
     }
 
 }            
@@ -21,7 +21,7 @@ public class MyApplication extends Application {
 
 ### 2. 下载并监听进度
 ```java
-QianXun.download("your download url")
+QXDownloader.download("your download url")
                 .addListener(new DownloadMission.MissionListener() {
                     @Override
                     public void onInit() {
@@ -65,41 +65,41 @@ QianXun.download("your download url")
 @Override
 protected void onDestroy() {
     super.onDestroy();
-    QianXun.unInit();
+    QXDownloader.unInit();
 }
 ```
 
 ### 4. 其它操作
 ```java
 //暂停下载
-QianXun.pause(mission);
+QXDownloader.pause(mission);
 
 //恢复下载
-QianXun.resume(mission);
+QXDownloader.resume(mission);
 
 //删除下载任务和下载文件
-QianXun.delete(mission);
+QXDownloader.delete(mission);
 
 //删除下载任务(不包含下载文件)
-QianXun.clear(mission);
+QXDownloader.clear(mission);
 
 //暂停所有下载任务
-QianXun.pauseAll();
+QXDownloader.pauseAll();
 
 //恢复所有下载任务
-QianXun.resumeAll();
+QXDownloader.resumeAll();
 
 //删除所有下载任务和下载文件
-QianXun.deleteAll();
+QXDownloader.deleteAll();
 
 //删除所有下载任务(不包含下载文件)
-QianXun.clearAll();
+QXDownloader.clearAll();
 
 //打开下载完成的文件
-QianXun.openFile(mission);
+QXDownloader.openFile(mission);
 
 //重命名文件
-QianXun.rename(mission, newName);
+QXDownloader.rename(mission, newName);
 ```
 
 ## 二. 高级使用
@@ -113,6 +113,7 @@ public class MyApplication extends Application {
         //全局设置
         QianXunOptions options = QianXunOptions.with(this)
                 .setDownloadPath("") //设置默认下载路径
+                .setEnableNotification(true) //是否显示通知栏下载进度通知，默认为true
                 .setBlockSize(1024 * 1024) //设置下载块大小，默认为1024 * 1024
                 .setBufferSize(1024) //设置缓存大小
                 //.setThreadCount(5) //已过时。设置线程大小，默认为3，要修改线程数量请使用setThreadPoolConfig
@@ -139,7 +140,7 @@ public class MyApplication extends Application {
                             }
                         })
                 );
-        QianXun.init(options); //初始化
+        QXDownloader.init(options); //初始化
     }
 
 }            
@@ -150,6 +151,7 @@ public class MyApplication extends Application {
 //为每个下载任务进行设置，优先使用单独设置的参数
 MissionOptions options = MissionOptions.with()
                 .setDownloadPath("") //单独设置任务下载路径
+                .setEnableNotification(true) //单独设置是否显示通知栏下载进度通知，默认为true
                 .setBlockSize(1024 * 1024) //单独设置下载块大小，默认为1024 * 1024
                 .setBufferSize(1024) //设置缓存大小
                 //.setThreadCount(5) //单独设置线程大小，默认为3，已过时
@@ -176,6 +178,6 @@ MissionOptions options = MissionOptions.with()
                             }
                         })
                 );
-QianXun.download("your download url", options);
+QXDownloader.download("your download url", options);
 //下载进度监听同上
 ```
