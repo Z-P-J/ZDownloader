@@ -192,6 +192,7 @@ public class DownloadMission {
 
                 Log.d("mission.name", "mission.name444=" + name);
                 if (TextUtils.isEmpty(name)) {
+                    Log.d("Initializer", "getMissionNameFromUrl--url=" + url);
                     name = getMissionNameFromUrl(DownloadMission.this, url);
                 }
 
@@ -769,6 +770,7 @@ public class DownloadMission {
     }
 
     private String getMissionNameFromUrl(DownloadMission mission, String url) {
+        Log.d("getMissionNameFromUrl", "1");
         if (!TextUtils.isEmpty(url)) {
             int index = url.lastIndexOf("/");
 
@@ -780,20 +782,27 @@ public class DownloadMission {
                 }
 
                 String name = url.substring(index + 1, end);
-                if (!TextUtils.isEmpty(mission.originUrl) && TextUtils.equals(url, mission.originUrl)) {
+                Log.d("getMissionNameFromUrl", "2");
+
+                if (!TextUtils.isEmpty(mission.originUrl) && !TextUtils.equals(url, mission.originUrl)) {
                     String originName = getMissionNameFromUrl(mission, mission.originUrl);
+                    Log.d("getMissionNameFromUrl", "3");
                     if (FileUtil.checkFileType(originName) != FileUtil.FILE_TYPE.UNKNOWN) {
+                        Log.d("getMissionNameFromUrl", "4");
                         return originName;
                     }
                 }
 
                 if (FileUtil.checkFileType(name) != FileUtil.FILE_TYPE.UNKNOWN || name.contains(".")) {
+                    Log.d("getMissionNameFromUrl", "5");
                     return name;
                 } else {
+                    Log.d("getMissionNameFromUrl", "6");
                     return name + ".ext";
                 }
             }
         }
+        Log.d("getMissionNameFromUrl", "7");
         return "未知文件.ext";
     }
 
