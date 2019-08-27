@@ -124,7 +124,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 			h.name.setText(STATUS_INIT);
 		} else {
 			h.name.setText(mission.name);
-			h.size.setText(Utility.formatBytes(mission.length));
+			h.size.setText(Utility.formatSize(mission.length));
 		}
 		
 		updateProgress(h);
@@ -188,7 +188,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		if (deltaTime > DELTA_TIME_LIMIT && deltaDone > 0) {
 			float speed = (float) deltaDone / deltaTime;
 			String speedStr = Utility.formatSpeed(speed * 1000);
-			String sizeStr = Utility.formatBytes(h.mission.length);
+			String sizeStr = Utility.formatSize(h.mission.length);
 			
 			h.size.setText(sizeStr + " " + speedStr);
 			
@@ -294,7 +294,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		@Override
 		public void onFinish() {
 			if (mHolder.mission != null) {
-				mHolder.size.setText(Utility.formatBytes(mHolder.mission.length));
+				mHolder.size.setText(Utility.formatSize(mHolder.mission.length));
 				mAdapter.updateProgress(mHolder, true);
 			}
 		}

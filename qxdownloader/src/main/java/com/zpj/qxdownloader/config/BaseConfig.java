@@ -130,7 +130,7 @@ abstract class BaseConfig {
     public abstract BaseConfig setCookie(String cookie);
 
     public String getCookie() {
-        return cookie;
+        return cookie == null ? "" : cookie;
     }
 
     public abstract BaseConfig setRetryDelay(int retryDelay);

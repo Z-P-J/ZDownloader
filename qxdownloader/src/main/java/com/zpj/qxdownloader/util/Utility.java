@@ -43,7 +43,7 @@ public class Utility {
 
 
 
-	public static String formatBytes(long bytes) {
+	public static String formatSize(long bytes) {
 		if (bytes < NUM_1024) {
 			return String.format(Locale.CHINA, "%d B", bytes);
 		} else if (bytes < NUM_1024_1024) {
@@ -59,7 +59,7 @@ public class Utility {
 		if (speed < NUM_1024) {
 			return String.format(Locale.CHINA, "%.2f B/s", speed);
 		} else if (speed < NUM_1024_1024) {
-			return String.format(Locale.CHINA, "%.2f kB/s", speed / NUM_1024);
+			return String.format(Locale.CHINA, "%.2f KB/s", speed / NUM_1024);
 		} else if (speed < NUM_1024_1024_1024) {
 			return String.format(Locale.CHINA, "%.2f MB/s", speed / NUM_1024_1024);
 		} else {
