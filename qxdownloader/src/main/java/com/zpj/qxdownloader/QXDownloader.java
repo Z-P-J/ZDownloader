@@ -21,6 +21,8 @@ import com.zpj.qxdownloader.util.notification.NotifyUtil;
 import com.zpj.qxdownloader.util.permission.PermissionUtil;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  *
@@ -271,6 +273,20 @@ public class QXDownloader {
 
     public static DownloadManager getDownloadManager() {
         return DownloadManagerImpl.getInstance();
+    }
+
+    public static List<DownloadMission> getAllMissions() {
+        return DownloadManagerImpl.getInstance().getMissions();
+    }
+
+    public static List<DownloadMission> getAllMissions(boolean downloading) {
+        List<DownloadMission> downloadMissionList = new ArrayList<>();
+        for (DownloadMission mission : getAllMissions()) {
+            if (mission.isFinished() != downloading) {
+                downloadMissionList.add(mission);
+            }
+        }
+        return downloadMissionList;
     }
 
 }

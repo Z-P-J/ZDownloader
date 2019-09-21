@@ -11,6 +11,7 @@ import android.provider.DocumentsContract;
 import android.provider.MediaStore;
 import android.text.TextUtils;
 import android.util.Log;
+import android.webkit.MimeTypeMap;
 
 import com.zpj.qxdownloader.R;
 
@@ -20,6 +21,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.security.MessageDigest;
+import java.util.Locale;
 import java.util.zip.CRC32;
 
 /**
@@ -344,22 +346,6 @@ public class FileUtil {
         }
     }
 
-
-//    public static String longToSize(Long num) {
-//        String size;
-//        DecimalFormat decimalFormat = new DecimalFormat("#.00");
-//        if (num < 1024) {
-//            size = decimalFormat.format((double)num) + "B";
-//        } else if (num < 1048576) {
-//            size = decimalFormat.format((double)num / 1024) + "KB";
-//        } else if (num < 1073741824) {
-//            size = decimalFormat.format((double)num / 1048576) + "MB";
-//        } else {
-//            size = decimalFormat.format((double)num / 1073741824) + "GB";
-//        }
-//        return size;
-//    }
-
     public static FILE_TYPE checkFileType(String fileName) {
         fileName = fileName.toLowerCase();
         if (fileName.endsWith(".torrent")) {
@@ -464,6 +450,21 @@ public class FileUtil {
         } catch (Exception e) {
             e.printStackTrace();
         }
+
+//        //实现方法二
+//        Intent i = new Intent();
+//        i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+//        i.setAction(Intent.ACTION_VIEW);
+//        String ext = MimeTypeMap.getFileExtensionFromUrl(file.toURI().toString()).toLowerCase(Locale.US);
+//        String mime = MimeTypeMap.getSingleton().getMimeTypeFromExtension(ext);
+//        if (file.exists()) {
+//            i.setDataAndType(Uri.fromFile(file), mime);
+//            try {
+//                context.startActivity(i);
+//            } catch (Exception e) {
+//                e.printStackTrace();
+//            }
+//        }
     }
 
     /**

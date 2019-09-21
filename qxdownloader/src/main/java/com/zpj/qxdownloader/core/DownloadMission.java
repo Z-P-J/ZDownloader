@@ -1,11 +1,14 @@
 package com.zpj.qxdownloader.core;
 
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.LongSparseArray;
+import android.webkit.MimeTypeMap;
 
 import com.google.gson.Gson;
 import com.zpj.qxdownloader.config.MissionConfig;
@@ -26,6 +29,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ThreadPoolExecutor;
 
@@ -624,6 +628,18 @@ public class DownloadMission {
         return getDownloadPath() + File.separator + name;
     }
 
+    public File getFile() {
+        return new File(getFilePath());
+    }
+
+    public String getMimeType() {
+        return FileUtil.getMIMEType(getFile());
+    }
+
+    public String getFileSuffix() {
+        return MimeTypeMap.getFileExtensionFromUrl(getFile().toURI().toString()).toLowerCase(Locale.US);
+    }
+
     public String getUserAgent() {
         return missionConfig.getUserAgent();
     }
@@ -664,6 +680,18 @@ public class DownloadMission {
         return progress * 100f;
     }
 
+    public String getProgressStr() {
+        return String.format(Locale.US, "%.2f%%", getProgress());
+    }
+
+    public String getFileSizeStr() {
+        return Utility.formatSize(length);
+    }
+
+    public String getDownloadedSizeStr() {
+        return Utility.formatSize(done);
+    }
+
     public String getSpeed() {
         return tempSpeed;
     }
@@ -685,6 +713,10 @@ public class DownloadMission {
 
     public String getMissionInfoFilePath() {
         return DownloadManagerImpl.TASK_PATH + File.separator + uuid + DownloadManagerImpl.MISSION_INFO_FILE_SUFFIX_NAME;
+    }
+
+    public void openFile(Context context) {
+        FileUtil.openFile(context, getFile());
     }
 
 
