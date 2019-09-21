@@ -20,7 +20,7 @@ class HttpUrlConnectionFactory {
 
 
     static HttpURLConnection getConnection(DownloadMission mission, long start, long end) throws Exception {
-        URL url = new URL(mission.url);
+        URL url = new URL(mission.getUrl());
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         wrapConnection(conn, mission);
         conn.setRequestProperty("Range", "bytes=" + start + "-" + end);
@@ -28,7 +28,7 @@ class HttpUrlConnectionFactory {
     }
 
     static HttpURLConnection getConnection(DownloadMission mission) throws Exception {
-        URL url = new URL(mission.url);
+        URL url = new URL(mission.getUrl());
         HttpURLConnection conn = (HttpURLConnection)url.openConnection();
         wrapConnection(conn, mission);
         return conn;
@@ -54,7 +54,7 @@ class HttpUrlConnectionFactory {
         }
         conn.setRequestProperty(USER_AGENT, mission.getUserAgent());
 //        conn.setRequestProperty("Accept", "*/*");
-        conn.setRequestProperty(REFERER, mission.url);
+        conn.setRequestProperty(REFERER, mission.getUrl());
         Map<String, String> headers = mission.getHeaders();
         if (!headers.isEmpty()) {
             for (String key : headers.keySet()) {

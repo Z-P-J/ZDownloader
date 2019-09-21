@@ -73,7 +73,7 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
 
     @Override
     protected void onDestroy() {
-        QXDownloader.unInit();
+        QXDownloader.onDestroy();
         super.onDestroy();
     }
 
@@ -122,7 +122,7 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
                     LinearLayout deleteTask = view1.findViewById(R.id.delete_task);
                     LinearLayout copyLink = view1.findViewById(R.id.copy_link);
 
-//                    switch (mission.missionState) {
+//                    switch (mission.missionStatus) {
 //                        case ERROR:
 //                            break;
 //                        case PAUSE:
@@ -182,7 +182,7 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
 
                     copyLink.setOnClickListener(v -> {
                         ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                        ClipData mClipData = ClipData.newPlainText("Label", mission.url);
+                        ClipData mClipData = ClipData.newPlainText("Label", mission.getUrl());
                         cm.setPrimaryClip(mClipData);
                         dialog.dismiss();
                     });

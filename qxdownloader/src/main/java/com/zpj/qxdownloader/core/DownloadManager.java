@@ -9,62 +9,70 @@ import com.zpj.qxdownloader.config.ThreadPoolConfig;
 import java.util.ArrayList;
 import java.util.List;
 
-public interface DownloadManager
-{
-	int BLOCK_SIZE = 1024 * 1024;
+public interface DownloadManager {
+    int BLOCK_SIZE = 1024 * 1024;
 
-	List<DownloadMission> ALL_MISSIONS = new ArrayList<>();
+    List<DownloadMission> ALL_MISSIONS = new ArrayList<>();
 
-	interface DownloadManagerListener {
-		void onMissionAdd();
-		void onMissionDelete();
-	}
+    interface DownloadManagerListener {
+        void onMissionAdd();
 
-	int startMission(String url);
-	int startMission(String url, String name);
-	int startMission(String url, String name, MissionConfig config);
-//	int startMission(String url, String name, int threads);
-//	int startMission(String url, String name, int threads, String cookie, String userAgent);
+        void onMissionDelete();
 
-	void resumeMission(int id);
-	void resumeMission(String uuid);
-	void resumeAllMissions();
+        void onMissionFinished();
+    }
 
-	void pauseMission(int id);
-	void pauseMission(String uuid);
-	void pauseAllMissions();
+    int startMission(String url);
 
-	void deleteMission(int id);
-	void deleteMission(String uuid);
-	void deleteMission(DownloadMission mission);
-	void deleteAllMissions();
+    int startMission(String url, String name);
 
-	void clearMission(int i);
-	void clearMission(String uuid);
-	void clearAllMissions();
+    int startMission(String url, String name, MissionConfig config);
 
-	DownloadMission getMission(int id);
-	DownloadMission getMission(String uuid);
+    void resumeMission(int id);
 
-	int getCount();
+    void resumeMission(String uuid);
 
-	Context getContext();
+    void resumeAllMissions();
 
-	QianXunConfig getQianXunConfig();
+    void pauseMission(int id);
 
-	ThreadPoolConfig getThreadPoolConfig();
+    void pauseMission(String uuid);
 
-	boolean shouldMissionWaiting();
+    void pauseAllMissions();
 
-//	String getDownloadPath();
-//
-//	void setDownloadPath(String downloadPath);
+    void deleteMission(int id);
 
-	void loadMissions();
+    void deleteMission(String uuid);
 
-	void setDownloadManagerListener(DownloadManagerListener downloadManagerListener);
+    void deleteMission(DownloadMission mission);
 
-	public DownloadManagerListener getDownloadManagerListener();
+    void deleteAllMissions();
 
-	List<DownloadMission> getMissions();
+    void clearMission(int i);
+
+    void clearMission(String uuid);
+
+    void clearAllMissions();
+
+    DownloadMission getMission(int id);
+
+    DownloadMission getMission(String uuid);
+
+    int getCount();
+
+    Context getContext();
+
+    QianXunConfig getQianXunConfig();
+
+    ThreadPoolConfig getThreadPoolConfig();
+
+    boolean shouldMissionWaiting();
+
+    void loadMissions();
+
+    void setDownloadManagerListener(DownloadManagerListener downloadManagerListener);
+
+    public DownloadManagerListener getDownloadManagerListener();
+
+    List<DownloadMission> getMissions();
 }

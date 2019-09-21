@@ -172,7 +172,7 @@ public class DownloadManagerService extends Service implements DownloadMission.M
 		
 		public void onMissionAdded(DownloadMission mission) {
 			mission.addListener(DownloadManagerService.this);
-			mission.errCode = -1;
+			mission.setErrCode(-1);
 			postUpdateMessage();
 		}
 		

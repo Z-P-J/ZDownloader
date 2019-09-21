@@ -1,14 +1,13 @@
 package com.zpj.qxdownloader.core;
 
 import android.content.Context;
-import android.content.Intent;
-import android.net.Uri;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.LongSparseArray;
 import android.webkit.MimeTypeMap;
+import android.widget.Toast;
 
 import com.google.gson.Gson;
 import com.zpj.qxdownloader.config.MissionConfig;
@@ -31,6 +30,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
@@ -59,87 +59,70 @@ public class DownloadMission {
         void onError(int errCode);
     }
 
-    public enum MissionState {
-        INITING,
-        START,
-        RUNNING,
-        WAITING,
-        PAUSE,
-        FINISHED,
-        ERROR,
-        RETRY
+    public enum MissionStatus {
+        INITING("初始化中"),
+        START("已开始"),
+        RUNNING("下载中"),
+        WAITING("等待中"),
+        PAUSE("已暂停"),
+        FINISHED("已完成"),
+        ERROR("出错了"),
+        RETRY("重试中");
+
+        private String statusName;
+
+        MissionStatus(String name) {
+            statusName = name;
+        }
+
+        @Override
+        public String toString() {
+            return statusName;
+        }
     }
 
-    public String uuid = "";
+    private final LongSparseArray<Boolean> blockState = new LongSparseArray<>();
 
-    public String name = "";
+    private String uuid = "";
+    private String name = "";
+    private String url = "";
+    private String redirectUrl = "";
+    private String originUrl = "";
+    private long createTime = 0;
+    private int notifyId = 0;
+    private long blocks = 0;
+    private int finishCount = 0;
+    private long length = 0;
+    private long done = 0;
+    private List<Long> threadPositions = new ArrayList<>();
+    private MissionStatus missionStatus = MissionStatus.INITING;
+    private boolean fallback = false;
+    private int errCode = -1;
+    private boolean hasInit = false;
+    private MissionConfig missionConfig = MissionConfig.with();
 
-    public String url = "";
+    //-----------------------------------------------------transient---------------------------------------------------------------
 
-    public String redictUrl = "";
+    private transient boolean recovered = false;
 
-    public String originUrl = "";
+    private transient int currentRetryCount = missionConfig.getRetryCount();
 
-//	public String location = "";
-//	public String cookie = "";
-//	public String userAgent = "";
-
-    public long createTime = 0;
-
-    public int notifyId = 0;
-
-    public long blocks = 0;
-//	public int bufferSize = DefaultConstant.BUFFER_SIZE;
-//	public int blockSize = DefaultConstant.BLOCK_SIZE;
-
-    public long length = 0;
-
-    public long done = 0;
-
-    public int finishCount = 0;
-    //单位毫秒
-//	public int retryDelay = DefaultConstant.RETRY_DELAY;
-//	public int connectOutTime = DefaultConstant.CONNECT_OUT_TIME;
-//	public int readOutTime = DefaultConstant.READ_OUT_TIME;
-
-    public List<Long> threadPositions = new ArrayList<>();
-
-    public transient int a;
-//	public final LongSparseBooleanArray longSparseBooleanArray = new LongSparseBooleanArray();
-
-    public final LongSparseArray<Boolean> blockState = new LongSparseArray<>();
-
-    public MissionState missionState = MissionState.INITING;
-
-    public boolean fallback = false;
-
-    public int errCode = -1;
-
-    public long timestamp = 0;
-
-    public boolean hasInit = false;
-
-    public MissionConfig missionConfig = MissionConfig.with();
-
-    public transient boolean recovered = false;
-
-    public transient int currentRetryCount = missionConfig.getRetryCount();
-
-    public transient int threadCount = missionConfig.getThreadPoolConfig().getCorePoolSize();
-//	public transient int maximumPoolSize = missionConfig.getThreadPoolConfig().getMaximumPoolSize();
-//	public transient int keepAliveTime = missionConfig.getThreadPoolConfig().getKeepAliveTime();
+    private transient int threadCount = missionConfig.getThreadPoolConfig().getCorePoolSize();
 
     private transient ArrayList<WeakReference<MissionListener>> mListeners = new ArrayList<>();
-    //    private transient MissionListener missionListener;
+
     private transient boolean mWritingToFile = false;
 
     private transient int errorCount = 0;
 
     private transient ThreadPoolExecutor threadPoolExecutor;
 
+    private transient long lastTimeStamp = -1;
+    private transient long lastDone = -1;
+    private transient String tempSpeed = "0 KB/s";
 
-    //runnables
 
+    //------------------------------------------------------runnables---------------------------------------------
     private transient Runnable initRunnable = new Runnable() {
         @Override
         public void run() {
@@ -208,7 +191,7 @@ public class DownloadMission {
                 for (DownloadMission downloadMission : DownloadManagerImpl.ALL_MISSIONS) {
                     if (!downloadMission.isIniting() && TextUtils.equals(name, downloadMission.name) &&
                             (TextUtils.equals(downloadMission.originUrl.trim(), url.trim()) ||
-                                    TextUtils.equals(downloadMission.redictUrl.trim(), url.trim()))) {
+                                    TextUtils.equals(downloadMission.redirectUrl.trim(), url.trim()))) {
                         downloadMission.start();
                         return;
                     }
@@ -255,15 +238,13 @@ public class DownloadMission {
     private transient Runnable progressRunnable = new Runnable() {
         @Override
         public void run() {
-
-            notifyState(MissionState.RUNNING);
-
+            notifyStatus(MissionStatus.RUNNING);
             if (missionConfig.getEnableNotificatio()) {
                 NotifyUtil.with(getContext())
                         .buildProgressNotify()
                         .setProgressAndFormat(getProgress(), false, "")
                         .setContentTitle(name)
-                        .setId(getId())
+                        .setId(getNotifyId())
                         .show();
             }
         }
@@ -279,13 +260,56 @@ public class DownloadMission {
         }
     };
 
+    private DownloadMission() {
 
+    }
+
+    public static DownloadMission create(String url, String name, MissionConfig config) {
+        DownloadMission mission = new DownloadMission();
+        mission.url = url;
+        mission.originUrl = url;
+        mission.name = name;
+        mission.uuid = UUID.randomUUID().toString();
+        mission.createTime = System.currentTimeMillis();
+//        mission.timestamp = mission.createTime;
+        mission.missionStatus = DownloadMission.MissionStatus.INITING;
+        mission.missionConfig = config;
+        return mission;
+    }
+
+    //-------------------------下载任务状态-----------------------------------
+    public boolean isIniting() {
+        return missionStatus == MissionStatus.INITING;
+    }
+
+    public boolean isRunning() {
+        return missionStatus == MissionStatus.RUNNING;
+    }
+
+    public boolean isWaiting() {
+        return missionStatus == MissionStatus.WAITING;
+    }
+
+    public boolean isPause() {
+        return missionStatus == MissionStatus.PAUSE;
+    }
+
+    public boolean isFinished() {
+        return missionStatus == MissionStatus.FINISHED;
+    }
+
+    public boolean isError() {
+        return missionStatus == MissionStatus.ERROR;
+    }
+
+
+    //----------------------------------------------------------operation------------------------------------------------------------
     public void init() {
         if (threadPoolExecutor == null || threadPoolExecutor.getCorePoolSize() != 2 * threadCount) {
             threadPoolExecutor = ThreadPoolFactory.newFixedThreadPool(missionConfig.getThreadPoolConfig());
         }
         if (hasInit) {
-            notifyState(MissionState.INITING);
+            notifyStatus(MissionStatus.INITING);
         } else {
             writeMissionInfo();
             threadPoolExecutor.submit(initRunnable);
@@ -305,7 +329,7 @@ public class DownloadMission {
 
 //			waiting = false;
 //			running = true;
-            missionState = MissionState.RUNNING;
+            missionStatus = MissionStatus.RUNNING;
 
 //			ExecutorService executorService;
             if (!fallback) {
@@ -338,19 +362,19 @@ public class DownloadMission {
             }
 
             writeMissionInfo();
-            notifyState(MissionState.START);
+            notifyStatus(MissionStatus.START);
         }
     }
 
     public void pause() {
         initCurrentRetryCount();
         if (isRunning() || isWaiting()) {
-            missionState = MissionState.PAUSE;
+            missionStatus = MissionStatus.PAUSE;
             recovered = true;
             writeMissionInfo();
-            notifyState(missionState);
+            notifyStatus(missionStatus);
 
-            if (missionState != MissionState.WAITING) {
+            if (missionStatus != MissionStatus.WAITING) {
                 DownloadManagerImpl.decreaseDownloadingCount();
             }
 
@@ -358,11 +382,17 @@ public class DownloadMission {
                 NotifyUtil.with(getContext())
                         .buildProgressNotify()
                         .setProgressAndFormat(getProgress(), false, "")
-                        .setId(getId())
+                        .setId(getNotifyId())
                         .setContentTitle("已暂停：" + name)
                         .show();
             }
         }
+    }
+
+    public void waiting() {
+        missionStatus = MissionStatus.WAITING;
+        notifyStatus(missionStatus);
+        pause();
     }
 
     public void delete() {
@@ -370,33 +400,18 @@ public class DownloadMission {
         new File(missionConfig.getDownloadPath() + File.separator + name).delete();
     }
 
-
-//	private transient final ProgressBuilder progressBuilder = new ProgressBuilder();
-
-    public void initNotification() {
-//		progressBuilder.setId(getId());
-//		progressBuilder.setSmallIcon(android.R.mipmap.sym_def_app_icon);
-    }
-
-    public boolean isBlockPreserved(long block) {
-        Boolean state = blockState.get(block);
-        return state != null && state;
-    }
-
-    public void preserveBlock(long block) {
-        synchronized (blockState) {
-            blockState.put(block, true);
+    public void openFile(Context context) {
+        File file = getFile();
+        if (file.exists()) {
+            FileUtil.openFile(context, getFile());
+        } else {
+            Toast.makeText(context, "下载文件不存在!", Toast.LENGTH_SHORT).show();
         }
     }
 
-
-    private transient long lastTimeStamp = -1;
-    private transient long lastDone = -1;
-    private transient String tempSpeed = "0 KB/s";
-
-    //progress
+    //------------------------------------------------------------notify------------------------------------------------------------
     public synchronized void notifyProgress(long deltaLen) {
-        if (missionState != MissionState.RUNNING) {
+        if (missionStatus != MissionStatus.RUNNING) {
             return;
         }
 
@@ -463,30 +478,6 @@ public class DownloadMission {
         }
     }
 
-    private void onFinish() {
-        if (errCode > 0) {
-            return;
-        }
-        Log.d(TAG, "onFinish");
-
-        missionState = MissionState.FINISHED;
-
-        writeMissionInfo();
-
-        notifyState(missionState);
-
-        DownloadManagerImpl.decreaseDownloadingCount();
-
-        if (missionConfig.getEnableNotificatio()) {
-            NotifyUtil.with(getContext())
-                    .buildNotify()
-                    .setContentTitle(name)
-                    .setContentText("下载已完成")
-                    .setId(getId())
-                    .show();
-        }
-    }
-
     synchronized void notifyError(int err) {
         if (!(err == ErrorCode.ERROR_WITHOUT_STORAGE_PERMISSIONS || err == ErrorCode.ERROR_FILE_NOT_FOUND)) {
             errorCount++;
@@ -494,7 +485,7 @@ public class DownloadMission {
                 currentRetryCount--;
                 if (currentRetryCount >= 0) {
                     pause();
-                    notifyState(MissionState.RETRY);
+                    notifyStatus(MissionStatus.RETRY);
                     new Handler().postDelayed(new Runnable() {
                         @Override
                         public void run() {
@@ -506,7 +497,7 @@ public class DownloadMission {
             }
         }
 
-        missionState = MissionState.ERROR;
+        missionStatus = MissionStatus.ERROR;
 
         currentRetryCount = missionConfig.getRetryCount();
 
@@ -516,7 +507,7 @@ public class DownloadMission {
 
         writeMissionInfo();
 
-        notifyState(missionState);
+        notifyStatus(missionStatus);
 
         DownloadManagerImpl.decreaseDownloadingCount();
 
@@ -524,41 +515,19 @@ public class DownloadMission {
             NotifyUtil.with(getContext())
                     .buildNotify()
                     .setContentTitle("下载出错" + errCode + ":" + name)
-                    .setId(getId())
+                    .setId(getNotifyId())
                     .show();
         }
     }
 
-    public void waiting() {
-        missionState = MissionState.WAITING;
-        notifyState(missionState);
-        pause();
-    }
-
-    public synchronized void addListener(MissionListener listener) {
-        Handler handler = new Handler(Looper.getMainLooper());
-        MissionListener.HANDLER_STORE.put(listener, handler);
-        mListeners.add(new WeakReference<>(listener));
-    }
-
-    public synchronized void removeListener(MissionListener listener) {
-        for (Iterator<WeakReference<MissionListener>> iterator = mListeners.iterator();
-             iterator.hasNext(); ) {
-            WeakReference<MissionListener> weakRef = iterator.next();
-            if (listener != null && listener == weakRef.get()) {
-                iterator.remove();
-            }
-        }
-    }
-
-    private void notifyState(final MissionState state) {
+    private void notifyStatus(final MissionStatus status) {
         for (WeakReference<MissionListener> ref : mListeners) {
             final MissionListener listener = ref.get();
             if (listener != null) {
                 MissionListener.HANDLER_STORE.get(listener).post(new Runnable() {
                     @Override
                     public void run() {
-                        switch (state) {
+                        switch (status) {
                             case INITING:
                                 listener.onInit();
                                 break;
@@ -592,6 +561,48 @@ public class DownloadMission {
         }
     }
 
+    private void onFinish() {
+        if (errCode > 0) {
+            return;
+        }
+        Log.d(TAG, "onFinish");
+
+        missionStatus = MissionStatus.FINISHED;
+
+        writeMissionInfo();
+
+        notifyStatus(missionStatus);
+
+        DownloadManagerImpl.decreaseDownloadingCount();
+
+        if (missionConfig.getEnableNotificatio()) {
+            NotifyUtil.with(getContext())
+                    .buildNotify()
+                    .setContentTitle(name)
+                    .setContentText("下载已完成")
+                    .setId(getNotifyId())
+                    .show();
+        }
+        if (DownloadManagerImpl.getInstance().getDownloadManagerListener() != null) {
+            DownloadManagerImpl.getInstance().getDownloadManagerListener().onMissionFinished();
+        }
+    }
+
+    public synchronized void addListener(MissionListener listener) {
+        Handler handler = new Handler(Looper.getMainLooper());
+        MissionListener.HANDLER_STORE.put(listener, handler);
+        mListeners.add(new WeakReference<>(listener));
+    }
+
+    public synchronized void removeListener(MissionListener listener) {
+        for (Iterator<WeakReference<MissionListener>> iterator = mListeners.iterator();
+             iterator.hasNext(); ) {
+            WeakReference<MissionListener> weakRef = iterator.next();
+            if (listener != null && listener == weakRef.get()) {
+                iterator.remove();
+            }
+        }
+    }
 
     public void writeMissionInfo() {
         if (!mWritingToFile) {
@@ -616,8 +627,77 @@ public class DownloadMission {
         }
     }
 
+    //--------------------------------------------------------------getter-----------------------------------------------
     private Context getContext() {
         return DownloadManagerImpl.getInstance().getContext();
+    }
+
+    public String getUuid() {
+        return uuid;
+    }
+
+    public String getTaskName() {
+        return name;
+    }
+
+    public String getUrl() {
+        return url;
+    }
+
+    public String getOriginUrl() {
+        return originUrl;
+    }
+
+    public String getRedirectUrl() {
+        return redirectUrl;
+    }
+
+    public long getCreateTime() {
+        return createTime;
+    }
+
+    public long getBlocks() {
+        return blocks;
+    }
+
+    public int getFinishCount() {
+        return finishCount;
+    }
+
+    public long getLength() {
+        return length;
+    }
+
+    public long getDone() {
+        return done;
+    }
+
+    public List<Long> getThreadPositions() {
+        return threadPositions;
+    }
+
+    public MissionStatus getStatus() {
+        return missionStatus;
+    }
+
+    public int getErrCode() {
+        return errCode;
+    }
+
+    public boolean isFallback() {
+        return fallback;
+    }
+
+    public boolean hasInit() {
+        return hasInit;
+    }
+
+    public MissionConfig getMissionConfig() {
+        return missionConfig;
+    }
+
+    public boolean isRecovered() {
+        return recovered;
     }
 
     public String getDownloadPath() {
@@ -671,7 +751,7 @@ public class DownloadMission {
     }
 
     public float getProgress() {
-        if (missionState == MissionState.FINISHED) {
+        if (missionStatus == MissionStatus.FINISHED) {
             return 100f;
         } else if (length <= 0) {
             return 0f;
@@ -696,15 +776,11 @@ public class DownloadMission {
         return tempSpeed;
     }
 
-    private int getId() {
+    private int getNotifyId() {
         if (notifyId == 0) {
             notifyId = (int) (createTime / 10000) + (int) (createTime % 10000) * 100000;
         }
         return notifyId;
-    }
-
-    public void setPosition(int id, long position) {
-        threadPositions.set(id, position);
     }
 
     public long getPosition(int id) {
@@ -715,36 +791,56 @@ public class DownloadMission {
         return DownloadManagerImpl.TASK_PATH + File.separator + uuid + DownloadManagerImpl.MISSION_INFO_FILE_SUFFIX_NAME;
     }
 
-    public void openFile(Context context) {
-        FileUtil.openFile(context, getFile());
+
+    //-----------------------------------------------------setter-----------------------------------------------------------------
+
+
+    public void setTaskName(String name) {
+        this.name = name;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    public void setRedirectUrl(String redirectUrl) {
+        this.redirectUrl = redirectUrl;
+    }
+
+    public void setOriginUrl(String originUrl) {
+        this.originUrl = originUrl;
+    }
+
+    public void setLength(long length) {
+        this.length = length;
+    }
+
+    public void setThreadPosition(int id, long position) {
+        threadPositions.set(id, position);
+    }
+
+    public void setRecovered(boolean recovered) {
+        this.recovered = recovered;
+    }
+
+    public void setErrCode(int errCode) {
+        this.errCode = errCode;
     }
 
 
-    //下载任务状态
-    public boolean isIniting() {
-        return missionState == MissionState.INITING;
+
+    //----------------------------------------------------------------other
+
+    public boolean isBlockPreserved(long block) {
+        Boolean state = blockState.get(block);
+        return state != null && state;
     }
 
-    public boolean isRunning() {
-        return missionState == MissionState.RUNNING;
+    public void preserveBlock(long block) {
+        synchronized (blockState) {
+            blockState.put(block, true);
+        }
     }
-
-    public boolean isWaiting() {
-        return missionState == MissionState.WAITING;
-    }
-
-    public boolean isPause() {
-        return missionState == MissionState.PAUSE;
-    }
-
-    public boolean isFinished() {
-        return missionState == MissionState.FINISHED;
-    }
-
-    public boolean isError() {
-        return missionState == MissionState.ERROR;
-    }
-
 
     private boolean handleResponse(Connection.Response response, DownloadMission mission) {
         Log.d("statusCode11111111", "       " + response.statusCode());
@@ -757,10 +853,10 @@ public class DownloadMission {
                 || response.statusCode() == ResponseCode.RESPONSE_301
                 || response.statusCode() == ResponseCode.RESPONSE_300) {
             String redictUrl = response.header("location");
-            Log.d(TAG, "redictUrl=" + redictUrl);
+            Log.d(TAG, "redirectUrl=" + redictUrl);
             if (redictUrl != null) {
                 mission.url = redictUrl;
-                mission.redictUrl = redictUrl;
+                mission.redirectUrl = redictUrl;
             }
         } else if (response.statusCode() == ErrorCode.ERROR_SERVER_404) {
             mission.errCode = ErrorCode.ERROR_SERVER_404;

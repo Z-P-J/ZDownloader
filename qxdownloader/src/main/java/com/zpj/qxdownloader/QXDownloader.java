@@ -30,50 +30,17 @@ import java.util.List;
  * */
 public class QXDownloader {
 
-//    private static DownloadManager mManager;
-//    private static DownloadManagerService.DMBinder mBinder;
-//    private static ServiceConnection mConnection = new ServiceConnection() {
-//
-//        @Override
-//        public void onServiceConnected(ComponentName p1, IBinder binder) {
-//            mBinder = (DownloadManagerService.DMBinder) binder;
-//            mManager = mBinder.getDownloadManager();
-//            if (registerListener != null) {
-//                registerListener.onServiceConnected();
-//            }
-//        }
-//
-//        @Override
-//        public void onServiceDisconnected(ComponentName p1) {
-//
-//        }
-//    };
-//
-//    private static RegisterListener registerListener;
-
-    private static volatile boolean isRunning = true;
-
     private static boolean waitingForInternet = false;
 
     private QXDownloader() {
-
+        throw new RuntimeException("Wrong operation!");
     }
-
-//    public interface RegisterListener {
-//        void onServiceConnected();
-//    }
-
-//    public void setRegisterListener(RegisterListener registerListener) {
-//        this.registerListener = registerListener;
-//    }
 
     public static void init(Context context) {
         init(QianXunConfig.with(context));
     }
 
     public static void init(final QianXunConfig options) {
-//        register(context, null);
-
         final Context context = options.getContext();
 
         PermissionUtil.grandStoragePermission(context);
@@ -86,18 +53,7 @@ public class QXDownloader {
         options.getContext().registerReceiver(NetworkChangeReceiver.getInstance(), intentFilter);
     }
 
-//    public static void register(Context context, RegisterListener registerListener) {
-//        NotifyUtil.init(context);
-//        QXDownloader.registerListener = registerListener;
-//        if (mManager == null || mBinder == null) {
-//            Intent intent = new Intent();
-//            intent.setClass(context, DownloadManagerService.class);
-//            context.startService(intent);
-//            context.bindService(intent, mConnection, Context.BIND_AUTO_CREATE);
-//        }
-//    }
-
-    public static void unInit() {
+    public static void onDestroy() {
         DownloadManagerImpl.unRegister();
         NotifyUtil.cancelAll();
         System.exit(0);
@@ -108,13 +64,10 @@ public class QXDownloader {
     }
 
     public static DownloadMission download(String url) {
-//        哈哈.apk
         int res = DownloadManagerImpl.getInstance().startMission(url);
         if (res == -1) {
-//            Log.d("download", "文件已存在！！！");
             return null;
         }
-        //        mBinder.onMissionAdded(downloadMission);
         return DownloadManagerImpl.getInstance().getMission(res);
     }
 
@@ -135,57 +88,34 @@ public class QXDownloader {
     }
 
     public static DownloadMission download(String url, String name, MissionConfig options) {
-//        哈哈.apk
         int res = DownloadManagerImpl.getInstance().startMission(url, name, options);
-        //Log.d("download", "文件已存在！！！");
         if (res == -1) {
             return null;
         }
-        //mBinder.onMissionAdded(downloadMission);
         return DownloadManagerImpl.getInstance().getMission(res);
     }
 
-//    public static DownloadMission download(String url, int threadCount) {
-////        哈哈.apk
-//        int res = DownloadManagerImpl.getInstance().startMission(url, "", threadCount);
-//        if (res == -1) {
-////            Log.d("download", "文件已存在！！！");
-//            return null;
-//        }
-//        //        mBinder.onMissionAdded(downloadMission);
-//        return DownloadManagerImpl.getInstance().getMission(res);
-//    }
-
     public static void pause(DownloadMission mission) {
-//        mManager.pauseMission(mission.uuid);
         mission.pause();
-//        mBinder.onMissionRemoved(mission);
     }
 
     public static void resume(DownloadMission mission) {
         mission.start();
-//        mBinder.onMissionAdded(mission);
     }
 
     public static void delete(DownloadMission mission) {
-//        mManager.deleteMission(mission.uuid);
-//        mission.pause();
-//        mission.delete();
-        DownloadManagerImpl.getInstance().deleteMission(mission.uuid);
-//        mBinder.onMissionRemoved(mission);
+        DownloadManagerImpl.getInstance().deleteMission(mission);
     }
 
     public static void clear(DownloadMission mission) {
-//        mManager.clearMission(mission.uuid);
         mission.pause();
         mission.deleteMissionInfo();
         DownloadManagerImpl.getInstance().getMissions().remove(mission);
-//        mBinder.onMissionRemoved(mission);
     }
 
     public static boolean rename(DownloadMission mission, String name) {
         Context context = DownloadManagerImpl.getInstance().getContext();
-        if (TextUtils.equals(mission.name, name)) {
+        if (TextUtils.equals(mission.getTaskName(), name)) {
             Toast.makeText(context, "请输入不同的名字", Toast.LENGTH_SHORT).show();
             return false;
         }
@@ -193,11 +123,11 @@ public class QXDownloader {
             Toast.makeText(context, "请暂停下载后再试", Toast.LENGTH_SHORT).show();
             return false;
         }
-        File file = new File(mission.getDownloadPath() + File.separator + mission.name);
+        File file = new File(mission.getDownloadPath() + File.separator + mission.getTaskName());
         File file2Rename = new File(mission.getDownloadPath() + File.separator + name);
         boolean success = file.renameTo(file2Rename);
         if (success) {
-            mission.name = name;
+            mission.setTaskName(name);
             mission.writeMissionInfo();
             DownloadManager.DownloadManagerListener downloadManagerListener =  DownloadManagerImpl.getInstance().getDownloadManagerListener();
             if (downloadManagerListener != null) {
@@ -213,7 +143,7 @@ public class QXDownloader {
 
     public static void openFile(DownloadMission mission) {
         if (mission.isFinished()) {
-            File file = new File(mission.getDownloadPath(), mission.name);
+            File file = mission.getFile();
             Context context = DownloadManagerImpl.getInstance().getContext();
             if (!file.exists()) {
                 Toast.makeText(context, "下载文件不存在", Toast.LENGTH_SHORT).show();
@@ -266,10 +196,6 @@ public class QXDownloader {
     public static void clearAll() {
         DownloadManagerImpl.getInstance().clearAllMissions();
     }
-
-//    public static DownloadManagerService.DMBinder getBinder() {
-//        return mBinder;
-//    }
 
     public static DownloadManager getDownloadManager() {
         return DownloadManagerImpl.getInstance();

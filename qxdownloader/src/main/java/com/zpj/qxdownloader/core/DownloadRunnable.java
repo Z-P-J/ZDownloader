@@ -122,7 +122,7 @@ public class DownloadRunnable implements Runnable {
 //            e.printStackTrace();
 //        }
 
-		if (mMission.fallback) {
+		if (mMission.isFallback()) {
 			try {
 				ThreadPoolExecutor writeExecutor = ThreadPoolFactory.newFixedThreadPool(ThreadPoolConfig.build().setCorePoolSize(1));
 				HttpURLConnection conn = HttpUrlConnectionFactory.getConnection(mMission);
@@ -167,7 +167,7 @@ public class DownloadRunnable implements Runnable {
 //						}
 						notifyProgress(total - lastTotal);
 						lastTotal = total;
-						mMission.length = total;
+						mMission.setLength(total);
 
 
 						if (Thread.currentThread().isInterrupted()) {
@@ -184,15 +184,15 @@ public class DownloadRunnable implements Runnable {
 				e.printStackTrace();
 			}
 		} else {
-			boolean retry = mMission.recovered;
+			boolean retry = mMission.isRecovered();
 			long position = mMission.getPosition(mId);
 
 			Log.d(TAG, mId + ":default pos " + position);
-			Log.d(TAG, mId + ":recovered: " + mMission.recovered);
+			Log.d(TAG, mId + ":recovered: " + mMission.isRecovered());
 
-			mMission.errCode = -1;
+			mMission.setErrCode(-1);
 
-			while (mMission.errCode == -1 && mMission.isRunning() && position < mMission.blocks) {
+			while (mMission.getErrCode() == -1 && mMission.isRunning() && position < mMission.getBlocks()) {
 
 				Log.d("timetimetimetime" + mId, "----------------------------start-------------------------");
 				long time0 = System.currentTimeMillis();
@@ -205,7 +205,7 @@ public class DownloadRunnable implements Runnable {
 				Log.d(TAG, mId + ":retry is true. Resuming at " + position);
 
 				// Wait for an unblocked position
-				while (!retry && position < mMission.blocks && mMission.isBlockPreserved(position)) {
+				while (!retry && position < mMission.getBlocks() && mMission.isBlockPreserved(position)) {
 
 					Log.d(TAG, mId + ":position " + position + " preserved, passing");
 
@@ -214,24 +214,24 @@ public class DownloadRunnable implements Runnable {
 
 				retry = false;
 
-				if (position >= mMission.blocks) {
+				if (position >= mMission.getBlocks()) {
 					break;
 				}
 
 				Log.d(TAG, mId + ":preserving position " + position);
 
 				mMission.preserveBlock(position);
-				mMission.setPosition(mId, position);
+				mMission.setThreadPosition(mId, position);
 
 				long start = position * mMission.getBlockSize();
 				long end = start + mMission.getBlockSize() - 1;
 
-				if (start >= mMission.length) {
+				if (start >= mMission.getLength()) {
 					continue;
 				}
 
-				if (end >= mMission.length) {
-					end = mMission.length - 1;
+				if (end >= mMission.getLength()) {
+					end = mMission.getLength() - 1;
 				}
 
 				HttpURLConnection conn;
@@ -267,15 +267,15 @@ public class DownloadRunnable implements Runnable {
 							|| conn.getResponseCode() == ResponseCode.RESPONSE_300) {
 						String redictUrl = conn.getHeaderField("location");
 						Log.d(TAG, "redictUrl=" + redictUrl);
-						mMission.url = redictUrl;
-						mMission.redictUrl = redictUrl;
+						mMission.setUrl(redictUrl);
+						mMission.setRedirectUrl(redictUrl);
 						conn.disconnect();
 						conn = HttpUrlConnectionFactory.getConnection(mMission, start, end);
 					}
 
 					// A server may be ignoring the range requet
 					if (conn.getResponseCode() != ResponseCode.RESPONSE_206) {
-						mMission.errCode = ErrorCode.ERROR_SERVER_UNSUPPORTED;
+						mMission.setErrCode(ErrorCode.ERROR_SERVER_UNSUPPORTED);
 						Log.d("DownRun", "error:206");
 						notifyError(ErrorCode.ERROR_SERVER_UNSUPPORTED);
 
@@ -358,7 +358,7 @@ public class DownloadRunnable implements Runnable {
 
         Log.d(TAG, "thread " + mId + " exited main loop");
 
-        if (mMission.errCode == -1 && mMission.isRunning()) {
+        if (mMission.getErrCode() == -1 && mMission.isRunning()) {
             Log.d(TAG, "no error has happened, notifying");
             notifyFinished();
         }

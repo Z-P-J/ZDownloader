@@ -9,18 +9,10 @@ import com.zpj.qxdownloader.config.MissionConfig;
 import com.zpj.qxdownloader.config.QianXunConfig;
 import com.zpj.qxdownloader.config.ThreadPoolConfig;
 import com.zpj.qxdownloader.constant.DefaultConstant;
-import com.zpj.qxdownloader.constant.ErrorCode;
-import com.zpj.qxdownloader.constant.ResponseCode;
-import com.zpj.qxdownloader.util.FileUtil;
 import com.zpj.qxdownloader.util.NetworkChangeReceiver;
 import com.zpj.qxdownloader.util.Utility;
-import com.zpj.qxdownloader.util.io.BufferedRandomAccessFile;
-
-import com.zpj.qxdownloader.jsoup.connection.Connection;
-import com.zpj.qxdownloader.jsoup.Jsoup;
 
 import java.io.File;
-import java.net.Proxy;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -154,7 +146,7 @@ public class DownloadManagerImpl implements DownloadManager {
 						DownloadMission mis = new Gson().fromJson(str, DownloadMission.class);
 						Log.d("initMissions", "mis=null? " + (mis == null));
 						if (mis != null) {
-							mis.recovered = true;
+							mis.setRecovered(true);
 							mis.init();
 							insertMission(mis);
 						}
@@ -168,7 +160,7 @@ public class DownloadManagerImpl implements DownloadManager {
 		Collections.sort(ALL_MISSIONS, new Comparator<DownloadMission>() {
 			@Override
 			public int compare(DownloadMission o1, DownloadMission o2) {
-				return - (int) (o1.createTime - o2.createTime);
+				return - (int) (o1.getCreateTime() - o2.getCreateTime());
 			}
 		});
 		long time2  = System.currentTimeMillis();
@@ -197,23 +189,11 @@ public class DownloadManagerImpl implements DownloadManager {
 
 	@Override
 	public int startMission(String url, String name, MissionConfig config) {
-		DownloadMission mission = new DownloadMission();
-		mission.url = url;
-		mission.originUrl = url;
-		mission.name = name;
-		mission.uuid = UUID.randomUUID().toString();
-		mission.createTime = System.currentTimeMillis();
-		mission.timestamp = mission.createTime;
-		mission.notifyId = (int)(mission.createTime / 10000) + (int) (mission.createTime % 10000) * 100000;
-		mission.missionState = DownloadMission.MissionState.INITING;
-
-		mission.missionConfig = config;
-
+		DownloadMission mission = DownloadMission.create(url, name, config);
 		int i = insertMission(mission);
 		if (downloadManagerListener != null) {
 			downloadManagerListener.onMissionAdd();
 		}
-//		new Initializer(mission).start();
 		mission.init();
 		return i;
 	}
@@ -342,7 +322,7 @@ public class DownloadManagerImpl implements DownloadManager {
 	@Override
 	public DownloadMission getMission(String uuid) {
 		for (DownloadMission mission : ALL_MISSIONS) {
-			if (TextUtils.equals(mission.uuid, uuid)) {
+			if (TextUtils.equals(mission.getUuid(), uuid)) {
 				return mission;
 			}
 		}

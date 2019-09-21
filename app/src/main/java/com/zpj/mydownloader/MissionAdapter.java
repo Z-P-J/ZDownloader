@@ -119,12 +119,12 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		h.progress = new ProgressDrawable(BACKGROUND_COLOR, FOREGROUND_COLOR);
 		h.bkg.setBackground(h.progress);
 
-		h.icon.setImageResource(FileUtil.getFileTypeIconId(mission.name));
-		if (TextUtils.isEmpty(mission.name)) {
+		h.icon.setImageResource(FileUtil.getFileTypeIconId(mission.getTaskName()));
+		if (TextUtils.isEmpty(mission.getTaskName())) {
 			h.name.setText(STATUS_INIT);
 		} else {
-			h.name.setText(mission.name);
-			h.size.setText(Utility.formatSize(mission.length));
+			h.name.setText(mission.getTaskName());
+			h.size.setText(mission.getFileSizeStr());
 		}
 		
 		updateProgress(h);
@@ -156,14 +156,14 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		}
 		
 		if (h.lastDone == -1) {
-			h.lastDone = h.mission.done;
+			h.lastDone = h.mission.getDone();
 		}
 		
 		long deltaTime = now - h.lastTimeStamp;
-		long deltaDone = h.mission.done - h.lastDone;
+		long deltaDone = h.mission.getDone() - h.lastDone;
 		
 		if (deltaTime == 0 || deltaTime > DELTA_TIME_LIMIT || finished) {
-			int errorCode = h.mission.errCode;
+			int errorCode = h.mission.getErrCode();
 			if (errorCode > 0) {
 				switch (errorCode) {
 					case 1000:
@@ -188,12 +188,12 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		if (deltaTime > DELTA_TIME_LIMIT && deltaDone > 0) {
 			float speed = (float) deltaDone / deltaTime;
 			String speedStr = Utility.formatSpeed(speed * 1000);
-			String sizeStr = Utility.formatSize(h.mission.length);
+			String sizeStr = h.mission.getFileSizeStr();
 			
 			h.size.setText(sizeStr + " " + speedStr);
 			
 			h.lastTimeStamp = now;
-			h.lastDone = h.mission.done;
+			h.lastDone = h.mission.getDone();
 		}
 		if (finished) {
 			Toast.makeText(mContext, "download finish", Toast.LENGTH_SHORT).show();
@@ -216,6 +216,11 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 	@Override
 	public void onMissionDelete() {
 		notifyDataSetChanged();
+	}
+
+	@Override
+	public void onMissionFinished() {
+
 	}
 
 
@@ -285,8 +290,8 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 
 		@Override
 		public void onProgress(long done, long total) {
-			if (TextUtils.equals(mHolder.name.getText().toString(), STATUS_INIT) && !TextUtils.isEmpty(mHolder.mission.name)) {
-				mHolder.name.setText(mHolder.mission.name);
+			if (TextUtils.equals(mHolder.name.getText().toString(), STATUS_INIT) && !TextUtils.isEmpty(mHolder.mission.getTaskName())) {
+				mHolder.name.setText(mHolder.mission.getTaskName());
 			}
 			mAdapter.updateProgress(mHolder);
 		}
@@ -294,7 +299,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		@Override
 		public void onFinish() {
 			if (mHolder.mission != null) {
-				mHolder.size.setText(Utility.formatSize(mHolder.mission.length));
+				mHolder.size.setText(mHolder.mission.getFileSizeStr());
 				mAdapter.updateProgress(mHolder, true);
 			}
 		}
