@@ -17,7 +17,7 @@ public class NetworkChangeReceiver extends BroadcastReceiver {
     private static NetworkChangeReceiver networkChangeReceiver;
 
 
-    public static NetworkChangeReceiver getInstance() {
+    public synchronized static NetworkChangeReceiver getInstance() {
         if (networkChangeReceiver == null) {
             networkChangeReceiver = new NetworkChangeReceiver();
         }

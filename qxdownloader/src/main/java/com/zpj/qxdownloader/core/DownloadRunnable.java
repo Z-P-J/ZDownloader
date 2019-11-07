@@ -25,8 +25,6 @@ public class DownloadRunnable implements Runnable {
     private final DownloadMission mMission;
     private int mId;
 
-    private Handler mHandler;
-
     private final byte[] buf = new byte[BUFFER_SIZE];
 
     private BufferedRandomAccessFile f;
@@ -38,105 +36,29 @@ public class DownloadRunnable implements Runnable {
             f = new BufferedRandomAccessFile(mMission.getFilePath(), "rw");
         } catch (IOException e) {
             e.printStackTrace();
-//			PermissionUtil.hasPermissions(DownloadManagerImpl.getInstance().getContext(), Permission.Group.STORAGE);
             if (PermissionUtil.checkStoragePermissions(DownloadManagerImpl.getInstance().getContext())) {
                 notifyError(ErrorCode.ERROR_FILE_NOT_FOUND);
             } else {
                 notifyError(ErrorCode.ERROR_WITHOUT_STORAGE_PERMISSIONS);
             }
-
-            return;
         }
-
-        HandlerThread thread = new HandlerThread("ServiceMessenger");
-        thread.start();
-
-        mHandler = new Handler(thread.getLooper()) {
-            @Override
-            public void handleMessage(Message msg) {
-                if (msg.what == 0) {
-                    int obj = (int) msg.obj;
-                    synchronized (mMission) {
-                        mMission.notifyProgress(obj);
-                    }
-                }
-            }
-        };
     }
 
     @Override
     public void run() {
-
-//        try {
-//            ThreadPoolExecutor writeExecutor = ThreadPoolFactory.newFixedThreadPool(ThreadPoolConfig.build().setCorePoolSize(1));
-//            HttpURLConnection conn = HttpUrlConnectionFactory.getConnection(mMission);
-//            if (conn.getResponseCode() != ResponseCode.RESPONSE_200 && conn.getResponseCode() != ResponseCode.RESPONSE_206) {
-//                Log.d("DownRunFallback", "getResponseCode=" + conn.getResponseCode());
-//                notifyError(ErrorCode.ERROR_SERVER_UNSUPPORTED);
-//            } else {
-//                f.seek(0);
-//                BufferedInputStream ipt = new BufferedInputStream(conn.getInputStream());
-//                int total = 0;
-//                int lastTotal = 0;
-////                byte[] buf = new byte[2048];
-//                mMission.length = 0;
-//                notifyProgress(0);
-//                while (mMission.isRunning()) {
-//                    long readStartTime = System.currentTimeMillis();
-//                    final int len = ipt.read(buf, 0, BUFFER_SIZE);
-//                    long readFinishedTime = System.currentTimeMillis();
-//                    Log.d(TAG, "readTime=" + (readFinishedTime - readStartTime));
-//                    if (len == -1) {
-//                        notifyProgress(0);
-//                        Log.d(TAG, "len == -1");
-//                        break;
-//                    }
-//                    total += len;
-////                    writeExecutor.execute(new Runnable() {
-////                        @Override
-////                        public void run() {
-////                            try {
-////                                f.write(buf, 0, len);
-////                            } catch (IOException e) {
-////                                e.printStackTrace();
-////                            }
-////                        }
-////                    });
-//                    f.write(buf, 0, len);
-//
-//                    notifyProgress(total - lastTotal);
-//                    lastTotal = total;
-//                    mMission.length = total;
-//
-//
-//                    if (Thread.currentThread().isInterrupted()) {
-//                        Log.d(TAG, "isInterrupted");
-//                        break;
-//                    }
-//                    Log.d(TAG, "writeTime=" + (System.currentTimeMillis() - readFinishedTime));
-//                }
-//                ipt.close();
-//                conn.disconnect();
-//            }
-//        } catch (Exception e) {
-//            e.printStackTrace();
-//        }
-
 		if (mMission.isFallback()) {
 			try {
-				ThreadPoolExecutor writeExecutor = ThreadPoolFactory.newFixedThreadPool(ThreadPoolConfig.build().setCorePoolSize(1));
 				HttpURLConnection conn = HttpUrlConnectionFactory.getConnection(mMission);
-
 				if (conn.getResponseCode() != ResponseCode.RESPONSE_200 && conn.getResponseCode() != ResponseCode.RESPONSE_206) {
 					Log.d("DownRunFallback", "error:206");
 					notifyError(ErrorCode.ERROR_SERVER_UNSUPPORTED);
+					return;
 				} else {
-//					BufferedRandomAccessFile f = new BufferedRandomAccessFile(mMission.location + "/" + mMission.name, "rw");
 					f.seek(0);
 					BufferedInputStream ipt = new BufferedInputStream(conn.getInputStream());
 
 					int total = 0;
-					int lastTotal = 0;
+//					int lastTotal = 0;
 					while (mMission.isRunning()) {
 						long readStartTime = System.currentTimeMillis();
 						final int len  = ipt.read(buf, 0, BUFFER_SIZE);
@@ -147,31 +69,16 @@ public class DownloadRunnable implements Runnable {
 							break;
 						}
 						total += len;
-//						writeExecutor.execute(new Runnable() {
-//							@Override
-//							public void run() {
-//								try {
-//									f.write(buf, 0, len);
-//									f.flush();
-//								} catch (IOException e) {
-//									e.printStackTrace();
-//								}
-//							}
-//						});
 						f.write(buf, 0, len);
 						f.flush();
-
-//						if (total % (256 * 1024) == 0) {
-//							notifyProgress(total - lastTotal);
-//							lastTotal = total;
-//						}
-						notifyProgress(total - lastTotal);
-						lastTotal = total;
+						notifyProgress(len);
+//						notifyProgress(total - lastTotal);
+//						lastTotal = total;
 						mMission.setLength(total);
 
 
 						if (Thread.currentThread().isInterrupted()) {
-							break;
+							return;
 						}
 						Log.d(TAG, "writeTime=" + (System.currentTimeMillis() - readFinishedTime));
 					}
@@ -184,44 +91,32 @@ public class DownloadRunnable implements Runnable {
 				e.printStackTrace();
 			}
 		} else {
-			boolean retry = mMission.isRecovered();
-			long position = mMission.getPosition(mId);
+//			boolean retry = mMission.isRecovered();
+//			long position = mMission.getPosition(mId);
 
-			Log.d(TAG, mId + ":default pos " + position);
-			Log.d(TAG, mId + ":recovered: " + mMission.isRecovered());
+
+//			Log.d(TAG, mId + ":recovered: " + mMission.isRecovered());
 
 			mMission.setErrCode(-1);
 
-			while (mMission.getErrCode() == -1 && mMission.isRunning() && position < mMission.getBlocks()) {
+			Log.d(TAG, mId + ":isRunning=" + mMission.isRunning());
+			Log.d(TAG, mId + ":blocks=" + mMission.getBlocks());
+			while (mMission.getErrCode() == -1 && mMission.isRunning()) {
 
 				Log.d("timetimetimetime" + mId, "----------------------------start-------------------------");
 				long time0 = System.currentTimeMillis();
 
 				if (Thread.currentThread().isInterrupted()) {
-					mMission.pause();
 					return;
 				}
 
-				Log.d(TAG, mId + ":retry is true. Resuming at " + position);
-
-				// Wait for an unblocked position
-				while (!retry && position < mMission.getBlocks() && mMission.isBlockPreserved(position)) {
-
-					Log.d(TAG, mId + ":position " + position + " preserved, passing");
-
-					position++;
-				}
-
-				retry = false;
-
-				if (position >= mMission.getBlocks()) {
+				long position = mMission.getPosition();
+				Log.d(TAG, "id=" + mId + " position=" + position + " blocks=" + mMission.getBlocks());
+				if (position < 0 || position > mMission.getBlocks()) {
 					break;
 				}
 
 				Log.d(TAG, mId + ":preserving position " + position);
-
-				mMission.preserveBlock(position);
-				mMission.setThreadPosition(mId, position);
 
 				long start = position * mMission.getBlockSize();
 				long end = start + mMission.getBlockSize() - 1;
@@ -241,20 +136,6 @@ public class DownloadRunnable implements Runnable {
 				long time_0 = System.currentTimeMillis();
 				Log.d("timetimetimetime" + mId, "timetime=" + (time_0 - time0));
 				try {
-//				OkHttpClient client = new OkHttpClient();
-//				Request request = new Request.Builder()
-//						.url(mMission.url)
-//						.addHeader("User-Agent", "")
-//						.addHeader("Cookie", "")
-//						.addHeader("Accept", "*/*")
-//						.addHeader("Referer","https://pan.baidu.com/disk/home")
-//						.addHeader("Pragma", "no-cache")
-//						.addHeader("Cache-Control", "no-cache")
-//						.addHeader("Want-Digest", "SHA-512;q=1, SHA-256;q=1, SHA;q=0.1")
-//						.addHeader("Range", "bytes=" + start + "-" + end)
-//						.build();
-//
-//				Response res = client.newCall(request).execute();
 
 
 					conn = HttpUrlConnectionFactory.getConnection(mMission, start, end);
@@ -275,22 +156,20 @@ public class DownloadRunnable implements Runnable {
 
 					// A server may be ignoring the range requet
 					if (conn.getResponseCode() != ResponseCode.RESPONSE_206) {
-						mMission.setErrCode(ErrorCode.ERROR_SERVER_UNSUPPORTED);
 						Log.d("DownRun", "error:206");
-						notifyError(ErrorCode.ERROR_SERVER_UNSUPPORTED);
+						mMission.onPositionDownloadFailed(position);
+						notifyError(conn.getResponseCode());
 
 						Log.e(TAG, mId + ":Unsupported " + conn.getResponseCode());
 
-						break;
+						return;
 					}
 
 					long time_1 = System.currentTimeMillis();
 					Log.d("timetimetimetime" + mId, "ttttttttt=" + (time_1 - time_0));
 
 					f.seek(start);
-//
 					BufferedInputStream ipt = new BufferedInputStream(conn.getInputStream());
-//
 					long time1 = System.currentTimeMillis();
 					Log.d("timetimetimetime" + mId, "hhhhhhhhhh=" + (time1 - time_1));
 					int i = 0;
@@ -317,22 +196,16 @@ public class DownloadRunnable implements Runnable {
 							Log.d("len", "len=" + len);
 							long time4 = System.currentTimeMillis();
 							tempTime2 += (time4 - time_4);
-//							notifyProgress(len, false);
+							notifyProgress(len);
 							long time5 = System.currentTimeMillis();
 							tempTime3 += (time5 - time4);
-//							Log.d("timetimetimetime" + mId, "time2222 = " + (time5 - time4));
 							tempTime += (time5 - time3);
 						}
 					}
-
-
-					notifyProgress(total);
-
 					Log.d("timetimetimetime" + mId, "tempTime=" + tempTime);
 					Log.d("timetimetimetime" + mId, "tempTime2=" + tempTime2);
 					Log.d("timetimetimetime" + mId, "tempTime3=" + tempTime3);
 					Log.d("timetimetimetime" + mId, "tempTime4=" + tempTime4);
-//					Log.d("timetimetimetime" + mId, "i=" + i);
 					ipt.close();
 					conn.disconnect();
 
@@ -341,14 +214,16 @@ public class DownloadRunnable implements Runnable {
 					Log.d("timetimetimetime" + mId, "----------------------------finished-------------------------");
 					Log.d(TAG, mId + ":position " + position + " finished, total length " + total);
 
-
+					Log.d(TAG, mId + ":errorCode=" + mMission.getErrCode());
+					Log.d(TAG, mId + ":isRunning=" + mMission.isRunning());
+					Log.d(TAG, mId + ":blocks=" + mMission.getBlocks());
+					mMission.preserveBlock(position);
 
 					// TODO We should save progress for each thread
 				} catch (Exception e) {
-					// TODO Retry count limit & notify error
-					retry = true;
 
 					notifyProgress(-total);
+					mMission.onPositionDownloadFailed(position);
 
 					Log.d(TAG, mId + ":position " + position + " retrying");
 				}
@@ -376,16 +251,14 @@ public class DownloadRunnable implements Runnable {
 
     public void notifyProgress(final int len) {
         Log.d("notifyProgress", "len=" + len);
-        Message msg = new Message();
-        msg.obj = len;
-        msg.what = 0;
-        mHandler.sendMessage(msg);
+		synchronized (mMission) {
+			mMission.notifyProgress(len);
+		}
     }
 
     private void notifyError(final int err) {
         synchronized (mMission) {
-            mMission.pause();
-            mMission.notifyError(err);
+            mMission.notifyError(err, true);
         }
     }
 

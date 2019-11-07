@@ -56,7 +56,7 @@ public class QXDownloader {
     public static void onDestroy() {
         DownloadManagerImpl.unRegister();
         NotifyUtil.cancelAll();
-        System.exit(0);
+//        System.exit(0);
 //        context.unbindService(mConnection);
 //        Intent intent = new Intent();
 //        intent.setClass(context, DownloadManagerService.class);
@@ -99,8 +99,16 @@ public class QXDownloader {
         mission.pause();
     }
 
+    public static void pause(String uuid) {
+        getDownloadManager().getMission(uuid).pause();
+    }
+
     public static void resume(DownloadMission mission) {
         mission.start();
+    }
+
+    public static void resume(String uuid) {
+        getDownloadManager().getMission(uuid).start();
     }
 
     public static void delete(DownloadMission mission) {
@@ -111,6 +119,10 @@ public class QXDownloader {
         mission.pause();
         mission.deleteMissionInfo();
         DownloadManagerImpl.getInstance().getMissions().remove(mission);
+    }
+
+    public static void clear(String uuid) {
+        clear(DownloadManagerImpl.getInstance().getMission(uuid));
     }
 
     public static boolean rename(DownloadMission mission, String name) {

@@ -23,6 +23,7 @@ public class MissionConfig extends BaseConfig {
         return new MissionConfig()
                 .setDownloadPath(config.downloadPath)
                 .setBufferSize(config.bufferSize)
+                .setProgressInterval(config.progressInterval)
                 .setThreadPoolConfig(config.threadPoolConfig)
                 .setBlockSize(config.blockSize)
                 .setRetryCount(config.retryCount)
@@ -56,6 +57,12 @@ public class MissionConfig extends BaseConfig {
     @Override
     public MissionConfig setBufferSize(int bufferSize) {
         this.bufferSize = bufferSize;
+        return this;
+    }
+
+    @Override
+    public MissionConfig setProgressInterval(long progressInterval) {
+        this.progressInterval = progressInterval;
         return this;
     }
 

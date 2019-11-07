@@ -31,6 +31,8 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 
 /**
@@ -52,7 +54,7 @@ public class DownloadMission {
 
         void onRetry();
 
-        void onProgress(long done, long total);
+        void onProgress(UpdateInfo update);
 
         void onFinish();
 
@@ -60,7 +62,7 @@ public class DownloadMission {
     }
 
     public enum MissionStatus {
-        INITING("初始化中"),
+        INITING("准备中"),
         START("已开始"),
         RUNNING("下载中"),
         WAITING("等待中"),
@@ -103,9 +105,9 @@ public class DownloadMission {
 
     //-----------------------------------------------------transient---------------------------------------------------------------
 
-    private transient boolean recovered = false;
-
     private transient int currentRetryCount = missionConfig.getRetryCount();
+
+    private transient int aliveThreadCount;
 
     private transient int threadCount = missionConfig.getThreadPoolConfig().getCorePoolSize();
 
@@ -117,13 +119,15 @@ public class DownloadMission {
 
     private transient ThreadPoolExecutor threadPoolExecutor;
 
-    private transient long lastTimeStamp = -1;
     private transient long lastDone = -1;
     private transient String tempSpeed = "0 KB/s";
+    private transient final UpdateInfo updateInfo = new UpdateInfo();
+    private transient final Handler handler = new Handler(Looper.getMainLooper());
+    private transient final ConcurrentLinkedQueue<Long> queue = new ConcurrentLinkedQueue<>();
 
 
     //------------------------------------------------------runnables---------------------------------------------
-    private transient Runnable initRunnable = new Runnable() {
+    private final transient Runnable initRunnable = new Runnable() {
         @Override
         public void run() {
             try {
@@ -146,6 +150,7 @@ public class DownloadMission {
                         .execute();
 
                 if (handleResponse(response, DownloadMission.this)) {
+                    Log.d(TAG, "handleResponse--111");
                     return;
                 }
 
@@ -170,6 +175,7 @@ public class DownloadMission {
                         .execute();
 
                 if (handleResponse(response, DownloadMission.this)) {
+                    Log.d(TAG, "handleResponse--222");
                     return;
                 }
 
@@ -192,12 +198,14 @@ public class DownloadMission {
                     if (!downloadMission.isIniting() && TextUtils.equals(name, downloadMission.name) &&
                             (TextUtils.equals(downloadMission.originUrl.trim(), url.trim()) ||
                                     TextUtils.equals(downloadMission.redirectUrl.trim(), url.trim()))) {
+                        Log.d(TAG, "has mission---url=" + downloadMission.url);
                         downloadMission.start();
                         return;
                     }
                 }
 
                 blocks = length / getBlockSize();
+                Log.d(TAG, "blocks=" + blocks);
 
                 if (threadCount > blocks) {
                     threadCount = (int) blocks;
@@ -210,6 +218,7 @@ public class DownloadMission {
                 if (blocks * getBlockSize() < length) {
                     blocks++;
                 }
+                initQueue();
 
 
                 File loacation = new File(getDownloadPath());
@@ -235,9 +244,34 @@ public class DownloadMission {
         }
     };
 
-    private transient Runnable progressRunnable = new Runnable() {
+    private final transient Runnable progressRunnable = new Runnable() {
         @Override
         public void run() {
+            Log.d(TAG, "progressRunnable--start");
+            if (isFinished()) {
+                handler.removeCallbacks(progressRunnable);
+                return;
+            }
+            handler.postDelayed(progressRunnable, missionConfig.getProgressInterval());
+            long downloaded = done;
+            long delta = downloaded - lastDone;
+            Log.d(TAG, "progressRunnable--delta=" + delta);
+            if (delta > 0) {
+                lastDone = downloaded;
+                float speed = delta * (missionConfig.getProgressInterval() / 1000f);
+                tempSpeed = Utility.formatSpeed(speed);
+            }
+            String downloadedSizeStr = Utility.formatSize(downloaded);
+            float progress = getProgress(downloaded, length);
+            Log.d(TAG, "progressRunnable--tempSpeed=" + tempSpeed);
+            updateInfo.setDone(downloaded);
+            updateInfo.setSize(length);
+            updateInfo.setProgress(progress);
+            updateInfo.setFileSizeStr(getFileSizeStr());
+            updateInfo.setDownloadedSizeStr(downloadedSizeStr);
+            updateInfo.setProgressStr(String.format(Locale.US, "%.2f%%", progress));
+            updateInfo.setSpeedStr(tempSpeed);
+            writeMissionInfo();
             notifyStatus(MissionStatus.RUNNING);
             if (missionConfig.getEnableNotificatio()) {
                 NotifyUtil.with(getContext())
@@ -250,7 +284,7 @@ public class DownloadMission {
         }
     };
 
-    private transient Runnable writeMissionInfoRunnable = new Runnable() {
+    private final transient Runnable writeMissionInfoRunnable = new Runnable() {
         @Override
         public void run() {
             synchronized (blockState) {
@@ -302,17 +336,40 @@ public class DownloadMission {
         return missionStatus == MissionStatus.ERROR;
     }
 
+    public boolean canPause() {
+        return isRunning() || isWaiting() || isIniting();
+    }
+
+    public boolean canStart() {
+        return isPause() || isError() || isIniting();
+    }
+
 
     //----------------------------------------------------------operation------------------------------------------------------------
-    public void init() {
+    void init() {
+        currentRetryCount = missionConfig.getRetryCount();
+        threadCount = missionConfig.getThreadCount();
+        lastDone = done;
         if (threadPoolExecutor == null || threadPoolExecutor.getCorePoolSize() != 2 * threadCount) {
             threadPoolExecutor = ThreadPoolFactory.newFixedThreadPool(missionConfig.getThreadPoolConfig());
         }
         if (hasInit) {
-            notifyStatus(MissionStatus.INITING);
+            initQueue();
+            pause();
+//            notifyStatus(MissionStatus.INITING);
         } else {
             writeMissionInfo();
             threadPoolExecutor.submit(initRunnable);
+        }
+    }
+
+    private void initQueue() {
+        queue.clear();
+        for (long position = 0;  position < getBlocks(); position++) {
+            if (!isBlockPreserved(position)) {
+                Log.d(TAG, "initQueue add position=" + position);
+                queue.add(position);
+            }
         }
     }
 
@@ -327,50 +384,35 @@ public class DownloadMission {
 
             DownloadManagerImpl.increaseDownloadingCount();
 
-//			waiting = false;
-//			running = true;
             missionStatus = MissionStatus.RUNNING;
 
-//			ExecutorService executorService;
-            if (!fallback) {
-//				executorService = Executors.newFixedThreadPool(threadCount);
-//				for (int i = 0; i < threadCount; i++) {
-//					if (threadPositions.size() <= i && !recovered) {
-//						threadPositions.add((long) i);
-//					}
-//					executorService.submit(new DownloadRunnable(this, i));
-////					new Thread(new DownloadRunnable(this, i)).start();
-//				}
-            } else {
+            if (fallback) {
                 // In fallback mode, resuming is not supported.
                 missionConfig.getThreadPoolConfig().setCorePoolSize(1);
                 threadCount = 1;
                 done = 0;
                 blocks = 0;
-//				executorService = Executors.newFixedThreadPool(1);
-//				executorService.submit(new DownloadRunnableFallback(this));
             }
 
+            aliveThreadCount = threadCount;
             if (threadPoolExecutor == null || threadPoolExecutor.getCorePoolSize() != 2 * threadCount) {
                 threadPoolExecutor = ThreadPoolFactory.newFixedThreadPool(missionConfig.getThreadPoolConfig());
             }
             for (int i = 0; i < threadCount; i++) {
-                if (threadPositions.size() <= i && !recovered) {
-                    threadPositions.add((long) i);
-                }
                 threadPoolExecutor.submit(new DownloadRunnable(this, i));
             }
 
             writeMissionInfo();
             notifyStatus(MissionStatus.START);
+            handler.post(progressRunnable);
         }
     }
 
     public void pause() {
         initCurrentRetryCount();
+        handler.removeCallbacks(progressRunnable);
         if (isRunning() || isWaiting()) {
             missionStatus = MissionStatus.PAUSE;
-            recovered = true;
             writeMissionInfo();
             notifyStatus(missionStatus);
 
@@ -410,78 +452,39 @@ public class DownloadMission {
     }
 
     //------------------------------------------------------------notify------------------------------------------------------------
-    public synchronized void notifyProgress(long deltaLen) {
-        if (missionStatus != MissionStatus.RUNNING) {
-            return;
-        }
-
-        if (recovered) {
-            recovered = false;
-        }
-
+    synchronized void notifyProgress(long deltaLen) {
         done += deltaLen;
-
         if (done > length) {
             done = length;
         }
-
-        long now = System.currentTimeMillis();
-        if (lastTimeStamp == -1) {
-            lastTimeStamp = now;
-        }
-        long deltaTime = now - lastTimeStamp;
-        if (deltaTime < 1000) {
-            return;
-        }
-        lastTimeStamp = now;
-        if (lastDone == -1) {
-            lastDone = done;
-        }
-        long deltaDone = done - lastDone;
-        lastDone = done;
-
-        if (deltaDone <= 0) {
-            tempSpeed = "0 KB/s";
-        } else {
-            float speed = (float) deltaDone / deltaTime;
-            tempSpeed = Utility.formatSpeed(speed * 1000);
-        }
-
-        if (done != length) {
-            Log.d(TAG, "已下载");
-            writeMissionInfo();
-            threadPoolExecutor.submit(progressRunnable);
-
-//			for (WeakReference<MissionListener> ref: mListeners) {
-//				final MissionListener listener = ref.get();
-//				if (listener != null) {
-//					MissionListener.HANDLER_STORE.get(listener).post(new Runnable() {
-//						@Override
-//						public void run() {
-//							listener.onProgressUpdate(done, length);
-//						}
-//					});
-//				}
-//			}
-        }
     }
 
-    public synchronized void notifyFinished() {
+    synchronized void notifyFinished() {
+        Log.d(TAG, "notifyFinished errCode=" + errCode + " done=" + done + " length=" + length);
         if (errCode > 0) {
             return;
         }
 
         finishCount++;
 
-        if (finishCount == threadCount) {
+        if (done == length) {
             onFinish();
+        } else {
+            pause();
+            start();
         }
     }
 
-    synchronized void notifyError(int err) {
+    synchronized void notifyError(int err, boolean fromThread) {
+        Log.d(TAG, "err=" +err + " fromThread=" + fromThread);
         if (!(err == ErrorCode.ERROR_WITHOUT_STORAGE_PERMISSIONS || err == ErrorCode.ERROR_FILE_NOT_FOUND)) {
             errorCount++;
-            if (errorCount == threadCount) {
+            if (fromThread) {
+                aliveThreadCount--;
+                finishCount++;
+            }
+            Log.d(TAG, "aliveThreadCount=" + aliveThreadCount + " fromThread=" + fromThread);
+            if (aliveThreadCount <= 0 && errorCount >= threadCount) {
                 currentRetryCount--;
                 if (currentRetryCount >= 0) {
                     pause();
@@ -494,6 +497,8 @@ public class DownloadMission {
                     }, missionConfig.getRetryDelay());
                     return;
                 }
+            } else {
+                return;
             }
         }
 
@@ -535,7 +540,7 @@ public class DownloadMission {
                                 listener.onStart();
                                 break;
                             case RUNNING:
-                                listener.onProgress(done, length);
+                                listener.onProgress(updateInfo);
                                 break;
                             case WAITING:
                                 listener.onWaiting();
@@ -566,6 +571,7 @@ public class DownloadMission {
             return;
         }
         Log.d(TAG, "onFinish");
+        handler.removeCallbacks(progressRunnable);
 
         missionStatus = MissionStatus.FINISHED;
 
@@ -601,6 +607,14 @@ public class DownloadMission {
             if (listener != null && listener == weakRef.get()) {
                 iterator.remove();
             }
+        }
+    }
+
+    public synchronized void removeAllListener() {
+        for (Iterator<WeakReference<MissionListener>> iterator = mListeners.iterator();
+             iterator.hasNext(); ) {
+            WeakReference<MissionListener> weakRef = iterator.next();
+            iterator.remove();
         }
     }
 
@@ -656,6 +670,10 @@ public class DownloadMission {
         return createTime;
     }
 
+    public int getThreadCount() {
+        return threadCount;
+    }
+
     public long getBlocks() {
         return blocks;
     }
@@ -670,10 +688,6 @@ public class DownloadMission {
 
     public long getDone() {
         return done;
-    }
-
-    public List<Long> getThreadPositions() {
-        return threadPositions;
     }
 
     public MissionStatus getStatus() {
@@ -694,10 +708,6 @@ public class DownloadMission {
 
     public MissionConfig getMissionConfig() {
         return missionConfig;
-    }
-
-    public boolean isRecovered() {
-        return recovered;
     }
 
     public String getDownloadPath() {
@@ -750,7 +760,7 @@ public class DownloadMission {
         return missionConfig.getHeaders();
     }
 
-    public float getProgress() {
+    private float getProgress(long done, long length) {
         if (missionStatus == MissionStatus.FINISHED) {
             return 100f;
         } else if (length <= 0) {
@@ -758,6 +768,10 @@ public class DownloadMission {
         }
         float progress = (float) done / (float) length;
         return progress * 100f;
+    }
+
+    public float getProgress() {
+        return getProgress(done, length);
     }
 
     public String getProgressStr() {
@@ -783,8 +797,15 @@ public class DownloadMission {
         return notifyId;
     }
 
-    public long getPosition(int id) {
-        return threadPositions.get(id);
+    long getPosition() {
+        if (queue.isEmpty()) {
+            return -1;
+        }
+        return queue.poll();
+    }
+
+    void onPositionDownloadFailed(long position) {
+        queue.add(position);
     }
 
     public String getMissionInfoFilePath() {
@@ -799,28 +820,20 @@ public class DownloadMission {
         this.name = name;
     }
 
-    public void setUrl(String url) {
+    void setUrl(String url) {
         this.url = url;
     }
 
-    public void setRedirectUrl(String redirectUrl) {
+    void setRedirectUrl(String redirectUrl) {
         this.redirectUrl = redirectUrl;
     }
 
-    public void setOriginUrl(String originUrl) {
+    void setOriginUrl(String originUrl) {
         this.originUrl = originUrl;
     }
 
-    public void setLength(long length) {
+    void setLength(long length) {
         this.length = length;
-    }
-
-    public void setThreadPosition(int id, long position) {
-        threadPositions.set(id, position);
-    }
-
-    public void setRecovered(boolean recovered) {
-        this.recovered = recovered;
     }
 
     public void setErrCode(int errCode) {
@@ -836,7 +849,7 @@ public class DownloadMission {
         return state != null && state;
     }
 
-    public void preserveBlock(long block) {
+    void preserveBlock(long block) {
         synchronized (blockState) {
             blockState.put(block, true);
         }
@@ -860,7 +873,7 @@ public class DownloadMission {
             }
         } else if (response.statusCode() == ErrorCode.ERROR_SERVER_404) {
             mission.errCode = ErrorCode.ERROR_SERVER_404;
-            mission.notifyError(ErrorCode.ERROR_SERVER_404);
+            mission.notifyError(ErrorCode.ERROR_SERVER_404, false);
             return true;
         } else if (response.statusCode() == ResponseCode.RESPONSE_206) {
             String contentLength = response.header("Content-Length");
@@ -928,14 +941,81 @@ public class DownloadMission {
     private boolean checkLength(DownloadMission mission) {
         if (mission.length <= 0) {
             mission.errCode = ErrorCode.ERROR_SERVER_UNSUPPORTED;
-            mission.notifyError(ErrorCode.ERROR_SERVER_UNSUPPORTED);
+            mission.notifyError(ErrorCode.ERROR_SERVER_UNSUPPORTED, false);
             return false;
         } else if (mission.length >= Utility.getAvailableSize()) {
             mission.errCode = ErrorCode.ERROR_NO_ENOUGH_SPACE;
-            mission.notifyError(ErrorCode.ERROR_NO_ENOUGH_SPACE);
+            mission.notifyError(ErrorCode.ERROR_NO_ENOUGH_SPACE, false);
             return false;
         }
         return true;
+    }
+
+    public class UpdateInfo {
+
+        private long size;
+        private long done;
+        private float progress;
+        private String fileSizeStr;
+        private String downloadedSizeStr;
+        private String progressStr;
+        private String speedStr;
+
+        public long getSize() {
+            return size;
+        }
+
+        public void setSize(long size) {
+            this.size = size;
+        }
+
+        public long getDone() {
+            return done;
+        }
+
+        public void setDone(long done) {
+            this.done = done;
+        }
+
+        public float getProgress() {
+            return progress;
+        }
+
+        void setProgress(float progress) {
+            this.progress = progress;
+        }
+
+        public String getFileSizeStr() {
+            return fileSizeStr;
+        }
+
+        void setFileSizeStr(String fileSizeStr) {
+            this.fileSizeStr = fileSizeStr;
+        }
+
+        public String getDownloadedSizeStr() {
+            return downloadedSizeStr;
+        }
+
+        void setDownloadedSizeStr(String downloadedSizeStr) {
+            this.downloadedSizeStr = downloadedSizeStr;
+        }
+
+        public String getProgressStr() {
+            return progressStr;
+        }
+
+        void setProgressStr(String progressStr) {
+            this.progressStr = progressStr;
+        }
+
+        public String getSpeedStr() {
+            return speedStr;
+        }
+
+        void setSpeedStr(String speedStr) {
+            this.speedStr = speedStr;
+        }
     }
 
 }

@@ -22,6 +22,7 @@ import com.zpj.qxdownloader.service.DownloadManagerService;
 import com.zpj.qxdownloader.util.FileUtil;
 import com.zpj.qxdownloader.util.Utility;
 
+import java.io.File;
 import java.util.Locale;
 
 /**
@@ -127,7 +128,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 			h.size.setText(mission.getFileSizeStr());
 		}
 		
-		updateProgress(h);
+		updateProgress(h, null);
 	}
 
 	@Override
@@ -140,64 +141,25 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		return position;
 	}
 	
-	private void updateProgress(ViewHolder h) {
-		updateProgress(h, false);
+	private void updateProgress(ViewHolder h, DownloadMission.UpdateInfo updateInfo) {
+		updateProgress(h, updateInfo, false);
 	}
 	
-	private void updateProgress(ViewHolder h, boolean finished) {
+	private void updateProgress(ViewHolder h, DownloadMission.UpdateInfo updateInfo, boolean finished) {
 		if (h.mission == null) {
 			return;
 		}
-		
-		long now = System.currentTimeMillis();
-		
-		if (h.lastTimeStamp == -1) {
-			h.lastTimeStamp = now;
-		}
-		
-		if (h.lastDone == -1) {
-			h.lastDone = h.mission.getDone();
-		}
-		
-		long deltaTime = now - h.lastTimeStamp;
-		long deltaDone = h.mission.getDone() - h.lastDone;
-		
-		if (deltaTime == 0 || deltaTime > DELTA_TIME_LIMIT || finished) {
-			int errorCode = h.mission.getErrCode();
-			if (errorCode > 0) {
-				switch (errorCode) {
-					case 1000:
-						h.status.setText("存储空间不足！");
-						break;
-					case 233:
-						h.status.setText("未知错误");
-						break;
-					default:
-						h.status.setText("出错了:errorCode=" + errorCode);
-						break;
-				}
-			} else {
-				float progress = h.mission.getProgress();
-				Log.d("progress", "progress=" + progress);
-				h.menu.setProgress(progress);
-				h.status.setText(String.format(Locale.CHINA, "%.2f%%", progress));
-				h.progress.setProgress(progress / 100);
-			}
-		}
-		
-		if (deltaTime > DELTA_TIME_LIMIT && deltaDone > 0) {
-			float speed = (float) deltaDone / deltaTime;
-			String speedStr = Utility.formatSpeed(speed * 1000);
-			String sizeStr = h.mission.getFileSizeStr();
-			
-			h.size.setText(sizeStr + " " + speedStr);
-			
-			h.lastTimeStamp = now;
-			h.lastDone = h.mission.getDone();
-		}
+
 		if (finished) {
-			Toast.makeText(mContext, "download finish", Toast.LENGTH_SHORT).show();
 			downloadCallback.onDownloadFinished();
+		} else {
+			if (updateInfo == null) {
+				h.menu.setProgress(h.mission.getProgress());
+				h.size.setText(h.mission.getFileSizeStr() + File.separator + h.mission.getDownloadedSizeStr() + "  " + h.mission.getSpeed());
+			} else {
+				h.menu.setProgress(updateInfo.getProgress());
+				h.size.setText(updateInfo.getFileSizeStr() + File.separator + updateInfo.getDownloadedSizeStr() + "  " + updateInfo.getSpeedStr());
+			}
 		}
 	}
 
@@ -289,24 +251,34 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		}
 
 		@Override
-		public void onProgress(long done, long total) {
+		public void onProgress(DownloadMission.UpdateInfo update) {
 			if (TextUtils.equals(mHolder.name.getText().toString(), STATUS_INIT) && !TextUtils.isEmpty(mHolder.mission.getTaskName())) {
 				mHolder.name.setText(mHolder.mission.getTaskName());
 			}
-			mAdapter.updateProgress(mHolder);
+			mAdapter.updateProgress(mHolder, update);
 		}
 
 		@Override
 		public void onFinish() {
 			if (mHolder.mission != null) {
 				mHolder.size.setText(mHolder.mission.getFileSizeStr());
-				mAdapter.updateProgress(mHolder, true);
+				mAdapter.updateProgress(mHolder, null, true);
 			}
 		}
 
 		@Override
 		public void onError(int errCode) {
-			mAdapter.updateProgress(mHolder);
+			switch (errCode) {
+				case 1000:
+					mHolder.status.setText("存储空间不足！");
+					break;
+				case 233:
+					mHolder.status.setText("未知错误");
+					break;
+				default:
+					mHolder.status.setText("出错了:errorCode=" + errCode);
+					break;
+			}
 		}
 		
 	}

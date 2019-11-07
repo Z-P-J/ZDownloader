@@ -46,6 +46,12 @@ public class QianXunConfig extends BaseConfig {
     }
 
     @Override
+    public QianXunConfig setProgressInterval(long progressInterval) {
+        this.progressInterval = progressInterval;
+        return this;
+    }
+
+    @Override
     public QianXunConfig setBlockSize(int blockSize) {
         this.blockSize = blockSize;
         return this;

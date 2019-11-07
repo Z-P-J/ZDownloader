@@ -121,6 +121,12 @@ public class DownloadManagerImpl implements DownloadManager {
 
 	@Override
 	public List<DownloadMission> getMissions() {
+		Collections.sort(ALL_MISSIONS, new Comparator<DownloadMission>() {
+			@Override
+			public int compare(DownloadMission o1, DownloadMission o2) {
+				return - (int) (o1.getCreateTime() - o2.getCreateTime());
+			}
+		});
 		return ALL_MISSIONS;
 	}
 
@@ -146,7 +152,6 @@ public class DownloadManagerImpl implements DownloadManager {
 						DownloadMission mis = new Gson().fromJson(str, DownloadMission.class);
 						Log.d("initMissions", "mis=null? " + (mis == null));
 						if (mis != null) {
-							mis.setRecovered(true);
 							mis.init();
 							insertMission(mis);
 						}

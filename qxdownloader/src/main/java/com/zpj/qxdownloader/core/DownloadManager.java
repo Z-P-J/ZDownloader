@@ -10,7 +10,6 @@ import java.util.ArrayList;
 import java.util.List;
 
 public interface DownloadManager {
-    int BLOCK_SIZE = 1024 * 1024;
 
     List<DownloadMission> ALL_MISSIONS = new ArrayList<>();
 
@@ -72,7 +71,7 @@ public interface DownloadManager {
 
     void setDownloadManagerListener(DownloadManagerListener downloadManagerListener);
 
-    public DownloadManagerListener getDownloadManagerListener();
+    DownloadManagerListener getDownloadManagerListener();
 
     List<DownloadMission> getMissions();
 }

@@ -33,6 +33,8 @@ abstract class BaseConfig {
      * */
     int bufferSize = DefaultConstant.BUFFER_SIZE;
 
+    long progressInterval =DefaultConstant.PROGRESS_INTERVAL;
+
     /**
      * 下载块大小
      * */
@@ -105,8 +107,14 @@ abstract class BaseConfig {
 
     public abstract BaseConfig setBufferSize(int bufferSize);
 
+    public abstract BaseConfig setProgressInterval(long progressInterval);
+
     public int getBufferSize() {
         return bufferSize;
+    }
+
+    public long getProgressInterval() {
+        return progressInterval;
     }
 
     public abstract BaseConfig setBlockSize(int blockSize);
