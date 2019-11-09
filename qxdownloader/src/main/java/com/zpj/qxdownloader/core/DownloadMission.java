@@ -467,7 +467,7 @@ public class DownloadMission {
 
         finishCount++;
 
-        if (done == length) {
+        if (isFallback() || done == length) {
             onFinish();
         } else {
             pause();
