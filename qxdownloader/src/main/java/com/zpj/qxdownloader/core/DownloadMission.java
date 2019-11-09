@@ -382,17 +382,22 @@ public class DownloadMission {
                 return;
             }
 
-            DownloadManagerImpl.increaseDownloadingCount();
-
-            missionStatus = MissionStatus.RUNNING;
-
             if (fallback) {
+                if (isPause() || isError()) {
+                    missionStatus = MissionStatus.INITING;
+                    threadPoolExecutor.submit(initRunnable);
+                    return;
+                }
                 // In fallback mode, resuming is not supported.
                 missionConfig.getThreadPoolConfig().setCorePoolSize(1);
                 threadCount = 1;
                 done = 0;
                 blocks = 0;
             }
+
+            DownloadManagerImpl.increaseDownloadingCount();
+
+            missionStatus = MissionStatus.RUNNING;
 
             aliveThreadCount = threadCount;
             if (threadPoolExecutor == null || threadPoolExecutor.getCorePoolSize() != 2 * threadCount) {
