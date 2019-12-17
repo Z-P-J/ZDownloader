@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/QXDownloader.iml" filepath="$PROJECT_DIR$/QXDownloader.iml" group="QXDownloader" />
+      <module fileurl="file://$PROJECT_DIR$/ZDownloader.iml" filepath="$PROJECT_DIR$/ZDownloader.iml" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" group="QXDownloader/app" />
       <module fileurl="file://$PROJECT_DIR$/switchbutton/switchbutton.iml" filepath="$PROJECT_DIR$/switchbutton/switchbutton.iml" />
       <module fileurl="file://$PROJECT_DIR$/zdialog/zdialog.iml" filepath="$PROJECT_DIR$/zdialog/zdialog.iml" />
