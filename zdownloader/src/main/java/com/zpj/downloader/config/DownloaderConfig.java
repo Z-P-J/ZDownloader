@@ -12,89 +12,89 @@ import java.util.Map;
 /**
 * @author Z-P-J
 * */
-public class QianXunConfig extends BaseConfig {
+public class DownloaderConfig extends BaseConfig {
 
     private int concurrentMissionCount = DefaultConstant.CONCURRENT_MISSION_COUNT;
 
-    private QianXunConfig() {
+    private DownloaderConfig() {
 
     }
 
-    public static QianXunConfig with(Context context) {
-        QianXunConfig options = new QianXunConfig();
+    public static DownloaderConfig with(Context context) {
+        DownloaderConfig options = new DownloaderConfig();
         options.setContext(context);
         return options;
     }
 
     @Override
-    public QianXunConfig setDownloadPath(String downloadPath) {
+    public DownloaderConfig setDownloadPath(String downloadPath) {
         this.downloadPath = downloadPath;
         return this;
     }
 
     @Deprecated
     @Override
-    public QianXunConfig setThreadCount(int threadCount) {
+    public DownloaderConfig setThreadCount(int threadCount) {
         this.threadPoolConfig.setCorePoolSize(threadCount);
         return this;
     }
 
     @Override
-    public QianXunConfig setBufferSize(int bufferSize) {
+    public DownloaderConfig setBufferSize(int bufferSize) {
         this.bufferSize = bufferSize;
         return this;
     }
 
     @Override
-    public QianXunConfig setProgressInterval(long progressInterval) {
+    public DownloaderConfig setProgressInterval(long progressInterval) {
         this.progressInterval = progressInterval;
         return this;
     }
 
     @Override
-    public QianXunConfig setBlockSize(int blockSize) {
+    public DownloaderConfig setBlockSize(int blockSize) {
         this.blockSize = blockSize;
         return this;
     }
 
     @Override
-    public QianXunConfig setUserAgent(String userAgent) {
+    public DownloaderConfig setUserAgent(String userAgent) {
         this.userAgent = userAgent;
         return this;
     }
 
     @Override
-    public QianXunConfig setRetryCount(int retryCount) {
+    public DownloaderConfig setRetryCount(int retryCount) {
         this.retryCount = retryCount;
         return this;
     }
 
     @Override
-    public QianXunConfig setCookie(String cookie) {
+    public DownloaderConfig setCookie(String cookie) {
         this.cookie = cookie;
         return this;
     }
 
     @Override
-    public QianXunConfig setRetryDelay(int retryDelay) {
+    public DownloaderConfig setRetryDelay(int retryDelay) {
         this.retryDelay = retryDelay;
         return this;
     }
 
     @Override
-    public QianXunConfig setConnectOutTime(int connectOutTime) {
+    public DownloaderConfig setConnectOutTime(int connectOutTime) {
         this.connectOutTime = connectOutTime;
         return this;
     }
 
     @Override
-    public QianXunConfig setReadOutTime(int readOutTime) {
+    public DownloaderConfig setReadOutTime(int readOutTime) {
         this.readOutTime = readOutTime;
         return this;
     }
 
     @Override
-    public QianXunConfig setHeaders(Map<String, String> headers) {
+    public DownloaderConfig setHeaders(Map<String, String> headers) {
         this.headers.clear();
         this.headers.putAll(headers);
         return this;
@@ -107,25 +107,25 @@ public class QianXunConfig extends BaseConfig {
     }
 
     @Override
-    public QianXunConfig setThreadPoolConfig(ThreadPoolConfig threadPoolConfig) {
+    public DownloaderConfig setThreadPoolConfig(ThreadPoolConfig threadPoolConfig) {
         this.threadPoolConfig = threadPoolConfig;
         return this;
     }
 
     @Override
-    public QianXunConfig setProxy(Proxy proxy) {
+    public DownloaderConfig setProxy(Proxy proxy) {
         this.proxy = proxy;
         return this;
     }
 
     @Override
-    public QianXunConfig setProxy(String host, int port) {
+    public DownloaderConfig setProxy(String host, int port) {
         this.proxy = new Proxy(Proxy.Type.HTTP, InetSocketAddress.createUnresolved(host, port));
         return this;
     }
 
     @Override
-    public QianXunConfig setEnableNotification(boolean enableNotification) {
+    public DownloaderConfig setEnableNotification(boolean enableNotification) {
         this.enableNotification = enableNotification;
         return this;
     }
@@ -134,7 +134,7 @@ public class QianXunConfig extends BaseConfig {
         return concurrentMissionCount;
     }
 
-    public QianXunConfig setConcurrentMissionCount(int concurrentMissionCount) {
+    public DownloaderConfig setConcurrentMissionCount(int concurrentMissionCount) {
         this.concurrentMissionCount = concurrentMissionCount;
         return this;
     }

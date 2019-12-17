@@ -3,7 +3,7 @@ package com.zpj.mydownloader;
 import android.app.Application;
 
 import com.zpj.downloader.ZDownloader;
-import com.zpj.downloader.config.QianXunConfig;
+import com.zpj.downloader.config.DownloaderConfig;
 
 /**
  * @author Z-P-J
@@ -14,7 +14,7 @@ public class MyApplication extends Application {
     public void onCreate() {
         super.onCreate();
 
-        QianXunConfig options = QianXunConfig.with(this)
+        DownloaderConfig options = DownloaderConfig.with(this)
                 .setBlockSize(1024 * 1024)
 //                .setThreadCount(5)
 //                .setThreadPoolConfig(

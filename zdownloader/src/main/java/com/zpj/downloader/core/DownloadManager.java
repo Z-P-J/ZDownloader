@@ -3,7 +3,7 @@ package com.zpj.downloader.core;
 import android.content.Context;
 
 import com.zpj.downloader.config.MissionConfig;
-import com.zpj.downloader.config.QianXunConfig;
+import com.zpj.downloader.config.DownloaderConfig;
 import com.zpj.downloader.config.ThreadPoolConfig;
 
 import java.util.ArrayList;
@@ -61,7 +61,7 @@ public interface DownloadManager {
 
     Context getContext();
 
-    QianXunConfig getQianXunConfig();
+    DownloaderConfig getQianXunConfig();
 
     ThreadPoolConfig getThreadPoolConfig();
 

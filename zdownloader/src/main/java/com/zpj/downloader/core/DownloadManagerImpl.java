@@ -6,7 +6,7 @@ import android.util.Log;
 
 import com.google.gson.Gson;
 import com.zpj.downloader.config.MissionConfig;
-import com.zpj.downloader.config.QianXunConfig;
+import com.zpj.downloader.config.DownloaderConfig;
 import com.zpj.downloader.config.ThreadPoolConfig;
 import com.zpj.downloader.constant.DefaultConstant;
 import com.zpj.downloader.util.NetworkChangeReceiver;
@@ -39,11 +39,11 @@ public class DownloadManagerImpl implements DownloadManager {
 
 	private DownloadManagerListener downloadManagerListener;
 
-	private QianXunConfig options;
+	private DownloaderConfig options;
 
 	private static AtomicInteger downloadingCount = new AtomicInteger(0);
 
-	private DownloadManagerImpl(Context context, QianXunConfig options) {
+	private DownloadManagerImpl(Context context, DownloaderConfig options) {
 		mContext = context;
 		this.options = options;
 
@@ -66,7 +66,7 @@ public class DownloadManagerImpl implements DownloadManager {
 		return mManager;
 	}
 
-	public static void register(QianXunConfig options) {
+	public static void register(DownloaderConfig options) {
 		if (mManager == null) {
 			mManager = new DownloadManagerImpl(options.getContext(), options);
 			mManager.loadMissions();
@@ -109,7 +109,7 @@ public class DownloadManagerImpl implements DownloadManager {
 	}
 
 	@Override
-	public QianXunConfig getQianXunConfig() {
+	public DownloaderConfig getQianXunConfig() {
 		return options;
 	}
 

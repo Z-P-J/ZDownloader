@@ -9,8 +9,8 @@ import android.support.v4.content.FileProvider;
 import android.text.TextUtils;
 import android.widget.Toast;
 
+import com.zpj.downloader.config.DownloaderConfig;
 import com.zpj.downloader.config.MissionConfig;
-import com.zpj.downloader.config.QianXunConfig;
 import com.zpj.downloader.core.DownloadManager;
 import com.zpj.downloader.core.DownloadManagerImpl;
 import com.zpj.downloader.core.DownloadMission;
@@ -37,10 +37,10 @@ public class ZDownloader {
     }
 
     public static void init(Context context) {
-        init(QianXunConfig.with(context));
+        init(DownloaderConfig.with(context));
     }
 
-    public static void init(final QianXunConfig options) {
+    public static void init(final DownloaderConfig options) {
         final Context context = options.getContext();
 
         PermissionUtil.grandStoragePermission(context);

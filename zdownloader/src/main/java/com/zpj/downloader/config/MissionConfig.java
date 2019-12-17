@@ -16,9 +16,9 @@ public class MissionConfig extends BaseConfig {
     }
 
     public static MissionConfig with() {
-        QianXunConfig config = DownloadManagerImpl.getInstance().getQianXunConfig();
+        DownloaderConfig config = DownloadManagerImpl.getInstance().getQianXunConfig();
         if (config == null) {
-            throw new RuntimeException("QianXunConfig is null in DownloadManagerImp. You must init first!");
+            throw new RuntimeException("DownloaderConfig is null in DownloadManagerImp. You must init first!");
         }
         return new MissionConfig()
                 .setDownloadPath(config.downloadPath)

@@ -1,4 +1,4 @@
-# QXDownloader
+# ZDownloader
 
 ----------------------------------
 ### 待完善后发布到jCenter或jitpack
@@ -13,7 +13,7 @@ public class MyApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        QXDownloader.init(this); //初始化
+        ZDownloader.init(this); //初始化
     }
 
 }            
@@ -21,7 +21,7 @@ public class MyApplication extends Application {
 
 ### 2. 下载并监听进度
 ```java
-QXDownloader.download("your download url")
+ZDownloader.download("your download url")
                 .addListener(new DownloadMission.MissionListener() {
                     @Override
                     public void onInit() {
@@ -65,41 +65,41 @@ QXDownloader.download("your download url")
 @Override
 protected void onDestroy() {
     super.onDestroy();
-    QXDownloader.unInit();
+    ZDownloader.unInit();
 }
 ```
 
 ### 4. 其它操作
 ```java
 //暂停下载
-QXDownloader.pause(mission);
+ZDownloader.pause(mission);
 
 //恢复下载
-QXDownloader.resume(mission);
+ZDownloader.resume(mission);
 
 //删除下载任务和下载文件
-QXDownloader.delete(mission);
+ZDownloader.delete(mission);
 
 //删除下载任务(不包含下载文件)
-QXDownloader.clear(mission);
+ZDownloader.clear(mission);
 
 //暂停所有下载任务
-QXDownloader.pauseAll();
+ZDownloader.pauseAll();
 
 //恢复所有下载任务
-QXDownloader.resumeAll();
+ZDownloader.resumeAll();
 
 //删除所有下载任务和下载文件
-QXDownloader.deleteAll();
+ZDownloader.deleteAll();
 
 //删除所有下载任务(不包含下载文件)
-QXDownloader.clearAll();
+ZDownloader.clearAll();
 
 //打开下载完成的文件
-QXDownloader.openFile(mission);
+ZDownloader.openFile(mission);
 
 //重命名文件
-QXDownloader.rename(mission, newName);
+ZDownloader.rename(mission, newName);
 ```
 
 ## 二. 高级使用
@@ -111,7 +111,7 @@ public class MyApplication extends Application {
     public void onCreate() {
         super.onCreate();
         //全局设置
-        QianXunOptions options = QianXunOptions.with(this)
+        DownloaderOptions options = DownloaderOptions.with(this)
                 .setDownloadPath("") //设置默认下载路径
                 .setEnableNotification(true) //是否显示通知栏下载进度通知，默认为true
                 .setBlockSize(1024 * 1024) //设置下载块大小，默认为1024 * 1024
@@ -120,7 +120,7 @@ public class MyApplication extends Application {
                 .setRetryCount(10) //设置出错重试次数，默认为5
                 .setRetryDelay(10000) //设置重试延迟，单位为ms
                 .setUserAgent("") //设置UA，默认为系统自带UA
-                .setCookie("") //设置下载任务cookie，默认为空
+                .setCookie("") //设置全局下载任务cookie，默认为空
                 .setConnectOutTime(10000) //设置连接超时，单位ms
                 .setReadOutTime(10000) //设置读取请求内容超时，单位ms
                 .setHeaders(new HashMap<>()) //设置请求头，若Map中含有key为cookie或user-agent的键值对，则会覆盖setCookie或setUserAgent的值
@@ -140,7 +140,7 @@ public class MyApplication extends Application {
                             }
                         })
                 );
-        QXDownloader.init(options); //初始化
+        ZDownloader.init(options); //初始化
     }
 
 }            
@@ -158,7 +158,7 @@ MissionOptions options = MissionOptions.with()
                 .setRetryCount(10) //设置出错重试次数，默认为5
                 .setRetryDelay(10000) //设置重试延迟，单位为ms
                 .setUserAgent("") //单独设置UA，默认为系统自带UA
-                .setCookie(""); //单独设置全局cookie，默认为空
+                .setCookie(""); //单独设置cookie，默认为空
                 .setConnectOutTime(10000) //设置连接超时，单位ms
                 .setReadOutTime(10000) //设置读取请求内容超时，单位ms
                 .setHeaders(new HashMap<>()) //设置请求头，若Map中含有key为cookie或user-agent的键值对，则会覆盖setCookie或setUserAgent的值
@@ -178,6 +178,6 @@ MissionOptions options = MissionOptions.with()
                             }
                         })
                 );
-QXDownloader.download("your download url", options);
+ZDownloader.download("your download url", options);
 //下载进度监听同上
 ```
