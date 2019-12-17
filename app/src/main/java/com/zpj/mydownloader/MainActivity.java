@@ -28,6 +28,8 @@ import com.zpj.downloader.core.DownloadManager;
 import com.zpj.downloader.core.DownloadMission;
 import com.zpj.downloader.jsoup.Jsoup;
 import com.zpj.downloader.jsoup.connection.Connection;
+import com.zpj.zdialog.ZAlertDialog;
+import com.zpj.zdialog.ZBottomSheetDialog;
 import com.zpj.zdialog.ZDialog;
 import com.zpj.zdialog.base.IDialog;
 
@@ -99,21 +101,8 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
     @Override
     public void onItemLongClicked(View view, MissionAdapter.ViewHolder holder, DownloadManager mManager) {
         DownloadMission mission = mManager.getMission(holder.position);
-        ZDialog.with(this)
-                //设置dialog布局
+        ZBottomSheetDialog.with(this)
                 .setContentView(R.layout.layout_dialog_share)
-                //设置动画 默认没有动画
-//                .setAnimStyle(R.style.slide_anim_style)
-                //设置屏幕宽度比例 0.0f-1.0f
-                .setScreenWidthP(1.0f)
-                //设置Gravity
-                .setGravity(Gravity.BOTTOM)
-                //设置背景透明度 0.0f-1.0f 1.0f完全不透明
-                .setWindowBackgroundP(0.1f)
-                //设置是否屏蔽物理返回键 true不屏蔽  false屏蔽
-                .setDialogCancelable(true)
-                //设置dialog外点击是否可以让dialog消失
-                .setCancelableOutSide(true)
                 .setOnViewCreateListener(new IDialog.OnViewCreateListener() {
                     @Override
                     public void onViewCreate(IDialog dialog, View view) {
@@ -122,23 +111,6 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
                         LinearLayout resumeDownload = view.findViewById(R.id.resume_download);
                         LinearLayout deleteTask = view.findViewById(R.id.delete_task);
                         LinearLayout copyLink = view.findViewById(R.id.copy_link);
-
-//                    switch (mission.missionStatus) {
-//                        case ERROR:
-//                            break;
-//                        case PAUSE:
-//                            break;
-//                        case INITING:
-//                            break;
-//                        case RUNNING:
-//                            break;
-//                        case WAITING:
-//                            break;
-//                        case FINISHED:
-//                            break;
-//                        default:
-//                            break;
-//                    }
 
                         openFile.setVisibility(View.GONE);
                         if (mission.isFinished()){
@@ -209,97 +181,82 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
     }
 
     private void showDownloadDialog() {
-        ZDialog.with(this)
-                //设置dialog布局
+        ZAlertDialog.with(this)
+                .setTitle("添加下载任务")
                 .setContentView(R.layout.layout_dialog_download)
-                //设置动画 默认没有动画
-//                .setAnimStyle(R.style.slide_anim_style)
-                //设置屏幕宽度比例 0.0f-1.0f
-                .setScreenWidthP(1.0f)
-                //设置Gravity
                 .setGravity(Gravity.BOTTOM)
-                //设置背景透明度 0.0f-1.0f 1.0f完全不透明
-                .setWindowBackgroundP(0.1f)
-                .setOnViewCreateListener(new IDialog.OnViewCreateListener() {
-                    @Override
-                    public void onViewCreate(IDialog dialog, View view) {
-                        final EditText text = view.findViewById(R.id.url);
-                        final EditText name = view.findViewById(R.id.file_name);
-                        final TextView tCount = view.findViewById(R.id.threads_count);
-                        final SeekBar threads = view.findViewById(R.id.threads);
-                        final Button fetch = view.findViewById(R.id.fetch_name);
+                .setScreenWidthP(1.0f)
+                .setSwipable(false)
+                .setOnViewCreateListener((dialog, view) -> {
+                    final EditText text = view.findViewById(R.id.url);
+                    final EditText name = view.findViewById(R.id.file_name);
+                    final TextView tCount = view.findViewById(R.id.threads_count);
+                    final SeekBar threads = view.findViewById(R.id.threads);
 
-                        final Button ok = view.findViewById(R.id.download_ok);
-                        final Button cancel = view.findViewById(R.id.download_cancel);
+                    threads.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
 
+                        @Override
+                        public void onProgressChanged(SeekBar seekbar, int progress, boolean fromUser) {
+                            tCount.setText(String.valueOf(progress + 1));
+                        }
 
-                        threads.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                        @Override
+                        public void onStartTrackingTouch(SeekBar p1) {
 
-                            @Override
-                            public void onProgressChanged(SeekBar seekbar, int progress, boolean fromUser) {
-                                tCount.setText(String.valueOf(progress + 1));
-                            }
+                        }
 
-                            @Override
-                            public void onStartTrackingTouch(SeekBar p1) {
+                        @Override
+                        public void onStopTrackingTouch(SeekBar p1) {
 
-                            }
+                        }
 
-                            @Override
-                            public void onStopTrackingTouch(SeekBar p1) {
+                    });
 
-                            }
+                    int def = 5;
+                    threads.setProgress(def - 1);
+                    tCount.setText(String.valueOf(def));
 
-                        });
+                    text.addTextChangedListener(new TextWatcher() {
 
-                        int def = 5;
-                        threads.setProgress(def - 1);
-                        tCount.setText(String.valueOf(def));
+                        @Override
+                        public void beforeTextChanged(CharSequence p1, int p2, int p3, int p4) {
 
-                        text.addTextChangedListener(new TextWatcher() {
+                        }
 
-                            @Override
-                            public void beforeTextChanged(CharSequence p1, int p2, int p3, int p4) {
+                        @Override
+                        public void onTextChanged(CharSequence p1, int p2, int p3, int p4) {
 
-                            }
+                            String url = text.getText().toString().trim();
 
-                            @Override
-                            public void onTextChanged(CharSequence p1, int p2, int p3, int p4) {
+                            if (!TextUtils.isEmpty(url)) {
+                                int index = url.lastIndexOf("/");
 
-                                String url = text.getText().toString().trim();
+                                if (index > 0) {
+                                    int end = url.lastIndexOf("?");
 
-                                if (!TextUtils.isEmpty(url)) {
-                                    int index = url.lastIndexOf("/");
-
-                                    if (index > 0) {
-                                        int end = url.lastIndexOf("?");
-
-                                        if (end < index) {
-                                            end = url.length();
-                                        }
-
-                                        name.setText(url.substring(index + 1, end));
+                                    if (end < index) {
+                                        end = url.length();
                                     }
+
+                                    name.setText(url.substring(index + 1, end));
                                 }
                             }
+                        }
 
-                            @Override
-                            public void afterTextChanged(Editable txt) {
+                        @Override
+                        public void afterTextChanged(Editable txt) {
 
-                            }
-                        });
-
-                        fetch.setOnClickListener(v -> new NameFetcherTask().execute(text, name));
-
-
-                        cancel.setOnClickListener(v -> dialog.dismiss());
-
-                        ok.setOnClickListener(v -> {
-                            //todo
-                            ZDownloader.download(text.getText().toString());
-                            dialog.dismiss();
-                        });
+                        }
+                    });
+                })
+                .setPositiveButton(dialog -> {
+                    String url = ((EditText)(dialog.getView(R.id.url))).getText().toString();
+                    if (TextUtils.isEmpty(url)) {
+                        Toast.makeText(this, "链接为空", Toast.LENGTH_SHORT).show();
+                        return;
                     }
+                    ZDownloader.download(url);
+                    dialog.dismiss();
                 })
                 .show();
     }
@@ -308,152 +265,4 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
 
     }
 
-    private static class NameFetcherTask extends AsyncTask<View, Void, Object[]> {
-
-        private static final String TAG = "NameFetcherTask";
-
-        private static final String UA = System.getProperty("http.agent");
-
-        @Override
-        protected Object[] doInBackground(View[] params) {
-            try {
-
-                String link = ((EditText) params[0]).getText().toString();
-                Log.d(TAG, "link=" + link);
-                Connection.Response response = Jsoup.connect(link)
-                        .followRedirects(false)
-                        .method(Connection.Method.HEAD)
-//                        .proxy(Proxy.NO_PROXY)
-                        .userAgent(UA)
-//                        .header("Cookie", mission.cookie)
-//                        .header("Accept", "*/*")
-                        .header("Accept-Encoding", "identity")
-						.header("Referer", link)
-                        .header("Range", "bytes=0-")
-                        .timeout(20000)
-                        .ignoreContentType(true)
-//                        .ignoreHttpErrors(true)
-//                        .validateTLSCertificates(false)
-                        .maxBodySize(0)
-                        .execute();
-                print(response);
-
-                response = Jsoup.connect(link)
-                        .method(Connection.Method.GET)
-                        .followRedirects(false)
-//                        .proxy(Proxy.NO_PROXY)
-                        .userAgent(UA)
-//                        .header("Cookie", mission.cookie)
-//                        .header("Accept", "*/*")
-//                        .header("Access-Control-Expose-Headers", "Content-Disposition")
-//						.header("Referer","")
-//                        .header("Pragma", "no-cache")
-                        .header("Accept-Encoding", "identity")
-                        .header("Referer", link)
-                        .header("Range", "bytes=0-255")
-//                        .header("Cache-Control", "no-cache")
-                        .timeout(10000)
-                        .ignoreContentType(true)
-//                        .ignoreHttpErrors(true)
-//                        .validateTLSCertificates(false)
-                        .maxBodySize(0)
-                        .execute();
-                print(response);
-
-
-                response = Jsoup.connect(link)
-                        .method(Connection.Method.GET)
-                        .followRedirects(false)
-                        .proxy(Proxy.NO_PROXY)
-                        .userAgent(UA)
-//                            .header("Cookie", mission.cookie)
-//                        .header("Accept", "*/*")
-//                        .header("Access-Control-Expose-Headers", "Content-Disposition")
-//							.header("Referer","")
-//                        .header("Pragma", "no-cache")
-                        .header("Accept-Encoding", "identity")
-                        .header("Referer", link)
-                        .header("Range", "bytes=1-255")
-//                        .header("Cache-Control", "no-cache")
-                        .timeout(10000)
-                        .ignoreContentType(true)
-//                        .ignoreHttpErrors(true)
-                        .maxBodySize(0)
-                        .execute();
-                print(response);
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-                URL url = new URL(link);
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setInstanceFollowRedirects(true);
-                conn.setRequestMethod("HEAD");
-//                conn.addRequestProperty("Range", "bytes=0-");
-                conn.addRequestProperty("Access-Control-Expose-Headers", "Content-Disposition");
-
-                Log.d("contentDisposition", "  " + response.statusCode());
-
-                String contentDisposition = response.header("Content-Disposition");
-                Log.d("contentDisposition", "contentDisposition=" + contentDisposition);
-                if (contentDisposition == null) {
-                    return new Object[]{params[1], conn.getURL().toString()};
-                }
-                String[] dispositions = contentDisposition.split(";");
-                for (String disposition : dispositions) {
-                    Log.d("disposition", "disposition=" + disposition);
-                    if (disposition.contains("filename=")) {
-                        return new Object[]{params[1], disposition.replace("filename=", "")};
-                    }
-                }
-                return null;
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Object[] result)	{
-            super.onPostExecute(result);
-
-            if (result != null) {
-                ((EditText) result[0]).setText(result[1].toString());
-            }
-        }
-
-        private String getMissionNameFromResponse(Connection.Response response) {
-            String contentDisposition = response.header("Content-Disposition");
-            Log.d("contentDisposition", "contentDisposition=" + contentDisposition);
-            if (contentDisposition != null) {
-                String[] dispositions = contentDisposition.split(";");
-                for (String disposition : dispositions) {
-                    Log.d("disposition", "disposition=" + disposition);
-                    if (disposition.contains("filename=")) {
-                        return disposition.replace("filename=", "");
-                    }
-                }
-            }
-            return "";
-        }
-
-        private void print(Connection.Response response) {
-            Log.d(TAG, "\n------------------start------------------");
-            Log.d(TAG, "response.headers()=" + response.headers());
-            Log.d(TAG, "statusCode＝" + response.statusCode());
-            Log.d(TAG, "mission.length=" +Long.parseLong(response.header("Content-Length")));
-            Log.d(TAG, "mission.name111=" + getMissionNameFromResponse(response));
-            Log.d(TAG, "-------------------finished-----------------\n");
-        }
-    }
 }

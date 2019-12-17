@@ -41,6 +41,7 @@ public class ZAlertDialog implements IDialog {
 
     private boolean isCancelable = true;
     private boolean isCancelableOutside = true;
+    private boolean swipable = true;
 
     private OnViewCreateListener onViewCreateListener;
     private OnClickListener positiveBtnListener;
@@ -121,6 +122,11 @@ public class ZAlertDialog implements IDialog {
         return this;
     }
 
+    public ZAlertDialog setSwipable(boolean swipable) {
+        this.swipable = swipable;
+        return this;
+    }
+
     public ZAlertDialog setCancelable(boolean cancelable) {
         isCancelable = cancelable;
         return this;
@@ -186,6 +192,7 @@ public class ZAlertDialog implements IDialog {
                 .setScreenWidthP(screenWidthPercent)
                 .setDialogCancelable(isCancelable)
                 .setCancelableOutSide(isCancelableOutside)
+                .setSwipeEnable(swipable)
                 .setOnViewCreateListener(new OnViewCreateListener() {
                     @Override
                     public void onViewCreate(final IDialog dialog, View view) {
