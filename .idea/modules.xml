@@ -4,8 +4,9 @@
     <modules>
       <module fileurl="file://$PROJECT_DIR$/QXDownloader.iml" filepath="$PROJECT_DIR$/QXDownloader.iml" group="QXDownloader" />
       <module fileurl="file://$PROJECT_DIR$/app/app.iml" filepath="$PROJECT_DIR$/app/app.iml" group="QXDownloader/app" />
-      <module fileurl="file://$PROJECT_DIR$/dialoglib/dialoglib.iml" filepath="$PROJECT_DIR$/dialoglib/dialoglib.iml" group="QXDownloader/dialoglib" />
-      <module fileurl="file://$PROJECT_DIR$/qxdownloader/qxdownloader.iml" filepath="$PROJECT_DIR$/qxdownloader/qxdownloader.iml" group="QXDownloader/qxdownloader" />
+      <module fileurl="file://$PROJECT_DIR$/switchbutton/switchbutton.iml" filepath="$PROJECT_DIR$/switchbutton/switchbutton.iml" />
+      <module fileurl="file://$PROJECT_DIR$/zdialog/zdialog.iml" filepath="$PROJECT_DIR$/zdialog/zdialog.iml" />
+      <module fileurl="file://$PROJECT_DIR$/zdownloader/zdownloader.iml" filepath="$PROJECT_DIR$/zdownloader/zdownloader.iml" />
     </modules>
   </component>
 </project>

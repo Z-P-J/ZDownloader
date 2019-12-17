@@ -7,23 +7,18 @@ import android.support.annotation.NonNull;
 import android.support.v7.widget.CardView;
 import android.support.v7.widget.RecyclerView;
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
-import android.widget.Toast;
 
-import com.zpj.qxdownloader.QXDownloader;
-import com.zpj.qxdownloader.core.DownloadManager;
-import com.zpj.qxdownloader.core.DownloadMission;
-import com.zpj.qxdownloader.service.DownloadManagerService;
-import com.zpj.qxdownloader.util.FileUtil;
-import com.zpj.qxdownloader.util.Utility;
+import com.zpj.downloader.ZDownloader;
+import com.zpj.downloader.core.DownloadManager;
+import com.zpj.downloader.core.DownloadMission;
+import com.zpj.downloader.util.FileUtil;
 
 import java.io.File;
-import java.util.Locale;
 
 /**
  * @author Z-P-J
@@ -47,7 +42,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 	
 	MissionAdapter(Context context, boolean isLinear) {
 		mContext = context;
-		mManager = QXDownloader.getDownloadManager();
+		mManager = ZDownloader.getDownloadManager();
 		mManager.setDownloadManagerListener(this);
 //		mBinder = binder;
 		
@@ -63,19 +58,19 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 
 		h.menu.setOnClickListener(v -> {
 			if (downloadCallback != null) {
-				downloadCallback.onMoreClicked(v, h, null, mManager);
+				downloadCallback.onMoreClicked(v, h, mManager);
 			}
 		});
 
 		h.itemView.setOnClickListener(v -> {
 			if (downloadCallback != null) {
-				downloadCallback.onItemClicked(v, h, null, mManager);
+				downloadCallback.onItemClicked(v, h, mManager);
 			}
 		});
 
 		h.itemView.setOnLongClickListener(v -> {
 			if (downloadCallback != null) {
-				downloadCallback.onItemLongClicked(v, h, null, mManager);
+				downloadCallback.onItemLongClicked(v, h, mManager);
 			}
 			return true;
 		});
@@ -303,29 +298,26 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		/**
 		 * on view clicked
 		 * @param holder the ViewHolder
-		 * @param mBinder the DMBinder
 		 * @param mManager  the DownloadManager
 		 * @param view the click view
 		 * */
-		void onItemClicked(View view, ViewHolder holder, DownloadManagerService.DMBinder mBinder, DownloadManager mManager);
+		void onItemClicked(View view, ViewHolder holder, DownloadManager mManager);
 
 		/**
 		 * on view longCLicked
 		 * @param holder the ViewHolder
-		 * @param mBinder the DMBinder
 		 * @param mManager  the DownloadManager
 		 * @param view the click view
 		 * */
-		void onItemLongClicked(View view, ViewHolder holder, DownloadManagerService.DMBinder mBinder, DownloadManager mManager);
+		void onItemLongClicked(View view, ViewHolder holder, DownloadManager mManager);
 
 		/**
 		 * on more clicked
 		 * @param holder the ViewHolder
-		 * @param mBinder the DMBinder
 		 * @param mManager  the DownloadManager
 		 * @param view the click view
 		 * */
-		void onMoreClicked(View view, ViewHolder holder, DownloadManagerService.DMBinder mBinder, DownloadManager mManager);
+		void onMoreClicked(View view, ViewHolder holder, DownloadManager mManager);
 	}
 
 	void setMissionAdapterClickListener(DownloadCallback downloadCallback) {

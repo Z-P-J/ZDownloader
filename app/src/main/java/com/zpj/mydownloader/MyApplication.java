@@ -2,8 +2,8 @@ package com.zpj.mydownloader;
 
 import android.app.Application;
 
-import com.zpj.qxdownloader.QXDownloader;
-import com.zpj.qxdownloader.config.QianXunConfig;
+import com.zpj.downloader.ZDownloader;
+import com.zpj.downloader.config.QianXunConfig;
 
 /**
  * @author Z-P-J
@@ -36,7 +36,7 @@ public class MyApplication extends Application {
 //                .setProxy("127.0.0.1", 80)
 //                .setUserAgent("")
                 .setCookie("");
-        QXDownloader.init(options);
+        ZDownloader.init(options);
     }
 
 }

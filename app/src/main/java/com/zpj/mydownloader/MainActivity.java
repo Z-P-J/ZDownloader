@@ -23,14 +23,13 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.zpj.qianxundialoglib.IDialog;
-import com.zpj.qianxundialoglib.QianxunDialog;
-import com.zpj.qxdownloader.QXDownloader;
-import com.zpj.qxdownloader.core.DownloadManager;
-import com.zpj.qxdownloader.core.DownloadMission;
-import com.zpj.qxdownloader.jsoup.Jsoup;
-import com.zpj.qxdownloader.jsoup.connection.Connection;
-import com.zpj.qxdownloader.service.DownloadManagerService;
+import com.zpj.downloader.ZDownloader;
+import com.zpj.downloader.core.DownloadManager;
+import com.zpj.downloader.core.DownloadMission;
+import com.zpj.downloader.jsoup.Jsoup;
+import com.zpj.downloader.jsoup.connection.Connection;
+import com.zpj.zdialog.ZDialog;
+import com.zpj.zdialog.base.IDialog;
 
 import java.net.HttpURLConnection;
 import java.net.Proxy;
@@ -73,7 +72,7 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
 
     @Override
     protected void onDestroy() {
-        QXDownloader.onDestroy();
+        ZDownloader.onDestroy();
         super.onDestroy();
     }
 
@@ -93,18 +92,18 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
     }
 
     @Override
-    public void onItemClicked(View view, MissionAdapter.ViewHolder holder, DownloadManagerService.DMBinder mBinder, DownloadManager mManager) {
+    public void onItemClicked(View view, MissionAdapter.ViewHolder holder, DownloadManager mManager) {
 
     }
 
     @Override
-    public void onItemLongClicked(View view, MissionAdapter.ViewHolder holder, DownloadManagerService.DMBinder mBinder, DownloadManager mManager) {
+    public void onItemLongClicked(View view, MissionAdapter.ViewHolder holder, DownloadManager mManager) {
         DownloadMission mission = mManager.getMission(holder.position);
-        QianxunDialog.with(this)
+        ZDialog.with(this)
                 //设置dialog布局
-                .setDialogView(R.layout.layout_dialog_share)
+                .setContentView(R.layout.layout_dialog_share)
                 //设置动画 默认没有动画
-                .setAnimStyle(R.style.slide_anim_style)
+//                .setAnimStyle(R.style.slide_anim_style)
                 //设置屏幕宽度比例 0.0f-1.0f
                 .setScreenWidthP(1.0f)
                 //设置Gravity
@@ -115,12 +114,14 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
                 .setDialogCancelable(true)
                 //设置dialog外点击是否可以让dialog消失
                 .setCancelableOutSide(true)
-                .setBuildChildListener((dialog, view1, layoutRes) -> {
-                    LinearLayout openFile = view1.findViewById(R.id.open_file);
-                    LinearLayout pauseDownload = view1.findViewById(R.id.pause_download);
-                    LinearLayout resumeDownload = view1.findViewById(R.id.resume_download);
-                    LinearLayout deleteTask = view1.findViewById(R.id.delete_task);
-                    LinearLayout copyLink = view1.findViewById(R.id.copy_link);
+                .setOnViewCreateListener(new IDialog.OnViewCreateListener() {
+                    @Override
+                    public void onViewCreate(IDialog dialog, View view) {
+                        LinearLayout openFile = view.findViewById(R.id.open_file);
+                        LinearLayout pauseDownload = view.findViewById(R.id.pause_download);
+                        LinearLayout resumeDownload = view.findViewById(R.id.resume_download);
+                        LinearLayout deleteTask = view.findViewById(R.id.delete_task);
+                        LinearLayout copyLink = view.findViewById(R.id.copy_link);
 
 //                    switch (mission.missionStatus) {
 //                        case ERROR:
@@ -139,59 +140,60 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
 //                            break;
 //                    }
 
-                    openFile.setVisibility(View.GONE);
-                    if (mission.isFinished()){
-                        openFile.setVisibility(View.VISIBLE);
-                        pauseDownload.setVisibility(View.GONE);
-                        resumeDownload.setVisibility(View.GONE);
-                    } else if (mission.isRunning()) {
-                        resumeDownload.setVisibility(View.GONE);
-                    } else if (mission.isWaiting()) {
-                        resumeDownload.setVisibility(View.GONE);
-                    } else if (mission.isError()) {
-                        pauseDownload.setVisibility(View.GONE);
-                    } else if (mission.isIniting()) {
-                        pauseDownload.setVisibility(View.GONE);
-                        resumeDownload.setVisibility(View.GONE);
-                    } else if (mission.isPause()) {
-                        pauseDownload.setVisibility(View.GONE);
+                        openFile.setVisibility(View.GONE);
+                        if (mission.isFinished()){
+                            openFile.setVisibility(View.VISIBLE);
+                            pauseDownload.setVisibility(View.GONE);
+                            resumeDownload.setVisibility(View.GONE);
+                        } else if (mission.isRunning()) {
+                            resumeDownload.setVisibility(View.GONE);
+                        } else if (mission.isWaiting()) {
+                            resumeDownload.setVisibility(View.GONE);
+                        } else if (mission.isError()) {
+                            pauseDownload.setVisibility(View.GONE);
+                        } else if (mission.isIniting()) {
+                            pauseDownload.setVisibility(View.GONE);
+                            resumeDownload.setVisibility(View.GONE);
+                        } else if (mission.isPause()) {
+                            pauseDownload.setVisibility(View.GONE);
+                        }
+
+                        openFile.setOnClickListener(v -> {
+                            ZDownloader.openFile(mission);
+                            dialog.dismiss();
+                        });
+
+                        pauseDownload.setOnClickListener(v -> {
+                            ZDownloader.pause(mission);
+                            holder.lastTimeStamp = -1;
+                            holder.lastDone = -1;
+                            dialog.dismiss();
+                        });
+
+                        resumeDownload.setOnClickListener(v -> {
+                            ZDownloader.resume(mission);
+                            dialog.dismiss();
+                        });
+
+                        deleteTask.setOnClickListener(v -> {
+                            ZDownloader.delete(mission);
+                            missionAdapter.notifyDataSetChanged();
+                            dialog.dismiss();
+                        });
+
+                        copyLink.setOnClickListener(v -> {
+                            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                            ClipData mClipData = ClipData.newPlainText("Label", mission.getUrl());
+                            cm.setPrimaryClip(mClipData);
+                            dialog.dismiss();
+                        });
                     }
-
-                    openFile.setOnClickListener(v -> {
-                        QXDownloader.openFile(mission);
-                        dialog.dismiss();
-                    });
-
-                    pauseDownload.setOnClickListener(v -> {
-                        QXDownloader.pause(mission);
-                        holder.lastTimeStamp = -1;
-                        holder.lastDone = -1;
-                        dialog.dismiss();
-                    });
-
-                    resumeDownload.setOnClickListener(v -> {
-                        QXDownloader.resume(mission);
-                        dialog.dismiss();
-                    });
-
-                    deleteTask.setOnClickListener(v -> {
-                        QXDownloader.delete(mission);
-                        missionAdapter.notifyDataSetChanged();
-                        dialog.dismiss();
-                    });
-
-                    copyLink.setOnClickListener(v -> {
-                        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                        ClipData mClipData = ClipData.newPlainText("Label", mission.getUrl());
-                        cm.setPrimaryClip(mClipData);
-                        dialog.dismiss();
-                    });
                 })
                 .show();
     }
 
     @Override
-    public void onMoreClicked(View view, MissionAdapter.ViewHolder holder, DownloadManagerService.DMBinder mBinder, DownloadManager mManager) {
+    public void onMoreClicked(View view, MissionAdapter.ViewHolder holder, DownloadManager mManager) {
         DownloadMission mission = mManager.getMission(holder.position);
         if (mission.isRunning()) {
             Toast.makeText(this, "暂停下载", Toast.LENGTH_SHORT).show();
@@ -207,25 +209,20 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
     }
 
     private void showDownloadDialog() {
-        QianxunDialog.with(this)
+        ZDialog.with(this)
                 //设置dialog布局
-                .setDialogView(R.layout.layout_dialog_download)
+                .setContentView(R.layout.layout_dialog_download)
                 //设置动画 默认没有动画
-                .setAnimStyle(R.style.slide_anim_style)
+//                .setAnimStyle(R.style.slide_anim_style)
                 //设置屏幕宽度比例 0.0f-1.0f
                 .setScreenWidthP(1.0f)
                 //设置Gravity
                 .setGravity(Gravity.BOTTOM)
                 //设置背景透明度 0.0f-1.0f 1.0f完全不透明
                 .setWindowBackgroundP(0.1f)
-                //设置是否屏蔽物理返回键 true不屏蔽  false屏蔽
-                .setDialogCancelable(true)
-                //设置dialog外点击是否可以让dialog消失
-                .setCancelableOutSide(true)
-                .setBuildChildListener(new IDialog.OnBuildListener() {
-                    //设置子View
+                .setOnViewCreateListener(new IDialog.OnViewCreateListener() {
                     @Override
-                    public void onBuildChildView(final IDialog dialog, View view, int layoutRes) {
+                    public void onViewCreate(IDialog dialog, View view) {
                         final EditText text = view.findViewById(R.id.url);
                         final EditText name = view.findViewById(R.id.file_name);
                         final TextView tCount = view.findViewById(R.id.threads_count);
@@ -299,11 +296,12 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
 
                         ok.setOnClickListener(v -> {
                             //todo
-                            QXDownloader.download(text.getText().toString());
+                            ZDownloader.download(text.getText().toString());
                             dialog.dismiss();
                         });
                     }
-                }).show();
+                })
+                .show();
     }
 
     private void showMenuDialog() {
