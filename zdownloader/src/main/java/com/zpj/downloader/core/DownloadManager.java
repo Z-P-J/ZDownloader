@@ -61,7 +61,7 @@ public interface DownloadManager {
 
     Context getContext();
 
-    DownloaderConfig getQianXunConfig();
+    DownloaderConfig getDownloaderConfig();
 
     ThreadPoolConfig getThreadPoolConfig();
 

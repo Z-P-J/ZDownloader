@@ -109,7 +109,7 @@ public class DownloadManagerImpl implements DownloadManager {
 	}
 
 	@Override
-	public DownloaderConfig getQianXunConfig() {
+	public DownloaderConfig getDownloaderConfig() {
 		return options;
 	}
 
@@ -345,7 +345,7 @@ public class DownloadManagerImpl implements DownloadManager {
 
 	@Override
 	public boolean shouldMissionWaiting() {
-		return DownloadManagerImpl.getDownloadingCount() >= getQianXunConfig().getConcurrentMissionCount();
+		return DownloadManagerImpl.getDownloadingCount() >= getDownloaderConfig().getConcurrentMissionCount();
 	}
 
 }
