@@ -4,9 +4,9 @@
 ### 待完善后发布到jCenter或jitpack
 ----------------------------------
 
-# 如何使用？
-## 一. 简单使用
-### 1. 在Application中初始化
+## 如何使用？
+### 一. 简单使用
+#### 1. 在Application中初始化
 ```java
 public class MyApplication extends Application {
 
@@ -19,7 +19,7 @@ public class MyApplication extends Application {
 }            
 ```
 
-### 2. 下载并监听进度
+#### 2. 下载并监听进度
 ```java
 ZDownloader.download("your download url")
                 .addListener(new DownloadMission.MissionListener() {
@@ -60,7 +60,7 @@ ZDownloader.download("your download url")
                 });         
 ```
 
-### 3. 退出应用时
+#### 3. 退出应用时
 ```java
 @Override
 protected void onDestroy() {
@@ -69,7 +69,7 @@ protected void onDestroy() {
 }
 ```
 
-### 4. 其它操作
+#### 4. 其它操作
 ```java
 //暂停下载
 ZDownloader.pause(mission);
@@ -102,8 +102,8 @@ ZDownloader.openFile(mission);
 ZDownloader.rename(mission, newName);
 ```
 
-## 二. 高级使用
-### 1. 在Application中初始化时进行全局设置
+### 二. 高级使用
+#### 1. 在Application中初始化时进行全局设置
 ```java
 public class MyApplication extends Application {
 
@@ -146,7 +146,7 @@ public class MyApplication extends Application {
 }            
 ```
 
-### 1. 下载时进行单独设置
+#### 1. 下载时进行单独设置
 ```java
 //为每个下载任务进行设置，优先使用单独设置的参数
 MissionOptions options = MissionOptions.with()
@@ -181,3 +181,7 @@ MissionOptions options = MissionOptions.with()
 ZDownloader.download("your download url", options);
 //下载进度监听同上
 ```
+
+
+##  混淆（如果您的项目使用了代码混淆，请一定添加以下规则至您的项目）
+[混淆规则](https://github.com/Z-P-J/ZDownloader/blob/master/app/proguard-rules.pro)
