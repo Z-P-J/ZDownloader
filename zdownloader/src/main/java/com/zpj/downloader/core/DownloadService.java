@@ -11,6 +11,8 @@ import android.os.IBinder;
 import android.os.Message;
 import android.util.Log;
 
+import com.zpj.downloader.constant.Error;
+
 public class DownloadService extends Service implements DownloadMission.MissionListener {
 
     private static final String TAG = DownloadService.class.getSimpleName();
@@ -133,7 +135,7 @@ public class DownloadService extends Service implements DownloadMission.MissionL
     }
 
     @Override
-    public void onError(int errCode) {
+    public void onError(Error errCode) {
         postUpdateMessage();
     }
 

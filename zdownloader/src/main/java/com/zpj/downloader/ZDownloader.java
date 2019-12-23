@@ -116,8 +116,7 @@ public class ZDownloader {
     }
 
     public static void clear(DownloadMission mission) {
-        mission.pause();
-        mission.deleteMissionInfo();
+        mission.clear();
         DownloadManagerImpl.getInstance().getMissions().remove(mission);
     }
 
@@ -135,15 +134,13 @@ public class ZDownloader {
             Toast.makeText(context, "请暂停下载后再试", Toast.LENGTH_SHORT).show();
             return false;
         }
-        File file = new File(mission.getDownloadPath() + File.separator + mission.getTaskName());
-        File file2Rename = new File(mission.getDownloadPath() + File.separator + name);
-        boolean success = file.renameTo(file2Rename);
+//        File file = new File(mission.getDownloadPath() + File.separator + mission.getTaskName());
+//        File file2Rename = new File(mission.getDownloadPath() + File.separator + name);
+        boolean success = mission.renameTo(name);
         if (success) {
-            mission.setTaskName(name);
-            mission.writeMissionInfo();
             DownloadManager.DownloadManagerListener downloadManagerListener =  DownloadManagerImpl.getInstance().getDownloadManagerListener();
             if (downloadManagerListener != null) {
-                downloadManagerListener.onMissionAdd();
+                downloadManagerListener.onMissionAdd(mission);
             }
             Toast.makeText(context, "重命名成功", Toast.LENGTH_SHORT).show();
             return true;

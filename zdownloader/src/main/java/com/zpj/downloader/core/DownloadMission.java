@@ -6,11 +6,13 @@ import android.os.Looper;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.LongSparseArray;
+import android.util.SparseArray;
 import android.webkit.MimeTypeMap;
 import android.widget.Toast;
 
 import com.google.gson.Gson;
 import com.zpj.downloader.config.MissionConfig;
+import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.constant.ErrorCode;
 import com.zpj.downloader.constant.ResponseCode;
 import com.zpj.downloader.jsoup.Jsoup;
@@ -22,6 +24,7 @@ import com.zpj.downloader.util.io.BufferedRandomAccessFile;
 import com.zpj.downloader.util.notification.NotifyUtil;
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.lang.ref.WeakReference;
 import java.net.Proxy;
 import java.util.ArrayList;
@@ -57,7 +60,7 @@ public class DownloadMission {
 
         void onFinish();
 
-        void onError(int errCode);
+        void onError(Error e);
     }
 
     public enum MissionStatus {
@@ -83,6 +86,8 @@ public class DownloadMission {
     }
 
     private final LongSparseArray<Boolean> blockState = new LongSparseArray<>();
+//    private final List<Error> errorHistoryList = new ArrayList<>();
+    private final List<Long> speedHistoryList = new ArrayList<>();
 
     private String uuid = "";
     private String name = "";
@@ -90,12 +95,13 @@ public class DownloadMission {
     private String redirectUrl = "";
     private String originUrl = "";
     private long createTime = 0;
+    private long finishTime = 0;
     private int notifyId = 0;
     private long blocks = 0;
     private int finishCount = 0;
     private long length = 0;
     private long done = 0;
-    private List<Long> threadPositions = new ArrayList<>();
+//    private List<Long> threadPositions = new ArrayList<>();
     private MissionStatus missionStatus = MissionStatus.INITING;
     private boolean fallback = false;
     private int errCode = -1;
@@ -142,7 +148,7 @@ public class DownloadMission {
 //						.header("Access-Control-Expose-Headers", "Content-Disposition")
 //						.header("Range", "bytes=0-")
                         .headers(getHeaders())
-                        .timeout(1000000)
+                        .timeout(200000)
                         .ignoreContentType(true)
                         .ignoreHttpErrors(true)
                         .maxBodySize(0)
@@ -239,6 +245,7 @@ public class DownloadMission {
                 start();
             } catch (Exception e) {
                 e.printStackTrace();
+                notifyError(new Error(e.getMessage()));
             }
         }
     };
@@ -247,7 +254,7 @@ public class DownloadMission {
         @Override
         public void run() {
             Log.d(TAG, "progressRunnable--start");
-            if (isFinished()) {
+            if (isFinished() || errCode != -1) {
                 handler.removeCallbacks(progressRunnable);
                 return;
             }
@@ -255,9 +262,10 @@ public class DownloadMission {
             long downloaded = done;
             long delta = downloaded - lastDone;
             Log.d(TAG, "progressRunnable--delta=" + delta);
+            speedHistoryList.add(delta);
             if (delta > 0) {
                 lastDone = downloaded;
-                float speed = delta * (missionConfig.getProgressInterval() / 1000f);
+                double speed = delta * (missionConfig.getProgressInterval() / 1000f);
                 tempSpeed = Utility.formatSpeed(speed);
             }
             String downloadedSizeStr = Utility.formatSize(downloaded);
@@ -355,7 +363,6 @@ public class DownloadMission {
         if (hasInit) {
             initQueue();
             pause();
-//            notifyStatus(MissionStatus.INITING);
         } else {
             writeMissionInfo();
             threadPoolExecutor.submit(initRunnable);
@@ -384,6 +391,8 @@ public class DownloadMission {
             if (fallback) {
                 if (isPause() || isError()) {
                     missionStatus = MissionStatus.INITING;
+                    redirectUrl = "";
+                    url = originUrl;
                     threadPoolExecutor.submit(initRunnable);
                     return;
                 }
@@ -442,8 +451,23 @@ public class DownloadMission {
     }
 
     public void delete() {
-        deleteMissionInfo();
+        clear();
         new File(missionConfig.getDownloadPath() + File.separator + name).delete();
+    }
+
+    public void clear() {
+        pause();
+        deleteMissionInfo();
+    }
+
+    public boolean renameTo(String newFileName) {
+        File file2Rename = new File(getDownloadPath() + File.separator + newFileName);
+        boolean success = getFile().renameTo(file2Rename);
+        if (success) {
+            setTaskName(newFileName);
+            writeMissionInfo();
+        }
+        return success;
     }
 
     public void openFile(Context context) {
@@ -479,9 +503,65 @@ public class DownloadMission {
         }
     }
 
-    synchronized void notifyError(int err, boolean fromThread) {
-        Log.d(TAG, "err=" +err + " fromThread=" + fromThread);
-        if (!(err == ErrorCode.ERROR_WITHOUT_STORAGE_PERMISSIONS || err == ErrorCode.ERROR_FILE_NOT_FOUND)) {
+//    synchronized void notifyError(int err, boolean fromThread) {
+//        Log.d(TAG, "err=" +err + " fromThread=" + fromThread);
+//        if (!(err == ErrorCode.ERROR_WITHOUT_STORAGE_PERMISSIONS || err == ErrorCode.ERROR_FILE_NOT_FOUND)) {
+//            errorCount++;
+//            if (fromThread) {
+//                aliveThreadCount--;
+//                finishCount++;
+//            }
+//            Log.d(TAG, "aliveThreadCount=" + aliveThreadCount + " fromThread=" + fromThread);
+//            if (aliveThreadCount <= 0 && errorCount >= threadCount) {
+//                currentRetryCount--;
+//                if (currentRetryCount >= 0) {
+//                    pause();
+//                    notifyStatus(MissionStatus.RETRY);
+////                    if (currentRetryCount == 0 && err == ErrorCode.ERROR_CONNECTION_TIMED_OUT && !TextUtils.isEmpty(redirectUrl)) {
+////                        if ()
+////                    } else {
+////
+////                    }
+//                    handler.postDelayed(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            start();
+//                        }
+//                    }, missionConfig.getRetryDelay());
+//                    return;
+//                }
+//            } else {
+//                return;
+//            }
+//        }
+//
+//        missionStatus = MissionStatus.ERROR;
+//
+//        currentRetryCount = missionConfig.getRetryCount();
+//
+//        errCode = err;
+//
+//        Log.d("eeeeeeeeeeeeeeeeeeee", "error:" + errCode);
+//
+//        writeMissionInfo();
+//
+//        notifyStatus(missionStatus);
+//
+//        DownloadManagerImpl.decreaseDownloadingCount();
+//
+//        if (missionConfig.getEnableNotificatio()) {
+//            NotifyUtil.with(getContext())
+//                    .buildNotify()
+//                    .setContentTitle("下载出错" + errCode + ":" + name)
+//                    .setId(getNotifyId())
+//                    .show();
+//        }
+//    }
+
+    synchronized void notifyError(Error e, boolean fromThread) {
+        Log.d(TAG, "err=" + e.getErrorMsg() + " fromThread=" + fromThread);
+//        errorHistoryList.add(e);
+        if (!(e == Error.WITHOUT_STORAGE_PERMISSIONS || e == Error.FILE_NOT_FOUND)) {
             errorCount++;
             if (fromThread) {
                 aliveThreadCount--;
@@ -493,7 +573,7 @@ public class DownloadMission {
                 if (currentRetryCount >= 0) {
                     pause();
                     notifyStatus(MissionStatus.RETRY);
-                    new Handler().postDelayed(new Runnable() {
+                    handler.postDelayed(new Runnable() {
                         @Override
                         public void run() {
                             start();
@@ -510,13 +590,13 @@ public class DownloadMission {
 
         currentRetryCount = missionConfig.getRetryCount();
 
-        errCode = err;
+        errCode = 1;
 
         Log.d("eeeeeeeeeeeeeeeeeeee", "error:" + errCode);
 
         writeMissionInfo();
 
-        notifyStatus(missionStatus);
+        notifyError(e);
 
         DownloadManagerImpl.decreaseDownloadingCount();
 
@@ -526,6 +606,20 @@ public class DownloadMission {
                     .setContentTitle("下载出错" + errCode + ":" + name)
                     .setId(getNotifyId())
                     .show();
+        }
+    }
+
+    private void notifyError(final Error e) {
+        for (WeakReference<MissionListener> ref : mListeners) {
+            final MissionListener listener = ref.get();
+            if (listener != null) {
+                MissionListener.HANDLER_STORE.get(listener).post(new Runnable() {
+                    @Override
+                    public void run() {
+                        listener.onError(e);
+                    }
+                });
+            }
         }
     }
 
@@ -551,9 +645,6 @@ public class DownloadMission {
                                 break;
                             case PAUSE:
                                 listener.onPause();
-                                break;
-                            case ERROR:
-                                listener.onError(errCode);
                                 break;
                             case RETRY:
                                 listener.onRetry();
@@ -586,7 +677,7 @@ public class DownloadMission {
         handler.removeCallbacks(progressRunnable);
 
         missionStatus = MissionStatus.FINISHED;
-
+        finishTime = System.currentTimeMillis();
         writeMissionInfo();
 
         notifyStatus(missionStatus);
@@ -602,7 +693,7 @@ public class DownloadMission {
                     .show();
         }
         if (DownloadManagerImpl.getInstance().getDownloadManagerListener() != null) {
-            DownloadManagerImpl.getInstance().getDownloadManagerListener().onMissionFinished();
+            DownloadManagerImpl.getInstance().getDownloadManagerListener().onMissionFinished(this);
         }
     }
 
@@ -630,7 +721,7 @@ public class DownloadMission {
         }
     }
 
-    public void writeMissionInfo() {
+    private void writeMissionInfo() {
         if (!mWritingToFile) {
             mWritingToFile = true;
             if (threadPoolExecutor == null) {
@@ -640,7 +731,7 @@ public class DownloadMission {
         }
     }
 
-    public void deleteMissionInfo() {
+    private void deleteMissionInfo() {
         File file = new File(getMissionInfoFilePath());
         if (file.exists()) {
             file.delete();
@@ -680,6 +771,10 @@ public class DownloadMission {
 
     public long getCreateTime() {
         return createTime;
+    }
+
+    public long getFinishTime() {
+        return finishTime;
     }
 
     public int getThreadCount() {
@@ -885,7 +980,7 @@ public class DownloadMission {
             }
         } else if (response.statusCode() == ErrorCode.ERROR_SERVER_404) {
             mission.errCode = ErrorCode.ERROR_SERVER_404;
-            mission.notifyError(ErrorCode.ERROR_SERVER_404, false);
+            mission.notifyError(Error.HTTP_404, false);
             return true;
         } else if (response.statusCode() == ResponseCode.RESPONSE_206) {
             String contentLength = response.header("Content-Length");
@@ -953,11 +1048,11 @@ public class DownloadMission {
     private boolean checkLength(DownloadMission mission) {
         if (mission.length <= 0) {
             mission.errCode = ErrorCode.ERROR_SERVER_UNSUPPORTED;
-            mission.notifyError(ErrorCode.ERROR_SERVER_UNSUPPORTED, false);
+            mission.notifyError(Error.SERVER_UNSUPPORTED, false);
             return false;
         } else if (mission.length >= Utility.getAvailableSize()) {
             mission.errCode = ErrorCode.ERROR_NO_ENOUGH_SPACE;
-            mission.notifyError(ErrorCode.ERROR_NO_ENOUGH_SPACE, false);
+            mission.notifyError(Error.NO_ENOUGH_SPACE, false);
             return false;
         }
         return true;

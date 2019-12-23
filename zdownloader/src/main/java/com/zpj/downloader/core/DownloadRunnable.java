@@ -2,12 +2,14 @@ package com.zpj.downloader.core;
 
 import android.util.Log;
 
+import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.constant.ErrorCode;
 import com.zpj.downloader.constant.ResponseCode;
 import com.zpj.downloader.util.io.BufferedRandomAccessFile;
 import com.zpj.downloader.util.permission.PermissionUtil;
 
 import java.io.BufferedInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 
@@ -30,11 +32,15 @@ public class DownloadRunnable implements Runnable {
             f = new BufferedRandomAccessFile(mMission.getFilePath(), "rw");
         } catch (IOException e) {
             e.printStackTrace();
-            if (PermissionUtil.checkStoragePermissions(DownloadManagerImpl.getInstance().getContext())) {
-                notifyError(ErrorCode.ERROR_FILE_NOT_FOUND);
-            } else {
-                notifyError(ErrorCode.ERROR_WITHOUT_STORAGE_PERMISSIONS);
-            }
+            if (e instanceof FileNotFoundException) {
+				notifyError(Error.FILE_NOT_FOUND);
+			} else {
+				if (PermissionUtil.checkStoragePermissions(DownloadManagerImpl.getInstance().getContext())) {
+					notifyError(new Error(e.getMessage()));
+				} else {
+					notifyError(Error.WITHOUT_STORAGE_PERMISSIONS);
+				}
+			}
         }
     }
 
@@ -43,9 +49,9 @@ public class DownloadRunnable implements Runnable {
 		if (mMission.isFallback()) {
 			try {
 				HttpURLConnection conn = HttpUrlConnectionFactory.getConnection(mMission);
-				if (conn.getResponseCode() != ResponseCode.RESPONSE_200 && conn.getResponseCode() != ResponseCode.RESPONSE_206) {
+				if (conn.getResponseCode() / 100 != 2) {
 					Log.d("DownRunFallback", "error:206");
-					notifyError(ErrorCode.ERROR_SERVER_UNSUPPORTED);
+					notifyError(Error.SERVER_UNSUPPORTED);
 					return;
 				} else {
 					f.seek(0);
@@ -81,16 +87,13 @@ public class DownloadRunnable implements Runnable {
 					ipt.close();
 					conn.disconnect();
 				}
-			} catch (Exception e) {
+			} catch (IOException e) {
 				e.printStackTrace();
+//				notifyError(ErrorCode.ERROR_CONNECTION_TIMED_OUT);
+				notifyError(new Error(e.getMessage()));
+				return;
 			}
 		} else {
-//			boolean retry = mMission.isRecovered();
-//			long position = mMission.getPosition(mId);
-
-
-//			Log.d(TAG, mId + ":recovered: " + mMission.isRecovered());
-
 			mMission.setErrCode(-1);
 
 			Log.d(TAG, mId + ":isRunning=" + mMission.isRunning());
@@ -135,9 +138,9 @@ public class DownloadRunnable implements Runnable {
 					Log.d(TAG, mId + ":" + conn.getRequestProperty("Range"));
 					Log.d(TAG, mId + ":Content-Length=" + conn.getContentLength() + " Code:" + conn.getResponseCode());
 
-					if (conn.getResponseCode() == ResponseCode.RESPONSE_302
-							|| conn.getResponseCode() == ResponseCode.RESPONSE_301
-							|| conn.getResponseCode() == ResponseCode.RESPONSE_300) {
+					if (conn.getResponseCode() == HttpURLConnection.HTTP_MOVED_PERM
+							|| conn.getResponseCode() == HttpURLConnection.HTTP_MOVED_TEMP
+							|| conn.getResponseCode() == HttpURLConnection.HTTP_MULT_CHOICE) {
 						String redictUrl = conn.getHeaderField("location");
 						Log.d(TAG, "redictUrl=" + redictUrl);
 						mMission.setUrl(redictUrl);
@@ -147,10 +150,10 @@ public class DownloadRunnable implements Runnable {
 					}
 
 					// A server may be ignoring the range requet
-					if (conn.getResponseCode() != ResponseCode.RESPONSE_206) {
+					if (conn.getResponseCode() != HttpURLConnection.HTTP_PARTIAL) {
 						Log.d("DownRun", "error:206");
 						mMission.onPositionDownloadFailed(position);
-						notifyError(conn.getResponseCode());
+						notifyError(Error.getHttpError(conn.getResponseCode()));
 
 						Log.e(TAG, mId + ":Unsupported " + conn.getResponseCode());
 
@@ -212,7 +215,7 @@ public class DownloadRunnable implements Runnable {
 					mMission.preserveBlock(position);
 
 					// TODO We should save progress for each thread
-				} catch (Exception e) {
+				} catch (IOException e) {
 
 					notifyProgress(-total);
 					mMission.onPositionDownloadFailed(position);
@@ -220,19 +223,19 @@ public class DownloadRunnable implements Runnable {
 					Log.d(TAG, mId + ":position " + position + " retrying");
 				}
 			}
-
 		}
 
         Log.d(TAG, "thread " + mId + " exited main loop");
-
-        if (mMission.getErrCode() == -1 && mMission.isRunning() && mMission.getDone() == mMission.getLength()) {
+        Log.d(TAG, "mMission.getDone()=" + mMission.getDone());
+        Log.d(TAG, "mMission.getLength()=" + mMission.getLength());
+        if (mMission.getErrCode() == -1 && mMission.isRunning() && (mMission.getDone() == mMission.getLength() || mMission.isFallback())) {
             Log.d(TAG, "no error has happened, notifying");
             notifyFinished();
         }
 
-        if (!mMission.isRunning()) {
-            Log.d(TAG, "The mission has been paused. Passing.");
-        }
+//        if (!mMission.isRunning()) {
+//            Log.d(TAG, "The mission has been paused. Passing.");
+//        }
         try {
             f.flush();
             f.close();
@@ -248,11 +251,17 @@ public class DownloadRunnable implements Runnable {
 		}
     }
 
-    private void notifyError(final int err) {
-        synchronized (mMission) {
-            mMission.notifyError(err, true);
-        }
-    }
+//    private void notifyError(final int err) {
+//        synchronized (mMission) {
+//            mMission.notifyError(err, true);
+//        }
+//    }
+
+	private void notifyError(final Error e) {
+		synchronized (mMission) {
+			mMission.notifyError(e, true);
+		}
+	}
 
     private void notifyFinished() {
         synchronized (mMission) {

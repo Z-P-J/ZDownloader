@@ -196,7 +196,7 @@ public class DownloadManagerImpl implements DownloadManager {
 		DownloadMission mission = DownloadMission.create(url, name, config);
 		int i = insertMission(mission);
 		if (downloadManagerListener != null) {
-			downloadManagerListener.onMissionAdd();
+			downloadManagerListener.onMissionAdd(mission);
 		}
 		mission.init();
 		return i;
@@ -204,14 +204,12 @@ public class DownloadManagerImpl implements DownloadManager {
 
 	@Override
 	public void resumeMission(int i) {
-		DownloadMission d = getMission(i);
-		d.start();
+		getMission(i).start();
 	}
 
 	@Override
 	public void resumeMission(String uuid) {
-		DownloadMission d = getMission(uuid);
-		d.start();
+		getMission(uuid).start();
 	}
 
 	@Override
@@ -223,14 +221,12 @@ public class DownloadManagerImpl implements DownloadManager {
 
 	@Override
 	public void pauseMission(int i) {
-		DownloadMission d = getMission(i);
-		d.pause();
+		getMission(i).pause();
 	}
 
 	@Override
 	public void pauseMission(String uuid) {
-		DownloadMission d = getMission(uuid);
-		d.pause();
+		getMission(uuid).pause();
 	}
 
 	@Override
@@ -243,78 +239,71 @@ public class DownloadManagerImpl implements DownloadManager {
 	@Override
 	public void deleteMission(int i) {
 		DownloadMission d = getMission(i);
-		d.pause();
 		d.delete();
 		ALL_MISSIONS.remove(i);
 		if (downloadManagerListener != null) {
-			downloadManagerListener.onMissionDelete();
+			downloadManagerListener.onMissionDelete(d);
 		}
 	}
 
 	@Override
 	public void deleteMission(String uuid) {
 		DownloadMission d = getMission(uuid);
-		d.pause();
 		d.delete();
 		ALL_MISSIONS.remove(d);
 		if (downloadManagerListener != null) {
-			downloadManagerListener.onMissionDelete();
+			downloadManagerListener.onMissionDelete(d);
 		}
 	}
 
 	@Override
 	public void deleteMission(DownloadMission mission) {
-		mission.pause();
 		mission.delete();
 		ALL_MISSIONS.remove(mission);
 		if (downloadManagerListener != null) {
-			downloadManagerListener.onMissionDelete();
+			downloadManagerListener.onMissionDelete(mission);
 		}
 	}
 
 	@Override
 	public void deleteAllMissions() {
 		for (DownloadMission mission : ALL_MISSIONS) {
-			mission.pause();
 			mission.delete();
 		}
 		ALL_MISSIONS.clear();
 		if (downloadManagerListener != null) {
-			downloadManagerListener.onMissionDelete();
+			downloadManagerListener.onMissionDelete(null);
 		}
 	}
 
 	@Override
 	public void clearMission(int i) {
 		DownloadMission d = getMission(i);
-		d.pause();
-		d.deleteMissionInfo();
+		d.clear();
 		ALL_MISSIONS.remove(i);
 		if (downloadManagerListener != null) {
-			downloadManagerListener.onMissionDelete();
+			downloadManagerListener.onMissionDelete(null);
 		}
 	}
 
 	@Override
 	public void clearMission(String uuid) {
 		DownloadMission d = getMission(uuid);
-		d.pause();
-		d.deleteMissionInfo();
+		d.clear();
 		ALL_MISSIONS.remove(d);
 		if (downloadManagerListener != null) {
-			downloadManagerListener.onMissionDelete();
+			downloadManagerListener.onMissionDelete(null);
 		}
 	}
 
 	@Override
 	public void clearAllMissions() {
 		for (DownloadMission mission : ALL_MISSIONS) {
-			mission.pause();
-			mission.deleteMissionInfo();
+			mission.clear();
 		}
 		ALL_MISSIONS.clear();
 		if (downloadManagerListener != null) {
-			downloadManagerListener.onMissionDelete();
+			downloadManagerListener.onMissionDelete(null);
 		}
 	}
 

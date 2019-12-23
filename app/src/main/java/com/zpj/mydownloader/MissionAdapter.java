@@ -14,6 +14,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.zpj.downloader.ZDownloader;
+import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.core.DownloadManager;
 import com.zpj.downloader.core.DownloadMission;
 import com.zpj.downloader.util.FileUtil;
@@ -165,18 +166,17 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 	}
 
 	@Override
-	public void onMissionAdd() {
-//		mManager.loadMissions();
+	public void onMissionAdd(DownloadMission mission) {
 		notifyDataSetChanged();
 	}
 
 	@Override
-	public void onMissionDelete() {
+	public void onMissionDelete(DownloadMission mission) {
 		notifyDataSetChanged();
 	}
 
 	@Override
-	public void onMissionFinished() {
+	public void onMissionFinished(DownloadMission mission) {
 
 	}
 
@@ -262,20 +262,9 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		}
 
 		@Override
-		public void onError(int errCode) {
-			switch (errCode) {
-				case 1000:
-					mHolder.status.setText("存储空间不足！");
-					break;
-				case 233:
-					mHolder.status.setText("未知错误");
-					break;
-				default:
-					mHolder.status.setText("出错了:errorCode=" + errCode);
-					break;
-			}
+		public void onError(Error e) {
+			mHolder.status.setText(e.getErrorMsg());
 		}
-		
 	}
 
 	public interface DownloadCallback {
