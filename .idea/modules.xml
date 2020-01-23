@@ -7,6 +7,7 @@
       <module fileurl="file://$PROJECT_DIR$/switchbutton/switchbutton.iml" filepath="$PROJECT_DIR$/switchbutton/switchbutton.iml" />
       <module fileurl="file://$PROJECT_DIR$/zdialog/zdialog.iml" filepath="$PROJECT_DIR$/zdialog/zdialog.iml" />
       <module fileurl="file://$PROJECT_DIR$/zdownloader/zdownloader.iml" filepath="$PROJECT_DIR$/zdownloader/zdownloader.iml" />
+      <module fileurl="file://$PROJECT_DIR$/zhttp/zhttp.iml" filepath="$PROJECT_DIR$/zhttp/zhttp.iml" />
     </modules>
   </component>
 </project>

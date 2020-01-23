@@ -3,7 +3,6 @@ package com.zpj.mydownloader;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
@@ -11,12 +10,10 @@ import android.support.v7.widget.RecyclerView;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
-import android.util.Log;
 import android.view.Gravity;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Button;
 import android.widget.EditText;
 import android.widget.LinearLayout;
 import android.widget.SeekBar;
@@ -26,16 +23,9 @@ import android.widget.Toast;
 import com.zpj.downloader.ZDownloader;
 import com.zpj.downloader.core.DownloadManager;
 import com.zpj.downloader.core.DownloadMission;
-import com.zpj.downloader.jsoup.Jsoup;
-import com.zpj.downloader.jsoup.connection.Connection;
 import com.zpj.zdialog.ZAlertDialog;
 import com.zpj.zdialog.ZBottomSheetDialog;
-import com.zpj.zdialog.ZDialog;
 import com.zpj.zdialog.base.IDialog;
-
-import java.net.HttpURLConnection;
-import java.net.Proxy;
-import java.net.URL;
 
 /**
  * @author Z-P-J
