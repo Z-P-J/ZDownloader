@@ -1,6 +1,7 @@
 package com.zpj.http.parser.html.nodes;
 
 import com.zpj.http.exception.SerializationException;
+import com.zpj.http.parser.html.select.Elements;
 import com.zpj.http.utils.StringUtil;
 import com.zpj.http.utils.Validate;
 import com.zpj.http.parser.html.select.NodeFilter;
@@ -527,7 +528,7 @@ public abstract class Node implements Cloneable {
      * Get the list index of this node in its node sibling list. I.e. if this is the first node
      * sibling, returns 0.
      * @return position in node sibling list
-     * @see com.zpj.http.parser.html.nodes.Element#elementSiblingIndex()
+     * @see Element#elementSiblingIndex()
      */
     public int siblingIndex() {
         return siblingIndex;

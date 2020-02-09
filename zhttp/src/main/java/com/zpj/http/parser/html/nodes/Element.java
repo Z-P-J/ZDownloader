@@ -178,6 +178,10 @@ public class Element extends Node {
         return tag.isBlock();
     }
 
+    public boolean isNull() {
+        return this instanceof NullElement;
+    }
+
     /**
      * Get the {@code id} attribute of this element.
      * 
@@ -365,16 +369,20 @@ public class Element extends Node {
      * <li>{@code el.select("a[href*=example.com]")} - finds links pointing to example.com (loosely)
      * </ul>
      * <p>
-     * See the query syntax documentation in {@link com.zpj.http.parser.html.select.Selector}.
+     * See the query syntax documentation in {@link Selector}.
      * </p>
      * 
      * @param cssQuery a {@link Selector} CSS-like query
      * @return elements that match the query (empty if none match)
-     * @see com.zpj.http.parser.html.select.Selector
+     * @see Selector
      * @throws Selector.SelectorParseException (unchecked) on an invalid CSS query.
      */
     public Elements select(String cssQuery) {
         return Selector.select(cssQuery, this);
+    }
+
+    public boolean has(String cssQuery) {
+        return !(selectFirst(cssQuery) instanceof NullElement);
     }
 
     /**
@@ -611,6 +619,13 @@ public class Element extends Node {
     @Override
     public Element after(Node node) {
         return (Element) super.after(node);
+    }
+
+    public void remove(String cssQuery) {
+        Elements elements = select(cssQuery);
+        for (Element element : elements) {
+            element.remove();
+        }
     }
 
     /**

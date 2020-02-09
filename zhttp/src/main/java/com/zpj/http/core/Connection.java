@@ -115,11 +115,11 @@ public interface Connection {
     Connection maxBodySize(int bytes);
 
     /**
-     * Set the request referrer (aka "referer") header.
-     * @param referrer referrer to use
+     * Set the request referer (aka "referer") header.
+     * @param referer referer to use
      * @return this Connection, for chaining
      */
-    Connection referrer(String referrer);
+    Connection referer(String referer);
 
     Connection contentType(String contentType);
 
@@ -155,6 +155,27 @@ public interface Connection {
      * @return this Connection, for chaining
      */
     Connection ignoreContentType(boolean ignoreContentType);
+
+    /**
+     * Disable/enable TLS certificates validation for HTTPS requests.
+     * <p>
+     * By default this is <b>true</b>; all
+     * connections over HTTPS perform normal validation of certificates, and will abort requests if the provided
+     * certificate does not validate.
+     * </p>
+     * <p>
+     * Some servers use expired, self-generated certificates; or your JDK may not
+     * support SNI hosts. In which case, you may want to enable this setting.
+     * </p>
+     * <p>
+     * <b>Be careful</b> and understand why you need to disable these validations.
+     * </p>
+     * @param value if should validate TLS (SSL) certificates. <b>true</b> by default.
+     * @return this Connection, for chaining
+     * @deprecated as distributions (specifically Google Play) are starting to show warnings if these checks are
+     * disabled.
+     */
+    Connection validateTLSCertificates(boolean value);
 
     /**
      * Set custom SSL socket factory
@@ -320,32 +341,48 @@ public interface Connection {
 
 //    OutputStream outputStream() throws IOException;
 
-    String toStr() throws IOException;
+//    /**
+//     * Execute the request.
+//     * @return a response object
+//     * @throws java.net.MalformedURLException if the request URL is not a HTTP or HTTPS URL, or is otherwise malformed
+//     * @throws HttpStatusException if the response is not OK and HTTP response errors are not ignored
+//     * @throws UnsupportedMimeTypeException if the response mime type is not supported and those errors are not ignored
+//     * @throws java.net.SocketTimeoutException if the connection times out
+//     * @throws IOException on error
+//     */
+//    Response execute() throws IOException;
 
-    Document toHtml() throws IOException;
+//    String toStr() throws IOException;
+//
+//    Document toHtml() throws IOException;
+//
+//    JSONObject toJsonObject() throws IOException, JSONException;
+//
+//    JSONArray toJsonArray() throws IOException, JSONException;
+//
+//    Document toXml() throws IOException;
 
-    JSONObject toJsonObject() throws IOException, JSONException;
+    HttpObservable<Response> execute();
 
-    JSONArray toJsonArray() throws IOException, JSONException;
+    HttpObservable<String> toStr();
 
-    Document toXml() throws IOException;
+    HttpObservable<Document> toHtml();
+
+    HttpObservable<JSONObject> toJsonObject();
+
+    HttpObservable<JSONArray> toJsonArray();
+
+    HttpObservable<Document> toXml();
 
     Connection onRedirect(IHttp.OnRedirectListener listener);
 
-    Connection onError(IHttp.OnErrorListener listener);
-
-    Connection onSuccess(IHttp.OnSuccessListener listener);
-
-    /**
-     * Execute the request.
-     * @return a response object
-     * @throws java.net.MalformedURLException if the request URL is not a HTTP or HTTPS URL, or is otherwise malformed
-     * @throws HttpStatusException if the response is not OK and HTTP response errors are not ignored
-     * @throws UnsupportedMimeTypeException if the response mime type is not supported and those errors are not ignored
-     * @throws java.net.SocketTimeoutException if the connection times out
-     * @throws IOException on error
-     */
-    Response execute() throws IOException;
+//    Connection onError(IHttp.OnErrorListener listener);
+//
+//    Connection onSuccess(IHttp.OnSuccessListener listener);
+//
+//    Connection onComplete(IHttp.OnCompleteListener listener);
+//
+//    Connection onSubscribe(IHttp.OnSubscribeListener listener);
 
     /**
      * Get the request object associated with this connection
@@ -613,6 +650,22 @@ public interface Connection {
          * @return this Request, for chaining
          */
         Request ignoreContentType(boolean ignoreContentType);
+
+        /**
+         * Get the current state of TLS (SSL) certificate validation.
+         * @return true if TLS cert validation enabled
+         * @deprecated
+         */
+        boolean validateTLSCertificates();
+
+        /**
+         * Set TLS certificate validation. <b>True</b> by default.
+         * @param value set false to ignore TLS (SSL) certificates
+         * @deprecated as distributions (specifically Google Play) are starting to show warnings if these checks are
+         * disabled. This method will be removed in the next release.
+         * @see #sslSocketFactory(SSLSocketFactory)
+         */
+        void validateTLSCertificates(boolean value);
 
         /**
          * Get the current custom SSL socket factory, if any.

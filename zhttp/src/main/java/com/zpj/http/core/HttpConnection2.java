@@ -1,4 +1,4 @@
-//package com.zpj.http.core;
+package com.zpj.http.core;//package com.zpj.http.core;
 //
 //import com.zpj.http.ZHttp;
 //import com.zpj.http.exception.HttpStatusException;
@@ -171,9 +171,9 @@
 //        return this;
 //    }
 //
-//    public Connection referrer(String referrer) {
-//        Validate.notNull(referrer, "Referrer must not be null");
-//        req.header("Referer", referrer);
+//    public Connection referer(String referer) {
+//        Validate.notNull(referer, "Referrer must not be null");
+//        req.header("Referer", referer);
 //        return this;
 //    }
 //
