@@ -6,7 +6,6 @@ import android.os.Looper;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.LongSparseArray;
-import android.util.SparseArray;
 import android.webkit.MimeTypeMap;
 import android.widget.Toast;
 
@@ -22,11 +21,10 @@ import com.zpj.downloader.util.io.BufferedRandomAccessFile;
 import com.zpj.downloader.util.notification.NotifyUtil;
 import com.zpj.http.ZHttp;
 import com.zpj.http.core.Connection;
-import com.zpj.http.core.HttpObservable;
 import com.zpj.http.core.IHttp;
+import com.zpj.http.core.ObservableTask;
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.lang.ref.WeakReference;
 import java.net.Proxy;
 import java.util.ArrayList;
@@ -254,7 +252,7 @@ public class DownloadMission {
                 .proxy(Proxy.NO_PROXY)
                 .userAgent(getUserAgent())
                 .cookie(getCookie())
-                .header("Accept", "*/*")
+                .accept("*/*")
                 .referer(url)
                 .headers(getHeaders())
                 .timeout(200000)
@@ -262,9 +260,9 @@ public class DownloadMission {
                 .ignoreHttpErrors(true)
                 .maxBodySize(0)
                 .execute()
-                .onNext(new HttpObservable.OnNextListener<Connection.Response, Connection.Response>() {
+                .onNext(new ObservableTask.OnNextListener<Connection.Response, Connection.Response>() {
                     @Override
-                    public HttpObservable<Connection.Response> onNext(Connection.Response res) {
+                    public ObservableTask<Connection.Response> onNext(Connection.Response res) {
                         if (handleResponse(res, DownloadMission.this)) {
                             Log.d(TAG, "handleResponse--111");
                             return null;
@@ -273,12 +271,12 @@ public class DownloadMission {
                                 .proxy(Proxy.NO_PROXY)
                                 .userAgent(getUserAgent())
                                 .cookie(getCookie())
-                                .header("Accept", "*/*")
-                                .header("Access-Control-Expose-Headers", "Content-Disposition")
+                                .accept("*/*")
                                 .referer(url)
+                                .range("bytes=0-")
                                 .header("Pragma", "no-cache")
-                                .header("Range", "bytes=0-")
                                 .header("Cache-Control", "no-cache")
+                                .header("Access-Control-Expose-Headers", "Content-Disposition")
                                 .headers(getHeaders())
                                 .timeout(getConnectOutTime())
                                 .ignoreContentType(true)

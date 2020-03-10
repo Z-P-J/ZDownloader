@@ -1,5 +1,4 @@
 include ':app',
         ':zdownloader',
         ':zdialog',
-        ':switchbutton',
-        ':zhttp'
+        ':switchbutton'
