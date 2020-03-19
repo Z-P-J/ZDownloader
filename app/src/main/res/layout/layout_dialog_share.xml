@@ -23,7 +23,7 @@
             android:text="打开文件"
             android:textSize="12sp"
             android:textColor="#000000"
-            android:background="@drawable/bg_selector"
+            android:background="?attr/selectableItemBackground"
             />
 
     </LinearLayout>
@@ -43,7 +43,7 @@
             android:text="暂停下载"
             android:textSize="12sp"
             android:textColor="#000000"
-            android:background="@drawable/bg_selector"
+            android:background="?attr/selectableItemBackground"
             />
 
     </LinearLayout>
@@ -63,7 +63,7 @@
             android:text="恢复下载"
             android:textSize="12sp"
             android:textColor="#000000"
-            android:background="@drawable/bg_selector"
+            android:background="?attr/selectableItemBackground"
             />
 
     </LinearLayout>
@@ -83,7 +83,7 @@
             android:text="删除任务"
             android:textSize="12sp"
             android:textColor="#000000"
-            android:background="@drawable/bg_selector"
+            android:background="?attr/selectableItemBackground"
             />
 
     </LinearLayout>
@@ -103,7 +103,7 @@
             android:text="复制链接"
             android:textSize="12sp"
             android:textColor="#000000"
-            android:background="@drawable/bg_selector"
+            android:background="?attr/selectableItemBackground"
             />
 
     </LinearLayout>

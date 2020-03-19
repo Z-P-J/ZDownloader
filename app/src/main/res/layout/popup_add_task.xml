@@ -1,0 +1,187 @@
+<LinearLayout
+	xmlns:android="http://schemas.android.com/apk/res/android"
+	android:orientation="vertical"
+	android:layout_width="match_parent"
+	android:layout_height="wrap_content"
+	android:background="@color/white"
+	>
+
+	<TextView
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:text="添加下载任务"
+		android:textColor="@color/black"
+		android:padding="16dp"
+		android:textSize="18sp"
+		/>
+
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:gravity="center_vertical"
+		android:orientation="vertical"
+		android:paddingStart="16dp"
+		android:paddingEnd="16dp"
+		>
+
+		<TextView
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:padding="5dp"
+			android:text="链接"/>
+
+		<EditText
+			android:id="@+id/url"
+			android:layout_width="match_parent"
+			android:layout_height="36.669987dp"
+			android:background="@drawable/edit_text_style"
+			android:inputType="text"
+			android:hint="请输入下载链接"
+			android:textSize="13sp"
+			android:paddingStart="10dp"
+			android:paddingEnd="10dp"
+			android:textColor="#000000"
+			/>
+
+	</LinearLayout>
+
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:gravity="center_vertical"
+		android:orientation="vertical"
+		android:paddingStart="16dp"
+		android:paddingEnd="16dp"
+		>
+
+		<TextView
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:padding="5dp"
+			android:text="名称"/>
+
+		<EditText
+			android:id="@+id/file_name"
+			android:layout_width="match_parent"
+			android:layout_height="36.669987dp"
+			android:background="@drawable/edit_text_style"
+			android:inputType="text"
+			android:hint="请输入下载文件名称"
+			android:textSize="13sp"
+			android:paddingStart="10dp"
+			android:paddingEnd="10dp"
+			android:textColor="#000000"
+			/>
+
+	</LinearLayout>
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:gravity="center_vertical"
+		android:orientation="vertical"
+		android:paddingStart="16dp"
+		android:paddingEnd="16dp"
+		>
+
+		<TextView
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:padding="5dp"
+			android:text="缓冲大小（*1024）"/>
+
+		<EditText
+			android:id="@+id/et_buffer"
+			android:layout_width="match_parent"
+			android:layout_height="36.669987dp"
+			android:background="@drawable/edit_text_style"
+			android:inputType="number"
+			android:hint="请输入buffer大小"
+			android:textSize="13sp"
+			android:paddingStart="10dp"
+			android:paddingEnd="10dp"
+			android:textColor="#000000"
+			/>
+
+	</LinearLayout>
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:gravity="center_vertical"
+		android:orientation="vertical"
+		android:paddingStart="16dp"
+		android:paddingEnd="16dp"
+		>
+
+		<TextView
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:padding="5dp"
+
+			android:text="线程数"/>
+
+		<LinearLayout
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:gravity="center_vertical"
+			android:orientation="horizontal">
+
+			<TextView
+				android:id="@+id/threads_count"
+				android:layout_width="20dp"
+				android:layout_height="wrap_content"
+				android:text="0"/>
+
+
+
+			<SeekBar
+				android:id="@+id/threads"
+				android:layout_width="match_parent"
+				android:layout_height="wrap_content"
+				android:max="127"
+				android:progress="3"/>
+
+		</LinearLayout>
+
+
+
+	</LinearLayout>
+
+	<LinearLayout
+		android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:orientation="horizontal"
+		>
+
+		<Button
+			android:id="@+id/bt_cancel"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:background="?attr/selectableItemBackground"
+			android:gravity="center"
+			android:minHeight="44dp"
+			android:text="取消"
+			android:textColor="#000000"
+			style="@style/Widget.AppCompat.Button.Borderless"
+			android:textSize="14sp"/>
+
+		<Button
+			android:id="@+id/bt_ok"
+			android:layout_width="match_parent"
+			android:layout_height="wrap_content"
+			android:layout_weight="1"
+			android:background="?attr/selectableItemBackground"
+			android:gravity="center"
+			android:minHeight="44dp"
+			android:text="确定"
+			android:textColor="#03a9f4"
+			style="@style/Widget.AppCompat.Button.Borderless"
+			android:textSize="14sp"/>
+
+	</LinearLayout>
+
+</LinearLayout>

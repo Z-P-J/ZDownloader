@@ -1,4 +1,3 @@
 include ':app',
         ':zdownloader',
-        ':zdialog',
-        ':switchbutton'
+        ':zpopup'

@@ -37,11 +37,18 @@ import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 
+import io.reactivex.Observable;
+import io.reactivex.ObservableEmitter;
+import io.reactivex.ObservableOnSubscribe;
+import io.reactivex.Observer;
+import io.reactivex.disposables.Disposable;
+import io.reactivex.schedulers.Schedulers;
+
 /**
  * @author Z-P-J
  */
 public class DownloadMission {
-    private static final String TAG = DownloadMission.class.getSimpleName();
+    private static final String TAG = "DownloadMission";
 
     public interface MissionListener {
         HashMap<MissionListener, Handler> HANDLER_STORE = new HashMap<>();
@@ -86,7 +93,7 @@ public class DownloadMission {
     }
 
     private final LongSparseArray<Boolean> blockState = new LongSparseArray<>();
-//    private final List<Error> errorHistoryList = new ArrayList<>();
+    //    private final List<Error> errorHistoryList = new ArrayList<>();
     private final List<Long> speedHistoryList = new ArrayList<>();
 
     private String uuid = "";
@@ -101,7 +108,7 @@ public class DownloadMission {
     private int finishCount = 0;
     private long length = 0;
     private long done = 0;
-//    private List<Long> threadPositions = new ArrayList<>();
+    //    private List<Long> threadPositions = new ArrayList<>();
     private MissionStatus missionStatus = MissionStatus.INITING;
     private boolean fallback = false;
     private int errCode = -1;
@@ -485,7 +492,7 @@ public class DownloadMission {
 
     private void initQueue() {
         queue.clear();
-        for (long position = 0;  position < getBlocks(); position++) {
+        for (long position = 0; position < getBlocks(); position++) {
             if (!isBlockPreserved(position)) {
                 Log.d(TAG, "initQueue add position=" + position);
                 queue.add(position);
@@ -839,10 +846,44 @@ public class DownloadMission {
     private void writeMissionInfo() {
         if (!mWritingToFile) {
             mWritingToFile = true;
-            if (threadPoolExecutor == null) {
-                threadPoolExecutor = ThreadPoolFactory.newFixedThreadPool(missionConfig.getThreadPoolConfig());
-            }
-            threadPoolExecutor.submit(writeMissionInfoRunnable);
+//            if (threadPoolExecutor == null) {
+//                threadPoolExecutor = ThreadPoolFactory.newFixedThreadPool(missionConfig.getThreadPoolConfig());
+//            }
+//            threadPoolExecutor.submit(writeMissionInfoRunnable);
+            Observable.create(new ObservableOnSubscribe<Object>() {
+                @Override
+                public void subscribe(ObservableEmitter<Object> emitter) throws Exception {
+                    synchronized (blockState) {
+                        Utility.writeToFile(getMissionInfoFilePath(), new Gson().toJson(DownloadMission.this));
+                        mWritingToFile = false;
+                        emitter.onNext(new Object());
+                        emitter.onComplete();
+                    }
+                }
+            })
+                    .subscribeOn(Schedulers.io())
+                    .observeOn(Schedulers.io())
+                    .subscribe(new Observer<Object>() {
+                        @Override
+                        public void onSubscribe(Disposable d) {
+
+                        }
+
+                        @Override
+                        public void onNext(Object o) {
+
+                        }
+
+                        @Override
+                        public void onError(Throwable e) {
+
+                        }
+
+                        @Override
+                        public void onComplete() {
+
+                        }
+                    });
         }
     }
 
@@ -1061,7 +1102,6 @@ public class DownloadMission {
     public void setErrCode(int errCode) {
         this.errCode = errCode;
     }
-
 
 
     //----------------------------------------------------------------other

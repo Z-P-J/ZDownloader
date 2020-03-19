@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="popup_menu_view_anim_left_and_top">
+        <item name="android:windowEnterAnimation">@anim/popup_menu_view_anim_left_and_top_show</item>
+        <item name="android:windowExitAnimation">@anim/popup_menu_view_anim_left_and_top_hide</item>
+    </style>
+
+    <style name="popup_menu_view_anim_right_and_top">
+        <item name="android:windowEnterAnimation">@anim/popup_menu_view_anim_right_and_top_show</item>
+<!--        <item name="android:windowExitAnimation">@anim/popup_menu_view_anim_right_and_top_hide</item>-->
+<!--        <item name="android:windowExitAnimation">@anim/pop_out</item>-->
+    </style>
+
+    <style name="pop_animation" parent="android:Animation">
+        <item name="android:windowEnterAnimation">@anim/pop_in</item>
+        <item name="android:windowExitAnimation">@anim/pop_out</item>
+    </style>
+
+    <style name="RightPopAnim" parent="@android:style/Animation.Activity">
+        <item name="android:windowEnterAnimation">@anim/right_in</item>
+        <item name="android:windowExitAnimation">@anim/right_out</item>
+    </style>
+
+    <style name="RightTopPopAnim" parent="@android:style/Animation.Activity">
+        <item name="android:windowEnterAnimation">@anim/right_top_in</item>
+        <item name="android:windowExitAnimation">@anim/right_top_out</item>
+    </style>
+
+    <style name="RightTop2PopAnim" parent="@android:style/Animation.Activity">
+        <item name="android:windowEnterAnimation">@anim/right_top_in_2</item>
+        <item name="android:windowExitAnimation">@anim/right_top_out_2</item>
+    </style>
+
+    <style name="LeftTopPopAnim" parent="@android:style/Animation.Activity">
+        <item name="android:windowEnterAnimation">@anim/left_top_in</item>
+        <item name="android:windowExitAnimation">@anim/left_top_out</item>
+    </style>
+
+    <style name="LeftBottomPopAnim" parent="@android:style/Animation.Activity">
+        <item name="android:windowEnterAnimation">@anim/left_bottom_in</item>
+        <item name="android:windowExitAnimation">@anim/left_bottom_out</item>
+    </style>
+
+    <style name="RightBottomPopAnim" parent="@android:style/Animation.Activity">
+        <item name="android:windowEnterAnimation">@anim/right_bottom_in</item>
+        <item name="android:windowExitAnimation">@anim/right_bottom_out</item>
+    </style>
+
+    <style name="TopPopAnim" parent="@android:style/Animation.Activity">
+        <item name="android:windowEnterAnimation">@anim/top_in</item>
+        <item name="android:windowExitAnimation">@anim/top_out</item>
+    </style>
+    <style name="BottomPopAnim" parent="@android:style/Animation.Activity">
+        <item name="android:windowEnterAnimation">@anim/bottom_in</item>
+        <item name="android:windowExitAnimation">@anim/bottom_out</item>
+    </style>
+
+
+    <style name="XPopupTitle">
+        <item name="android:textSize">18sp</item>
+        <item name="android:textColor">@color/_xpopup_title_color</item>
+        <item name="android:lines">1</item>
+        <item name="android:ellipsize">end</item>
+    </style>
+
+</resources>
