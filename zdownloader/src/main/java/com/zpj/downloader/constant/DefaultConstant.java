@@ -9,7 +9,7 @@ public class DefaultConstant {
 
     public static final String DOWNLOAD_PATH = Environment.getExternalStorageDirectory().getAbsolutePath() + "/ZDownloader/";
 
-    public static final int BUFFER_SIZE = 512;
+    public static final int BUFFER_SIZE = 1024;
 
     public static final int BLOCK_SIZE = 1024 * 1024;
 

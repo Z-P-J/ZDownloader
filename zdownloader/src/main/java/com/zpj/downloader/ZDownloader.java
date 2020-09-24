@@ -16,9 +16,7 @@ import com.zpj.downloader.core.DownloadManagerImpl;
 import com.zpj.downloader.core.DownloadMission;
 import com.zpj.downloader.util.FileUtil;
 import com.zpj.downloader.util.NetworkChangeReceiver;
-import com.zpj.downloader.util.content.SPHelper;
 import com.zpj.downloader.util.notification.NotifyUtil;
-import com.zpj.downloader.util.permission.PermissionUtil;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -40,17 +38,20 @@ public class ZDownloader {
         init(DownloaderConfig.with(context));
     }
 
-    public static void init(final DownloaderConfig options) {
+    public static <T extends DownloadMission> void init(final DownloaderConfig options, Class<T> clazz) {
         final Context context = options.getContext();
 
-        PermissionUtil.grandStoragePermission(context);
+//        PermissionUtil.grandStoragePermission(context);
 
-        SPHelper.init(context);
         NotifyUtil.init(context);
-        DownloadManagerImpl.register(options);
+        DownloadManagerImpl.register(options, clazz);
         IntentFilter intentFilter = new IntentFilter();
         intentFilter.addAction("android.net.conn.CONNECTIVITY_CHANGE");
         options.getContext().registerReceiver(NetworkChangeReceiver.getInstance(), intentFilter);
+    }
+
+    public static void init(final DownloaderConfig options) {
+        init(options, DownloadMission.class);
     }
 
     public static void onDestroy() {
@@ -195,7 +196,13 @@ public class ZDownloader {
     }
 
     public static void resumeAll() {
-        DownloadManagerImpl.getInstance().resumeAllMissions();
+        waitingForInternet = false;
+        for (DownloadMission mission : DownloadManagerImpl.getInstance().getMissions()) {
+            if (mission.isWaiting()) {
+                mission.start();
+            }
+        }
+//        DownloadManagerImpl.getInstance().resumeAllMissions();
     }
 
     public static void deleteAll() {
@@ -210,8 +217,20 @@ public class ZDownloader {
         return DownloadManagerImpl.getInstance();
     }
 
+    public static Context getContext() {
+        return getDownloadManager().getContext();
+    }
+
     public static List<DownloadMission> getAllMissions() {
         return DownloadManagerImpl.getInstance().getMissions();
+    }
+
+    public static <T extends DownloadMission> List<T> getAllMissions(Class<T> clazz) {
+        List<T> downloadMissionList = new ArrayList<>();
+        for (DownloadMission mission : getAllMissions()) {
+            downloadMissionList.add((T) mission);
+        }
+        return downloadMissionList;
     }
 
     public static List<DownloadMission> getAllMissions(boolean downloading) {
@@ -219,6 +238,26 @@ public class ZDownloader {
         for (DownloadMission mission : getAllMissions()) {
             if (mission.isFinished() != downloading) {
                 downloadMissionList.add(mission);
+            }
+        }
+        return downloadMissionList;
+    }
+
+    public static <T extends DownloadMission> List<T> getAllMissions(boolean downloading, Class<T> clazz) {
+        List<T> downloadMissionList = new ArrayList<>();
+        for (DownloadMission mission : getAllMissions()) {
+            if (mission.isFinished() != downloading) {
+                downloadMissionList.add((T) mission);
+            }
+        }
+        return downloadMissionList;
+    }
+
+    public static <T extends DownloadMission> List<T> getRunningMissions(Class<T> clazz) {
+        List<T> downloadMissionList = new ArrayList<>();
+        for (DownloadMission mission : getAllMissions()) {
+            if (mission.isRunning()) {
+                downloadMissionList.add((T) mission);
             }
         }
         return downloadMissionList;
@@ -242,6 +281,32 @@ public class ZDownloader {
             }
         }
         return downloadMissionList;
+    }
+
+    public static <T extends DownloadMission> List<T> getMissions(DownloadMission.MissionStatus status, Class<T> clazz) {
+        List<T> downloadMissionList = new ArrayList<>();
+        for (DownloadMission mission : getAllMissions()) {
+            if (status == mission.getStatus()) {
+                downloadMissionList.add((T) mission);
+            }
+        }
+        return downloadMissionList;
+    }
+
+    public static void setEnableNotification(boolean value) {
+        setEnableNotification(value, true);
+    }
+
+    public static void setEnableNotification(boolean value, boolean affectPresent) {
+        DownloadManagerImpl.getInstance().getDownloaderConfig().setEnableNotification(value);
+        if (affectPresent) {
+            for (DownloadMission mission : getAllMissions()) {
+                mission.getMissionConfig().setEnableNotification(value);
+            }
+            if (!value) {
+                NotifyUtil.cancelAll();
+            }
+        }
     }
 
 }

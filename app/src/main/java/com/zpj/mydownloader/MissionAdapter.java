@@ -265,6 +265,16 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		public void onError(Error e) {
 			mHolder.status.setText(e.getErrorMsg());
 		}
+
+		@Override
+		public void onDelete() {
+
+		}
+
+		@Override
+		public void onClear() {
+
+		}
 	}
 
 	public interface DownloadCallback {

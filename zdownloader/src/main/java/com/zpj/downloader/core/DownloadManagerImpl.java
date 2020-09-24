@@ -41,7 +41,7 @@ public class DownloadManagerImpl implements DownloadManager {
 
 	private DownloaderConfig options;
 
-	private static AtomicInteger downloadingCount = new AtomicInteger(0);
+	private static final AtomicInteger downloadingCount = new AtomicInteger(0);
 
 	private DownloadManagerImpl(Context context, DownloaderConfig options) {
 		mContext = context;
@@ -66,16 +66,19 @@ public class DownloadManagerImpl implements DownloadManager {
 		return mManager;
 	}
 
-	public static void register(DownloaderConfig options) {
+	public static <T extends DownloadMission> void register(DownloaderConfig options, Class<T> clazz) {
 		if (mManager == null) {
 			mManager = new DownloadManagerImpl(options.getContext(), options);
-			mManager.loadMissions();
+			mManager.loadMissions(clazz);
 		}
 	}
 
 	public static void unRegister() {
+		getInstance().removeDownloadManagerListener(null);
 		getInstance().pauseAllMissions();
 		getInstance().getContext().unregisterReceiver(NetworkChangeReceiver.getInstance());
+		ALL_MISSIONS.clear();
+		mManager = null;
 	}
 
 	public static void setDownloadPath(String downloadPath) {
@@ -131,6 +134,11 @@ public class DownloadManagerImpl implements DownloadManager {
 
 	@Override
 	public void loadMissions() {
+		loadMissions(DownloadMission.class);
+	}
+
+	@Override
+	public <T extends DownloadMission> void loadMissions(Class<T> clazz) {
 		long time1 = System.currentTimeMillis();
 		ALL_MISSIONS.clear();
 		File f;
@@ -141,6 +149,7 @@ public class DownloadManagerImpl implements DownloadManager {
 		}
 
 		if (f.exists() && f.isDirectory()) {
+			Gson gson = new Gson();
 			for (final File sub : f.listFiles()) {
 				if (sub.isDirectory()) {
 					continue;
@@ -148,7 +157,7 @@ public class DownloadManagerImpl implements DownloadManager {
 				if (sub.getName().endsWith(MISSION_INFO_FILE_SUFFIX_NAME)) {
 					String str = Utility.readFromFile(sub.getAbsolutePath());
 					if (!TextUtils.isEmpty(str)) {
-						DownloadMission mis = new Gson().fromJson(str, DownloadMission.class);
+						DownloadMission mis = gson.fromJson(str, clazz);
 						Log.d("initMissions", "mis=null? " + (mis == null));
 						if (mis != null) {
 							mis.init();
@@ -177,6 +186,11 @@ public class DownloadManagerImpl implements DownloadManager {
 	}
 
 	@Override
+	public void removeDownloadManagerListener(DownloadManagerListener downloadManagerListener) {
+		this.downloadManagerListener = null;
+	}
+
+	@Override
 	public DownloadManagerListener getDownloadManagerListener() {
 		return downloadManagerListener;
 	}
@@ -195,9 +209,9 @@ public class DownloadManagerImpl implements DownloadManager {
 	public int startMission(String url, String name, MissionConfig config) {
 		DownloadMission mission = DownloadMission.create(url, name, config);
 		int i = insertMission(mission);
-		if (downloadManagerListener != null) {
-			downloadManagerListener.onMissionAdd(mission);
-		}
+//		if (downloadManagerListener != null) {
+//			downloadManagerListener.onMissionAdd(mission);
+//		}
 		mission.init();
 		return i;
 	}
@@ -326,9 +340,16 @@ public class DownloadManagerImpl implements DownloadManager {
 	public int getCount() {
 		return ALL_MISSIONS.size();
 	}
-	
-	private int insertMission(DownloadMission mission) {
+
+	@Override
+	public int insertMission(DownloadMission mission) {
+		if (ALL_MISSIONS.contains(mission)) {
+			return ALL_MISSIONS.indexOf(mission);
+		}
 		ALL_MISSIONS.add(mission);
+		if (downloadManagerListener != null) {
+			downloadManagerListener.onMissionAdd(mission);
+		}
 		return ALL_MISSIONS.size() - 1;
 	}
 

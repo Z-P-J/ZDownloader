@@ -57,6 +57,8 @@ public interface DownloadManager {
 
     DownloadMission getMission(String uuid);
 
+    int insertMission(DownloadMission mission);
+
     int getCount();
 
     Context getContext();
@@ -69,7 +71,11 @@ public interface DownloadManager {
 
     void loadMissions();
 
+    <T extends DownloadMission> void loadMissions(Class<T> clazz);
+
     void setDownloadManagerListener(DownloadManagerListener downloadManagerListener);
+
+    void removeDownloadManagerListener(DownloadManagerListener downloadManagerListener);
 
     DownloadManagerListener getDownloadManagerListener();
 
