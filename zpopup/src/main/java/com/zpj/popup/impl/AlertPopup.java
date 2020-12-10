@@ -90,6 +90,12 @@ public class AlertPopup extends CenterPopupView implements View.OnClickListener 
         return this;
     }
 
+    public AlertPopup setCancelButton(String btnStr, OnCancelListener listener) {
+        this.cancelText = btnStr;
+        this.cancelListener = listener;
+        return this;
+    }
+
     public AlertPopup onCancel(OnCancelListener cancelListener) {
         this.cancelListener = cancelListener;
         return this;

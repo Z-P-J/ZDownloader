@@ -5,10 +5,21 @@
 	android:layout_height="wrap_content"
 	android:layout_width="match_parent"
 	app:cardUseCompatPadding="true"
-	app:cardCornerRadius="5dp"
+	app:cardCornerRadius="8dp"
 	app:cardElevation="1dp"
 	app:cardBackgroundColor="@color/white"
+	android:layout_margin="8dp"
 	>
+
+<!--	<ProgressBar-->
+<!--		android:id="@+id/progress_bar"-->
+<!--		android:layout_width="match_parent"-->
+<!--		android:layout_height="match_parent"-->
+<!--		android:background="@null"-->
+<!--		android:progress="0"-->
+<!--		android:progressDrawable="@drawable/background_download_item"-->
+<!--		style="?android:attr/progressBarStyleHorizontal"-->
+<!--		/>-->
 
 	<RelativeLayout
 		android:id="@+id/item_bkg"
@@ -19,12 +30,15 @@
 
 		<ImageView
 			android:id="@+id/item_icon"
-			android:layout_width="72dp"
-			android:layout_height="72dp"
+			android:layout_width="36dp"
+			android:layout_height="36dp"
 			android:layout_centerVertical="true"
-			android:scaleType="fitXY"
+			android:layout_marginVertical="16dp"
+			android:layout_marginHorizontal="16dp"
 			android:gravity="center"
-			android:padding="15dp"/>
+			android:scaleType="fitXY"
+			android:src="@mipmap/ic_launcher"
+			/>
 
 		<LinearLayout
 			android:id="@+id/item_name_and_size"
@@ -33,13 +47,14 @@
 			android:layout_toEndOf="@id/item_icon"
 			android:layout_toStartOf="@+id/item_more"
 			android:layout_centerVertical="true"
-			android:orientation="vertical">
+			android:orientation="vertical"
+			android:layout_marginVertical="8dp"
+			>
 
 			<TextView
 				android:id="@+id/item_name"
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content"
-				android:padding="6dp"
 				android:maxLines="2"
 				android:ellipsize="end"
 				android:text="XXX.xx"
@@ -47,19 +62,23 @@
 				android:textStyle="bold"
 				android:textColor="@color/black"/>
 
+			<Space
+				android:layout_width="match_parent"
+				android:layout_height="8dp"/>
+
 			<RelativeLayout
 				android:layout_width="match_parent"
 				android:layout_height="wrap_content">
 
 				<TextView
 					android:id="@+id/item_size"
-					android:layout_width="match_parent"
+					android:layout_width="wrap_content"
 					android:layout_height="wrap_content"
-					android:padding="6dp"
-					android:singleLine="true"
+					android:maxLines="2"
 					android:text="100.00MB"
-					android:textSize="14sp"
+					android:textSize="12sp"
 					android:textColor="@color/black"
+					android:layout_alignParentStart="true"
 					android:layout_toStartOf="@id/item_status"
 					/>
 
@@ -68,11 +87,8 @@
 					android:layout_width="wrap_content"
 					android:layout_height="wrap_content"
 					android:layout_centerVertical="true"
-					android:layout_marginLeft="6dp"
-					android:layout_marginRight="6dp"
-					android:singleLine="true"
 					android:text="0%"
-					android:textSize="14sp"
+					android:textSize="12sp"
 					android:textColor="@color/black"
 					android:layout_alignParentEnd="true"
 					/>
@@ -87,8 +103,7 @@
 			android:id="@+id/item_more"
 			android:layout_alignParentEnd="true"
 			android:layout_centerVertical="true"
-			android:layout_marginEnd="4dp"
-			android:layout_marginStart="4dp"
+			android:layout_marginHorizontal="16dp"
 			/>
 
 	</RelativeLayout>

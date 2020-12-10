@@ -3,10 +3,7 @@ package com.zpj.downloader.config;
 import android.content.Context;
 
 import com.zpj.downloader.constant.DefaultConstant;
-
-import java.net.InetSocketAddress;
-import java.net.Proxy;
-import java.util.Map;
+import com.zpj.downloader.core.INotificationInterceptor;
 
 
 /**
@@ -15,6 +12,7 @@ import java.util.Map;
 public class DownloaderConfig extends BaseConfig<DownloaderConfig> {
 
     private int concurrentMissionCount = DefaultConstant.CONCURRENT_MISSION_COUNT;
+//    private INotificationInterceptor interceptor;
 
     private DownloaderConfig() {
 
@@ -30,8 +28,18 @@ public class DownloaderConfig extends BaseConfig<DownloaderConfig> {
         return concurrentMissionCount;
     }
 
+//    public INotificationInterceptor getNotificationInterceptor() {
+//        return interceptor;
+//    }
+
     public DownloaderConfig setConcurrentMissionCount(int concurrentMissionCount) {
         this.concurrentMissionCount = concurrentMissionCount;
         return this;
     }
+
+//    public DownloaderConfig setNotificationInterceptor(INotificationInterceptor interceptor) {
+//        this.interceptor = interceptor;
+//        return this;
+//    }
+
 }

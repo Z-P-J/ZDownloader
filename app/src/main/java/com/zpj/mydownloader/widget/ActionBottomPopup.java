@@ -57,22 +57,22 @@ public class ActionBottomPopup extends BottomPopupView {
         }
 
         openFile.setOnClickListener(v -> {
-            ZDownloader.openFile(mission);
+            mission.openFile();
             dismiss();
         });
 
         pauseDownload.setOnClickListener(v -> {
-            ZDownloader.pause(mission);
+            mission.pause();
             dismiss();
         });
 
         resumeDownload.setOnClickListener(v -> {
-            ZDownloader.resume(mission);
+            mission.start();
             dismiss();
         });
 
         deleteTask.setOnClickListener(v -> {
-            ZDownloader.delete(mission);
+            mission.delete();
             dismiss();
         });
 

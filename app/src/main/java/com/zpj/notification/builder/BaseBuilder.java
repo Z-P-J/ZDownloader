@@ -381,7 +381,7 @@
 
 
 
-package com.zpj.downloader.util.notification.builder;
+package com.zpj.notification.builder;
 
 import android.app.Notification;
 import android.app.NotificationChannel;
@@ -395,7 +395,7 @@ import android.support.annotation.RequiresApi;
 import android.support.v4.app.NotificationCompat;
 import android.text.TextUtils;
 
-import com.zpj.downloader.util.notification.NotifyUtil;
+import com.zpj.notification.ZNotify;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -589,7 +589,7 @@ public class BaseBuilder {
         NotificationCompat.Builder builder;
         NotificationCompat.Builder cBuilder;
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            cBuilder = new NotificationCompat.Builder(context, NotifyUtil.CHANNEL_ID);
+            cBuilder = new NotificationCompat.Builder(context, ZNotify.CHANNEL_ID);
         } else {
             //注意用下面这个方法，在8.0以上无法出现通知栏。8.0之前是正常的。这里需要增强判断逻辑
             cBuilder = new NotificationCompat.Builder(context);

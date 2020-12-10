@@ -1,39 +1,72 @@
 package com.zpj.mydownloader;
 
+import android.Manifest;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.os.Bundle;
+import android.support.v4.app.ActivityCompat;
+import android.support.v4.content.ContextCompat;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
-import android.widget.Toast;
 
+import com.lxj.xpermission.PermissionConstants;
+import com.lxj.xpermission.XPermission;
 import com.zpj.downloader.ZDownloader;
+import com.zpj.downloader.config.DownloaderConfig;
 import com.zpj.downloader.core.DownloadManager;
 import com.zpj.downloader.core.DownloadMission;
 import com.zpj.mydownloader.widget.ActionBottomPopup;
 import com.zpj.mydownloader.widget.AddTaskPopup;
+import com.zpj.popup.ZPopup;
 
 /**
  * @author Z-P-J
  * */
-public class MainActivity extends AppCompatActivity implements MissionAdapter.DownloadCallback {
-
-    private MissionAdapter missionAdapter;
+public class MainActivity extends AppCompatActivity
+        implements MissionAdapter.DownloadCallback {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        RecyclerView recyclerView = findViewById(R.id.recycler_view);
-        recyclerView.setLayoutManager(new LinearLayoutManager(this));
+        DownloaderConfig options = DownloaderConfig.with(this)
+                .setBlockSize(1024 * 1024)
+                .setNotificationInterceptor(new DownloadNotificationInterceptor())
+//                .setThreadCount(5)
+//                .setThreadPoolConfig(
+//                        ThreadPoolConfig.build()
+//                        .setCorePoolSize(5)
+//                        .setMaximumPoolSize(36)
+//                        .setKeepAliveTime(60)
+//                        .setWorkQueue(new LinkedBlockingQueue<Runnable>())
+//                        .setHandler(new ThreadPoolExecutor.AbortPolicy())
+//                        .setThreadFactory(new ThreadFactory() {
+//                            @Override
+//                            public Thread newThread(Runnable r) {
+//                                return new Thread(r);
+//                            }
+//                        })
+//                )
+                .setRetryCount(10);
+//                .setProxy(Proxy.NO_PROXY)
+//                .setProxy("127.0.0.1", 80)
+//                .setUserAgent("")
+//                .setCookie("");
 
-        missionAdapter = new MissionAdapter(MainActivity.this, true);
-        missionAdapter.setMissionAdapterClickListener(MainActivity.this);
-        recyclerView.setAdapter(missionAdapter);
+        ZDownloader.init(options);
 
+        showRequestPermissionPopup();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
     }
 
     @Override
@@ -52,17 +85,12 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
 
     @Override
     protected void onDestroy() {
-        ZDownloader.onDestroy();
         super.onDestroy();
+        ZDownloader.onDestroy();
     }
 
     @Override
     public void onEmpty() {
-
-    }
-
-    @Override
-    public void onNotifyChange() {
 
     }
 
@@ -80,83 +108,46 @@ public class MainActivity extends AppCompatActivity implements MissionAdapter.Do
     public void onItemLongClicked(View view, MissionAdapter.ViewHolder holder, DownloadManager mManager) {
         DownloadMission mission = mManager.getMission(holder.position);
         new ActionBottomPopup(this, mission).show();
-//        ZBottomSheetDialog.with(this)
-//                .setContentView(R.layout.layout_dialog_share)
-//                .setOnViewCreateListener(new IDialog.OnViewCreateListener() {
-//                    @Override
-//                    public void onViewCreate(IDialog dialog, View view) {
-//                        LinearLayout openFile = view.findViewById(R.id.open_file);
-//                        LinearLayout pauseDownload = view.findViewById(R.id.pause_download);
-//                        LinearLayout resumeDownload = view.findViewById(R.id.resume_download);
-//                        LinearLayout deleteTask = view.findViewById(R.id.delete_task);
-//                        LinearLayout copyLink = view.findViewById(R.id.copy_link);
-//
-//                        openFile.setVisibility(View.GONE);
-//                        if (mission.isFinished()){
-//                            openFile.setVisibility(View.VISIBLE);
-//                            pauseDownload.setVisibility(View.GONE);
-//                            resumeDownload.setVisibility(View.GONE);
-//                        } else if (mission.isRunning()) {
-//                            resumeDownload.setVisibility(View.GONE);
-//                        } else if (mission.isWaiting()) {
-//                            resumeDownload.setVisibility(View.GONE);
-//                        } else if (mission.isError()) {
-//                            pauseDownload.setVisibility(View.GONE);
-//                        } else if (mission.isIniting()) {
-//                            pauseDownload.setVisibility(View.GONE);
-//                            resumeDownload.setVisibility(View.GONE);
-//                        } else if (mission.isPause()) {
-//                            pauseDownload.setVisibility(View.GONE);
-//                        }
-//
-//                        openFile.setOnClickListener(v -> {
-//                            ZDownloader.openFile(mission);
-//                            dialog.dismiss();
-//                        });
-//
-//                        pauseDownload.setOnClickListener(v -> {
-//                            ZDownloader.pause(mission);
-//                            holder.lastTimeStamp = -1;
-//                            holder.lastDone = -1;
-//                            dialog.dismiss();
-//                        });
-//
-//                        resumeDownload.setOnClickListener(v -> {
-//                            ZDownloader.resume(mission);
-//                            dialog.dismiss();
-//                        });
-//
-//                        deleteTask.setOnClickListener(v -> {
-//                            ZDownloader.delete(mission);
-//                            missionAdapter.notifyDataSetChanged();
-//                            dialog.dismiss();
-//                        });
-//
-//                        copyLink.setOnClickListener(v -> {
-//                            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-//                            ClipData mClipData = ClipData.newPlainText("Label", mission.getUrl());
-//                            cm.setPrimaryClip(mClipData);
-//                            dialog.dismiss();
-//                        });
-//                    }
-//                })
-//                .show();
     }
 
-    @Override
-    public void onMoreClicked(View view, MissionAdapter.ViewHolder holder, DownloadManager mManager) {
-        DownloadMission mission = mManager.getMission(holder.position);
-        if (mission.isRunning()) {
-            Toast.makeText(this, "暂停下载", Toast.LENGTH_SHORT).show();
-            mManager.pauseMission(holder.position);
-//            mBinder.onMissionRemoved(mission);
-            holder.lastTimeStamp = -1;
-            holder.lastDone = -1;
+    private void showRequestPermissionPopup() {
+        if (hasStoragePermissions(getApplicationContext())) {
+            requestPermission();
         } else {
-            Toast.makeText(this, "恢复下载", Toast.LENGTH_SHORT).show();
-            mManager.resumeMission(holder.position);
-//            mBinder.onMissionAdded(mission);
+            ZPopup.alert(this)
+                    .setTitle("权限申请")
+                    .setContent("本软件需要读写手机存储的权限用于文件的下载与查看，是否申请该权限？")
+                    .setConfirmButton("去申请", this::requestPermission)
+                    .setCancelButton("拒绝", () -> ActivityCompat.finishAfterTransition(MainActivity.this))
+                    .show();
         }
+    }
+
+    private boolean hasStoragePermissions(Context context) {
+        return ContextCompat.checkSelfPermission(context, Manifest.permission.READ_EXTERNAL_STORAGE)
+                == PackageManager.PERMISSION_GRANTED
+                && ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                == PackageManager.PERMISSION_GRANTED;
+    }
+
+    private void requestPermission() {
+        XPermission.create(getApplicationContext(), PermissionConstants.STORAGE)
+                .callback(new XPermission.SimpleCallback() {
+                    @Override
+                    public void onGranted() {
+                        RecyclerView recyclerView = findViewById(R.id.recycler_view);
+                        recyclerView.setLayoutManager(new LinearLayoutManager(MainActivity.this));
+
+                        MissionAdapter missionAdapter = new MissionAdapter(MainActivity.this, true);
+                        missionAdapter.setMissionAdapterClickListener(MainActivity.this);
+                        recyclerView.setAdapter(missionAdapter);
+                    }
+
+                    @Override
+                    public void onDenied() {
+                        showRequestPermissionPopup();
+                    }
+                }).request();
     }
 
     private void showDownloadDialog() {

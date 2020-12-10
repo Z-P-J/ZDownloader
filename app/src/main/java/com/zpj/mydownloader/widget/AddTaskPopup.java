@@ -12,12 +12,14 @@ import android.widget.Toast;
 
 import com.zpj.downloader.ZDownloader;
 import com.zpj.downloader.config.MissionConfig;
+import com.zpj.downloader.core.DownloadMission;
 import com.zpj.mydownloader.R;
 import com.zpj.popup.core.BottomPopupView;
 
 public class AddTaskPopup extends BottomPopupView implements View.OnClickListener {
 
     private EditText text;
+    private EditText name;
     private EditText etBufferSize;
 
     public AddTaskPopup(Context context) {
@@ -35,7 +37,7 @@ public class AddTaskPopup extends BottomPopupView implements View.OnClickListene
 
         text = findViewById(R.id.url);
         etBufferSize = findViewById(R.id.et_buffer);
-        final EditText name = findViewById(R.id.file_name);
+        name = findViewById(R.id.file_name);
         final TextView tCount = findViewById(R.id.threads_count);
         final SeekBar threads = findViewById(R.id.threads);
 
@@ -119,7 +121,9 @@ public class AddTaskPopup extends BottomPopupView implements View.OnClickListene
             } else {
                 config.setBufferSize(1024);
             }
-            ZDownloader.download(url, config);
+            DownloadMission mission = DownloadMission.create(url, name.getText().toString(), config);
+            mission.start();
+//            ZDownloader.download(url, config);
         }
     }
 }

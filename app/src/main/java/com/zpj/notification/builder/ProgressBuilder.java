@@ -64,7 +64,7 @@
 //}
 
 
-package com.zpj.downloader.util.notification.builder;
+package com.zpj.notification.builder;
 
 import android.app.Notification;
 import android.content.Context;

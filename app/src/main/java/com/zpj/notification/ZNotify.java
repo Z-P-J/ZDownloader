@@ -112,7 +112,7 @@
 //
 //}
 
-package com.zpj.downloader.util.notification;
+package com.zpj.notification;
 
 import android.app.Activity;
 import android.app.Notification;
@@ -121,8 +121,8 @@ import android.app.NotificationManager;
 import android.content.Context;
 import android.os.Build;
 
-import com.zpj.downloader.util.notification.builder.BaseBuilder;
-import com.zpj.downloader.util.notification.builder.ProgressBuilder;
+import com.zpj.notification.builder.BaseBuilder;
+import com.zpj.notification.builder.ProgressBuilder;
 
 import static android.support.v4.app.NotificationCompat.VISIBILITY_SECRET;
 
@@ -130,7 +130,7 @@ import static android.support.v4.app.NotificationCompat.VISIBILITY_SECRET;
  * Created by Administrator on 2017/2/13 0013.
  */
 
-public class NotifyUtil {
+public class ZNotify {
 
     public static final String CHANNEL_ID = "1";
     private static final String CHANNEL_NAME = "Default_Channel";
@@ -169,12 +169,12 @@ public class NotifyUtil {
         }
     }
 
-    private NotifyUtil(Context context) {
+    private ZNotify(Context context) {
         this.context = context;
     }
 
-    public static NotifyUtil with(Context context) {
-        return new NotifyUtil(context);
+    public static ZNotify with(Context context) {
+        return new ZNotify(context);
     }
 
 //    public static SingleLineBuilder buildSimple(int id,int smallIcon,CharSequence contentTitle ,CharSequence contentText,PendingIntent contentIntent){

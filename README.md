@@ -6,12 +6,12 @@
 
 ## 如何使用？
 ### 一. 简单使用
-#### 1. 在Application中初始化
+#### 1. 推荐在Activity中初始化
 ```java
-public class MyApplication extends Application {
+public class MainActivity extends AppCompatActivity {
 
     @Override
-    public void onCreate() {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate();
         ZDownloader.init(this); //初始化
     }
@@ -19,10 +19,10 @@ public class MyApplication extends Application {
 }            
 ```
 
-#### 2. 下载并监听进度
+#### 2. 创建下载并监听进度
 ```java
-ZDownloader.download("your download url")
-                .addListener(new DownloadMission.MissionListener() {
+DownloadMission mission = DownloadMission.create("your download url", config);
+mission..addListener(new DownloadMission.MissionListener() {
                     @Override
                     public void onInit() {
                         
@@ -57,31 +57,33 @@ ZDownloader.download("your download url")
                     public void onError(int errCode) {
 
                     }
-                });         
+                }); 
+
+mission.start(); // 开始下载任务
 ```
 
-#### 3. 退出应用时
+#### 3. 完全退出应用时
 ```java
 @Override
 protected void onDestroy() {
     super.onDestroy();
-    ZDownloader.unInit();
+    ZDownloader.onDestroy();
 }
 ```
 
 #### 4. 其它操作
 ```java
 //暂停下载
-ZDownloader.pause(mission);
+mission.pause();
 
 //恢复下载
-ZDownloader.resume(mission);
+mission.start();
 
 //删除下载任务和下载文件
-ZDownloader.delete(mission);
+mission.delete();
 
 //删除下载任务(不包含下载文件)
-ZDownloader.clear(mission);
+mission.clear();
 
 //暂停所有下载任务
 ZDownloader.pauseAll();
@@ -96,22 +98,24 @@ ZDownloader.deleteAll();
 ZDownloader.clearAll();
 
 //打开下载完成的文件
-ZDownloader.openFile(mission);
+mission.openFile(); // 使用初始化时的Context
+mission.openFile(context);
 
 //重命名文件
-ZDownloader.rename(mission, newName);
+mission.renameTo(newName);
 ```
 
 ### 二. 高级使用
-#### 1. 在Application中初始化时进行全局设置
+#### 1. 在Activity中初始化时进行全局设置
 ```java
-public class MyApplication extends Application {
+public class MainActivity extends AppCompatActivity {
 
     @Override
-    public void onCreate() {
+    protected void onCreate(Bundle savedInstanceState) {
         super.onCreate();
         //全局设置
         DownloaderOptions options = DownloaderOptions.with(this)
+                .setNotificationInterceptor(new DownloadNotificationInterceptor()) // 设置通知拦截器
                 .setDownloadPath("") //设置默认下载路径
                 .setEnableNotification(true) //是否显示通知栏下载进度通知，默认为true
                 .setBlockSize(1024 * 1024) //设置下载块大小，默认为1024 * 1024
@@ -146,11 +150,12 @@ public class MyApplication extends Application {
 }            
 ```
 
-#### 1. 下载时进行单独设置
+#### 1. 创建下载任务时单独设置下载配置
 ```java
 //为每个下载任务进行设置，优先使用单独设置的参数
 MissionOptions options = MissionOptions.with()
                 .setDownloadPath("") //单独设置任务下载路径
+                .setNotificationInterceptor(new DownloadNotificationInterceptor()) // 单独设置通知拦截器
                 .setEnableNotification(true) //单独设置是否显示通知栏下载进度通知，默认为true
                 .setBlockSize(1024 * 1024) //单独设置下载块大小，默认为1024 * 1024
                 .setBufferSize(1024) //设置缓存大小
@@ -178,10 +183,44 @@ MissionOptions options = MissionOptions.with()
                             }
                         })
                 );
-ZDownloader.download("your download url", options);
+DownloadMission mission = DownloadMission.create("your download url", config);
+mission.start();
 //下载进度监听同上
 ```
 
 
-##  混淆（如果您的项目使用了代码混淆，请一定添加以下规则至您的项目）
-[混淆规则](https://github.com/Z-P-J/ZDownloader/blob/master/app/proguard-rules.pro)
+##  混淆规则（如果您的项目使用了代码混淆，请一定添加以下规则至项目的proguard-rules.pro文件中）
+```
+##---------------Begin: proguard configuration for Gson  ----------
+# Gson uses generic type information stored in a class file when working with fields. Proguard
+# removes such information by default, so configure it to keep all of it.
+-keepattributes Signature
+
+# For using GSON @Expose annotation
+-keepattributes *Annotation*
+
+# Gson specific classes
+-dontwarn sun.misc.**
+#-keep class com.google.gson.stream.** { *; }
+
+# Application classes that will be serialized/deserialized over Gson
+-keep class com.zpj.downloader.core.DownloadMission{*;}
+-keep class com.zpj.downloader.core.DownloadMission* {
+        *;
+ }
+-keep class com.zpj.downloader.config.** { <fields>; }
+
+# Prevent proguard from stripping interface information from TypeAdapter, TypeAdapterFactory,
+# JsonSerializer, JsonDeserializer instances (so they can be used in @JsonAdapter)
+-keep class * implements com.google.gson.TypeAdapter
+-keep class * implements com.google.gson.TypeAdapterFactory
+-keep class * implements com.google.gson.JsonSerializer
+-keep class * implements com.google.gson.JsonDeserializer
+
+# Prevent R8 from leaving Data object members always null
+-keepclassmembers,allowobfuscation class * {
+  @com.google.gson.annotations.SerializedName <fields>;
+}
+
+##---------------End: proguard configuration for Gson  ----------
+```
