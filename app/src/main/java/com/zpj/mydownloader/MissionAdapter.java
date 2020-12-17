@@ -11,7 +11,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
-import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -19,7 +18,6 @@ import com.zpj.downloader.ZDownloader;
 import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.core.DownloadManager;
 import com.zpj.downloader.core.DownloadMission;
-import com.zpj.downloader.util.FileUtil;
 import com.zpj.mydownloader.widget.ActionBottomPopup;
 
 import java.io.File;
@@ -140,11 +138,18 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 
 		if (finished) {
 			downloadCallback.onDownloadFinished();
+			h.status.setText("已完成");
 		} else {
 			if (updateInfo == null) {
 				h.menu.setProgress(h.mission.getProgress());
 				h.size.setText(h.mission.getFileSizeStr() + File.separator + h.mission.getDownloadedSizeStr() + "  " + h.mission.getSpeed());
+				if (h.mission.isRunning()) {
+					h.status.setText(h.mission.getProgressStr());
+				} else {
+					h.status.setText(h.mission.getStatus().toString());
+				}
 			} else {
+				h.status.setText(updateInfo.getProgressStr());
 				h.menu.setProgress(updateInfo.getProgress());
 				h.size.setText(updateInfo.getFileSizeStr() + File.separator + updateInfo.getDownloadedSizeStr() + "  " + updateInfo.getSpeedStr());
 			}
@@ -221,6 +226,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		@Override
 		public void onPause() {
 			mHolder.menu.pause();
+			mHolder.status.setText("已暂停");
 		}
 
 		@Override
@@ -247,6 +253,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 				mHolder.size.setText(mHolder.mission.getFileSizeStr());
 				mAdapter.updateProgress(mHolder, null, true);
 			}
+			mHolder.status.setText("已完成");
 		}
 
 		@Override

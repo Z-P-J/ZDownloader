@@ -6,14 +6,15 @@ import android.text.TextUtils;
 import android.util.Log;
 
 import com.google.gson.Gson;
-import com.zpj.downloader.config.MissionConfig;
 import com.zpj.downloader.config.DownloaderConfig;
-import com.zpj.downloader.config.ThreadPoolConfig;
+import com.zpj.downloader.config.MissionConfig;
 import com.zpj.downloader.constant.DefaultConstant;
+import com.zpj.downloader.util.FileUtils;
 import com.zpj.downloader.util.NetworkChangeReceiver;
-import com.zpj.downloader.util.Utility;
 
 import java.io.File;
+import java.lang.ref.WeakReference;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
@@ -34,13 +35,14 @@ public class DownloadManagerImpl implements DownloadManager {
 
 	static String MISSION_INFO_FILE_SUFFIX_NAME = ".zpj";
 
-	private static DownloadManager mManager;
+	private static DownloadManagerImpl mManager;
 	
-	private Context mContext;
+	private final Context mContext;
 
-	private DownloadManagerListener downloadManagerListener;
+//	private DownloadManagerListener downloadManagerListener;
+	private final ArrayList<WeakReference<DownloadManagerListener>> mListeners = new ArrayList<>();
 
-	private DownloaderConfig options;
+	private final DownloaderConfig options;
 
 	private static final AtomicInteger downloadingCount = new AtomicInteger(0);
 
@@ -67,7 +69,7 @@ public class DownloadManagerImpl implements DownloadManager {
 		return mManager;
 	}
 
-	public static DownloadManager get() {
+	public static DownloadManagerImpl get() {
 		return mManager;
 	}
 
@@ -110,6 +112,7 @@ public class DownloadManagerImpl implements DownloadManager {
 		for (DownloadMission mission : ALL_MISSIONS) {
 			if (!mission.isFinished() && mission.isWaiting()) {
 				mission.start();
+				break;
 			}
 		}
 	}
@@ -128,10 +131,10 @@ public class DownloadManagerImpl implements DownloadManager {
 		return options;
 	}
 
-	@Override
-	public ThreadPoolConfig getThreadPoolConfig() {
-		return options.getThreadPoolConfig();
-	}
+//	@Override
+//	public ThreadPoolConfig getThreadPoolConfig() {
+//		return options.getThreadPoolConfig();
+//	}
 
 	@Override
 	public List<DownloadMission> getMissions() {
@@ -167,7 +170,7 @@ public class DownloadManagerImpl implements DownloadManager {
 					continue;
 				}
 				if (sub.getName().endsWith(MISSION_INFO_FILE_SUFFIX_NAME)) {
-					String str = Utility.readFromFile(sub.getAbsolutePath());
+					String str = FileUtils.readFromFile(sub.getAbsolutePath());
 					if (!TextUtils.isEmpty(str)) {
 						DownloadMission mis = gson.fromJson(str, clazz);
 						Log.d("initMissions", "mis=null? " + (mis == null));
@@ -193,18 +196,19 @@ public class DownloadManagerImpl implements DownloadManager {
 	}
 
 	@Override
-	public void setDownloadManagerListener(DownloadManagerListener downloadManagerListener) {
-		this.downloadManagerListener = downloadManagerListener;
+	public void addDownloadManagerListener(DownloadManagerListener downloadManagerListener) {
+		this.mListeners.add(new WeakReference<DownloadManagerListener>(downloadManagerListener));
 	}
 
 	@Override
 	public void removeDownloadManagerListener(DownloadManagerListener downloadManagerListener) {
-		this.downloadManagerListener = null;
-	}
-
-	@Override
-	public DownloadManagerListener getDownloadManagerListener() {
-		return downloadManagerListener;
+		for (WeakReference<DownloadManagerListener> reference : this.mListeners) {
+			DownloadManagerListener listener = reference.get();
+			if (listener == downloadManagerListener) {
+				this.mListeners.remove(reference);
+				return;
+			}
+		}
 	}
 
 	@Override
@@ -267,9 +271,7 @@ public class DownloadManagerImpl implements DownloadManager {
 		DownloadMission d = getMission(i);
 		d.delete();
 		ALL_MISSIONS.remove(i);
-		if (downloadManagerListener != null) {
-			downloadManagerListener.onMissionDelete(d);
-		}
+		onMissionDelete(null);
 	}
 
 	@Override
@@ -277,18 +279,14 @@ public class DownloadManagerImpl implements DownloadManager {
 		DownloadMission d = getMission(uuid);
 		d.delete();
 		ALL_MISSIONS.remove(d);
-		if (downloadManagerListener != null) {
-			downloadManagerListener.onMissionDelete(d);
-		}
+		onMissionDelete(null);
 	}
 
 	@Override
 	public void deleteMission(DownloadMission mission) {
 		mission.delete();
 		ALL_MISSIONS.remove(mission);
-		if (downloadManagerListener != null) {
-			downloadManagerListener.onMissionDelete(mission);
-		}
+		onMissionDelete(mission);
 	}
 
 	@Override
@@ -297,9 +295,7 @@ public class DownloadManagerImpl implements DownloadManager {
 			mission.delete();
 		}
 		ALL_MISSIONS.clear();
-		if (downloadManagerListener != null) {
-			downloadManagerListener.onMissionDelete(null);
-		}
+		onMissionDelete(null);
 	}
 
 	@Override
@@ -307,9 +303,7 @@ public class DownloadManagerImpl implements DownloadManager {
 		DownloadMission d = getMission(i);
 		d.clear();
 		ALL_MISSIONS.remove(i);
-		if (downloadManagerListener != null) {
-			downloadManagerListener.onMissionDelete(null);
-		}
+		onMissionDelete(null);
 	}
 
 	@Override
@@ -317,9 +311,7 @@ public class DownloadManagerImpl implements DownloadManager {
 		DownloadMission d = getMission(uuid);
 		d.clear();
 		ALL_MISSIONS.remove(d);
-		if (downloadManagerListener != null) {
-			downloadManagerListener.onMissionDelete(null);
-		}
+		onMissionDelete(null);
 	}
 
 	@Override
@@ -328,9 +320,7 @@ public class DownloadManagerImpl implements DownloadManager {
 			mission.clear();
 		}
 		ALL_MISSIONS.clear();
-		if (downloadManagerListener != null) {
-			downloadManagerListener.onMissionDelete(null);
-		}
+		onMissionDelete(null);
 	}
 
 	@Override
@@ -358,11 +348,10 @@ public class DownloadManagerImpl implements DownloadManager {
 		if (ALL_MISSIONS.contains(mission)) {
 			return ALL_MISSIONS.indexOf(mission);
 		}
-		ALL_MISSIONS.add(mission);
-		if (downloadManagerListener != null) {
-			downloadManagerListener.onMissionAdd(mission);
-		}
-		return ALL_MISSIONS.size() - 1;
+		ALL_MISSIONS.add(0, mission);
+		onMissionAdd(mission);
+//		return ALL_MISSIONS.size() - 1;
+		return 0;
 	}
 
 	@Override
@@ -370,4 +359,31 @@ public class DownloadManagerImpl implements DownloadManager {
 		return DownloadManagerImpl.getDownloadingCount() >= getDownloaderConfig().getConcurrentMissionCount();
 	}
 
+
+	static void onMissionAdd(DownloadMission mission) {
+		for (WeakReference<DownloadManagerListener> reference : DownloadManagerImpl.get().mListeners) {
+			DownloadManagerListener listener = reference.get();
+			if (listener != null) {
+				listener.onMissionAdd(mission);
+			}
+		}
+	}
+
+	static void onMissionDelete(DownloadMission mission) {
+		for (WeakReference<DownloadManagerListener> reference : DownloadManagerImpl.get().mListeners) {
+			DownloadManagerListener listener = reference.get();
+			if (listener != null) {
+				listener.onMissionDelete(mission);
+			}
+		}
+	}
+
+	static void onMissionFinished(DownloadMission mission) {
+		for (WeakReference<DownloadManagerListener> reference : DownloadManagerImpl.get().mListeners) {
+			DownloadManagerListener listener = reference.get();
+			if (listener != null) {
+				listener.onMissionFinished(mission);
+			}
+		}
+	}
 }

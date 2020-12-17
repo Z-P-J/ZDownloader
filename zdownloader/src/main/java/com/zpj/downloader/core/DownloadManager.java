@@ -2,9 +2,8 @@ package com.zpj.downloader.core;
 
 import android.content.Context;
 
-import com.zpj.downloader.config.MissionConfig;
 import com.zpj.downloader.config.DownloaderConfig;
-import com.zpj.downloader.config.ThreadPoolConfig;
+import com.zpj.downloader.config.MissionConfig;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -65,7 +64,7 @@ public interface DownloadManager {
 
     DownloaderConfig getDownloaderConfig();
 
-    ThreadPoolConfig getThreadPoolConfig();
+//    ThreadPoolConfig getThreadPoolConfig();
 
     boolean shouldMissionWaiting();
 
@@ -73,11 +72,12 @@ public interface DownloadManager {
 
     <T extends DownloadMission> void loadMissions(Class<T> clazz);
 
-    void setDownloadManagerListener(DownloadManagerListener downloadManagerListener);
+    void addDownloadManagerListener(DownloadManagerListener downloadManagerListener);
 
     void removeDownloadManagerListener(DownloadManagerListener downloadManagerListener);
 
-    DownloadManagerListener getDownloadManagerListener();
+//    DownloadManagerListener getDownloadManagerListener();
 
     List<DownloadMission> getMissions();
+
 }

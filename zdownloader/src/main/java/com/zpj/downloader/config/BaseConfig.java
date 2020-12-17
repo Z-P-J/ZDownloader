@@ -25,10 +25,15 @@ abstract class BaseConfig<T extends BaseConfig<T>> {
      */
     transient INotificationInterceptor notificationInterceptor;
 
+    /*
+    * 生产者线程数
+    * */
+    int producerThreadCount = DefaultConstant.THREAD_COUNT;
+
     /**
-     * 线程池配置
-     * */
-    ThreadPoolConfig threadPoolConfig = ThreadPoolConfig.build();
+     * 消费者线程数
+     */
+    int consumerThreadCount = 3 * DefaultConstant.THREAD_COUNT;
 
     /**
      * 下载路径
@@ -97,8 +102,12 @@ abstract class BaseConfig<T extends BaseConfig<T>> {
         return notificationInterceptor;
     }
 
-    public ThreadPoolConfig getThreadPoolConfig() {
-        return threadPoolConfig;
+    public int getProducerThreadCount() {
+        return producerThreadCount;
+    }
+
+    public int getConsumerThreadCount() {
+        return consumerThreadCount;
     }
 
     public String getDownloadPath() {
@@ -167,8 +176,13 @@ abstract class BaseConfig<T extends BaseConfig<T>> {
         return (T) this;
     }
 
-    public T setThreadPoolConfig(ThreadPoolConfig threadPoolConfig) {
-        this.threadPoolConfig = threadPoolConfig;
+    public T setProducerThreadCount(int producerThreadCount) {
+        this.producerThreadCount = producerThreadCount;
+        return (T) this;
+    }
+
+    public T setConsumerThreadCount(int consumerThreadCount) {
+        this.consumerThreadCount = consumerThreadCount;
         return (T) this;
     }
 
@@ -179,7 +193,9 @@ abstract class BaseConfig<T extends BaseConfig<T>> {
 
     @Deprecated
     public T setThreadCount(int threadCount) {
-        threadPoolConfig.setCorePoolSize(threadCount);
+//        threadPoolConfig.setCorePoolSize(threadCount);
+        this.producerThreadCount = threadCount;
+        this.consumerThreadCount = 3 * threadCount;
         return (T) this;
     }
 

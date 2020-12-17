@@ -1,40 +1,40 @@
 package com.zpj.mydownloader;
 
-import com.zpj.downloader.util.FileUtil;
+import com.zpj.downloader.util.FileUtils;
 
 public class Utils {
 
     public static int getFileTypeIconId(String fileName) {
-        FileUtil.FILE_TYPE fileType = FileUtil.checkFileType(fileName);
-        if (fileType.equals(FileUtil.FILE_TYPE.TORRENT)) {
+        FileUtils.FileType fileType = FileUtils.checkFileType(fileName);
+        if (fileType.equals(FileUtils.FileType.TORRENT)) {
             return R.drawable.wechat_icon_bt;
-        } else if (fileType.equals(FileUtil.FILE_TYPE.TXT)) {
+        } else if (fileType.equals(FileUtils.FileType.TXT)) {
             return R.drawable.wechat_icon_txt;
-        } else if (fileType.equals(FileUtil.FILE_TYPE.APK)) {
+        } else if (fileType.equals(FileUtils.FileType.APK)) {
             return R.drawable.wechat_icon_apk;
-        } else if (fileType.equals(FileUtil.FILE_TYPE.PDF)) {
+        } else if (fileType.equals(FileUtils.FileType.PDF)) {
             return R.drawable.wechat_icon_pdf;
-        } else if (fileType.equals(FileUtil.FILE_TYPE.DOC)) {
+        } else if (fileType.equals(FileUtils.FileType.DOC)) {
             return R.drawable.wechat_icon_word;
-        } else if (fileType.equals(FileUtil.FILE_TYPE.PPT)) {
+        } else if (fileType.equals(FileUtils.FileType.PPT)) {
             return R.drawable.wechat_icon_ppt;
-        } else if (fileType.equals(FileUtil.FILE_TYPE.XLS)) {
+        } else if (fileType.equals(FileUtils.FileType.XLS)) {
             return R.drawable.wechat_icon_excel;
-        } else if (fileType.equals(FileUtil.FILE_TYPE.HTML)) {
+        } else if (fileType.equals(FileUtils.FileType.HTML)) {
             return R.drawable.wechat_icon_html;
-        } else if (fileType.equals(FileUtil.FILE_TYPE.SWF)) {
+        } else if (fileType.equals(FileUtils.FileType.SWF)) {
             return R.drawable.format_flash;
-        } else if (fileType.equals(FileUtil.FILE_TYPE.CHM)) {
+        } else if (fileType.equals(FileUtils.FileType.CHM)) {
             return R.drawable.format_chm;
-        } else if (fileType.equals(FileUtil.FILE_TYPE.IMAGE)) {
+        } else if (fileType.equals(FileUtils.FileType.IMAGE)) {
             return R.drawable.format_picture;
-        } else if (fileType.equals(FileUtil.FILE_TYPE.VIDEO)) {
+        } else if (fileType.equals(FileUtils.FileType.VIDEO)) {
             return R.drawable.format_media;
-        } else if (fileType.equals(FileUtil.FILE_TYPE.ARCHIVE)) {
+        } else if (fileType.equals(FileUtils.FileType.ARCHIVE)) {
             return R.drawable.wechat_icon_zip;
-        } else if (fileType.equals(FileUtil.FILE_TYPE.MUSIC)) {
+        } else if (fileType.equals(FileUtils.FileType.MUSIC)) {
             return R.drawable.wechat_icon_music;
-        } else if (fileType.equals(FileUtil.FILE_TYPE.EBOOK)) {
+        } else if (fileType.equals(FileUtils.FileType.EBOOK)) {
             return R.drawable.wechat_icon_txt;
         }
         return R.drawable.wechat_icon_others;

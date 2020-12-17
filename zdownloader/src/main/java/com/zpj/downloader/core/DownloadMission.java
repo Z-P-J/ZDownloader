@@ -8,16 +8,16 @@ import android.support.annotation.NonNull;
 import android.text.TextUtils;
 import android.util.Log;
 import android.webkit.MimeTypeMap;
-import android.widget.Toast;
 
 import com.google.gson.Gson;
 import com.zpj.downloader.config.MissionConfig;
+import com.zpj.downloader.constant.DefaultConstant;
 import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.constant.ErrorCode;
 import com.zpj.downloader.constant.ResponseCode;
-import com.zpj.downloader.util.FileUtil;
-import com.zpj.downloader.util.ThreadPoolFactory;
-import com.zpj.downloader.util.Utility;
+import com.zpj.downloader.util.FileUtils;
+import com.zpj.downloader.util.RxHandler;
+import com.zpj.downloader.util.FormatUtils;
 import com.zpj.http.ZHttp;
 import com.zpj.http.core.Connection;
 import com.zpj.http.core.IHttp;
@@ -33,8 +33,15 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
+
+import io.reactivex.Observable;
+import io.reactivex.ObservableEmitter;
+import io.reactivex.ObservableOnSubscribe;
+import io.reactivex.functions.Action;
+import io.reactivex.schedulers.Schedulers;
 
 /**
  * @author Z-P-J
@@ -91,7 +98,7 @@ public class DownloadMission {
     }
 
     private final ConcurrentLinkedQueue<Long> queue = new ConcurrentLinkedQueue<>();
-    private final List<Long> finished = new ArrayList<>();
+    private final ConcurrentLinkedQueue<Long> finished = new ConcurrentLinkedQueue<>();
     private final List<Long> speedHistoryList = new ArrayList<>();
 
     protected String uuid = "";
@@ -101,12 +108,11 @@ public class DownloadMission {
     protected String originUrl = "";
     protected long createTime = 0;
     protected long finishTime = 0;
-    protected int notifyId = 0;
-    protected long blocks = 0;
-    protected int finishCount = 0;
+//    protected int notifyId = 0;
+    protected long blocks = 1;
     protected long length = 0;
-    protected long done = 0;
-    protected AtomicLong doneLen = new AtomicLong(0);
+    //    protected long done = 0;
+    protected AtomicLong done = new AtomicLong(0);
     protected MissionStatus missionStatus = MissionStatus.INITING;
     protected boolean fallback = false;
     protected int errCode = -1;
@@ -117,27 +123,39 @@ public class DownloadMission {
 
     private transient int currentRetryCount = missionConfig.getRetryCount();
 
-    private transient int aliveThreadCount;
+    protected transient AtomicInteger finishCount = new AtomicInteger(0);
+    private final transient AtomicInteger aliveThreadCount = new AtomicInteger(0);
 
-    private transient int threadCount = missionConfig.getThreadPoolConfig().getCorePoolSize();
+    private transient int threadCount = DefaultConstant.THREAD_COUNT; // missionConfig.getThreadPoolConfig().getCorePoolSize()
 
-    private transient ArrayList<WeakReference<MissionListener>> mListeners = new ArrayList<>();
+    private final transient ArrayList<WeakReference<MissionListener>> mListeners = new ArrayList<>();
 
-    private transient boolean mWritingToFile = false;
+    private final transient AtomicBoolean mWritingToFile = new AtomicBoolean(false);
 
     private transient int errorCount = 0;
 
-    private transient ThreadPoolExecutor threadPoolExecutor;
+//    private transient ThreadPoolExecutor threadPoolExecutor;
 
     private transient long lastDone = -1;
     private transient String tempSpeed = "0 KB/s";
     private transient final UpdateInfo updateInfo = new UpdateInfo();
-    private transient final Handler handler = new Handler(Looper.getMainLooper());
-    private transient final Gson gson = new Gson();
-
+//    private transient final Handler handler = new Handler(Looper.getMainLooper());
+//    private transient final Gson gson = new Gson();
+    private transient ConcurrentLinkedQueue<DownloadBlock> blockQueue;
 
 
     //------------------------------------------------------runnables---------------------------------------------
+
+    protected ConcurrentLinkedQueue<DownloadBlock> getBlockQueue() {
+        if (blockQueue == null) {
+            synchronized (DownloadMission.class) {
+                if (blockQueue == null) {
+                    blockQueue = new ConcurrentLinkedQueue<>();
+                }
+            }
+        }
+        return blockQueue;
+    }
 
     protected void initMission() {
         notifyStatus(missionStatus);
@@ -220,23 +238,31 @@ public class DownloadMission {
                             }
                         }
 
-                        blocks = length / getBlockSize();
+                        if (fallback) {
+                            blocks = 1;
+                        } else {
+                            blocks = length / getBlockSize();
+                            if (blocks * getBlockSize() < length) {
+                                blocks++;
+                            }
+                        }
+//                        blocks = fallback ? 1 : length / getBlockSize();
                         Log.d(TAG, "blocks=" + blocks);
 
-                        if (threadCount > blocks) {
-                            threadCount = (int) blocks;
-                        }
+//                        if (threadCount > blocks) {
+//                            threadCount = (int) blocks;
+//                        }
+//
+//                        if (threadCount <= 0) {
+//                            threadCount = 1;
+//                        }
 
-                        if (threadCount <= 0) {
-                            threadCount = 1;
-                        }
-
-                        if (blocks * getBlockSize() < length) {
-                            blocks++;
-                        }
+//                        if (blocks * getBlockSize() < length) {
+//                            blocks++;
+//                        }
 
                         queue.clear();
-                        for (long position = 0;  position < blocks; position++) {
+                        for (long position = 0; position < blocks; position++) {
                             Log.d(TAG, "initQueue add position=" + position);
                             queue.add(position);
                         }
@@ -251,12 +277,8 @@ public class DownloadMission {
                             file.createNewFile();
                         }
 
-                        Log.d(TAG, "storage=" + Utility.getAvailableSize());
+                        Log.d(TAG, "storage=" + FileUtils.getAvailableSize());
                         hasInit = true;
-
-//                        BufferedRandomAccessFile af = new BufferedRandomAccessFile(getFilePath(), "rw");
-//                        af.setLength(length);
-//                        af.close();
 
                         start();
                     }
@@ -270,25 +292,30 @@ public class DownloadMission {
                 .subscribe();
     }
 
-    private final transient Runnable progressRunnable = new Runnable() {
+    private final transient Action progressAction = new Action() {
         @Override
-        public void run() {
-            Log.d(TAG, "progressRunnable--start");
-            if (isFinished() || errCode != -1 || aliveThreadCount < 1) {
-                handler.removeCallbacks(progressRunnable);
+        public void run() throws Exception {
+            Log.d(TAG, "progressRunnable--start isRunning=" + isRunning() + " missionStatus=" + missionStatus);
+            if (isFinished() || errCode != -1 || aliveThreadCount.get() < 1 || !isRunning()) {
+//                handler.removeCallbacks(progressRunnable);
+                notifyStatus(missionStatus);
                 return;
             }
-            handler.postDelayed(progressRunnable, missionConfig.getProgressInterval());
-            long downloaded = done;
+//            if (!isRunning()) {
+//                notifyStatus(missionStatus);
+//                return;
+//            }
+            RxHandler.post(progressAction, missionConfig.getProgressInterval());
+            long downloaded = done.get();
             long delta = downloaded - lastDone;
             Log.d(TAG, "progressRunnable--delta=" + delta);
             speedHistoryList.add(delta);
             if (delta > 0) {
                 lastDone = downloaded;
                 double speed = delta * (missionConfig.getProgressInterval() / 1000f);
-                tempSpeed = Utility.formatSpeed(speed);
+                tempSpeed = FormatUtils.formatSpeed(speed);
             }
-            String downloadedSizeStr = Utility.formatSize(downloaded);
+            String downloadedSizeStr = FormatUtils.formatSize(downloaded);
             float progress = getProgress(downloaded, length);
             Log.d(TAG, "progressRunnable--tempSpeed=" + tempSpeed);
             updateInfo.setDone(downloaded);
@@ -300,29 +327,66 @@ public class DownloadMission {
             updateInfo.setSpeedStr(tempSpeed);
             writeMissionInfo();
             notifyStatus(MissionStatus.RUNNING);
-//            if (missionConfig.getEnableNotification()) {
-//                NotifyUtil.with(getContext())
-//                        .buildProgressNotify()
-//                        .setProgressAndFormat(getProgress(), false, "")
-//                        .setContentTitle(name)
-//                        .setId(getNotifyId())
-//                        .show();
-//            }
             if (missionConfig.getEnableNotification() && getNotificationListener() != null) {
                 getNotificationListener().onProgress(getContext(), DownloadMission.this, getProgress(), false);
             }
         }
     };
 
-    private final transient Runnable writeMissionInfoRunnable = new Runnable() {
-        @Override
-        public void run() {
-            synchronized (DownloadMission.this) {
-                Utility.writeToFile(getMissionInfoFilePath(), gson.toJson(DownloadMission.this));
-                mWritingToFile = false;
-            }
-        }
-    };
+//    private final transient Runnable progressRunnable = new Runnable() {
+//        @Override
+//        public void run() {
+//            Log.d(TAG, "progressRunnable--start");
+//            if (isFinished() || errCode != -1 || aliveThreadCount.get() < 1) {
+//                handler.removeCallbacks(progressRunnable);
+//                return;
+//            }
+//            handler.postDelayed(progressRunnable, missionConfig.getProgressInterval());
+////            long downloaded = done;
+//            long downloaded = done.get();
+//            long delta = downloaded - lastDone;
+//            Log.d(TAG, "progressRunnable--delta=" + delta);
+//            speedHistoryList.add(delta);
+//            if (delta > 0) {
+//                lastDone = downloaded;
+//                double speed = delta * (missionConfig.getProgressInterval() / 1000f);
+//                tempSpeed = Utility.formatSpeed(speed);
+//            }
+//            String downloadedSizeStr = Utility.formatSize(downloaded);
+//            float progress = getProgress(downloaded, length);
+//            Log.d(TAG, "progressRunnable--tempSpeed=" + tempSpeed);
+//            updateInfo.setDone(downloaded);
+//            updateInfo.setSize(length);
+//            updateInfo.setProgress(progress);
+//            updateInfo.setFileSizeStr(getFileSizeStr());
+//            updateInfo.setDownloadedSizeStr(downloadedSizeStr);
+//            updateInfo.setProgressStr(String.format(Locale.US, "%.2f%%", progress));
+//            updateInfo.setSpeedStr(tempSpeed);
+//            writeMissionInfo();
+//            notifyStatus(MissionStatus.RUNNING);
+////            if (missionConfig.getEnableNotification()) {
+////                NotifyUtil.with(getContext())
+////                        .buildProgressNotify()
+////                        .setProgressAndFormat(getProgress(), false, "")
+////                        .setContentTitle(name)
+////                        .setId(getNotifyId())
+////                        .show();
+////            }
+//            if (missionConfig.getEnableNotification() && getNotificationListener() != null) {
+//                getNotificationListener().onProgress(getContext(), DownloadMission.this, getProgress(), false);
+//            }
+//        }
+//    };
+
+//    private final transient Runnable writeMissionInfoRunnable = new Runnable() {
+//        @Override
+//        public void run() {
+//            synchronized (DownloadMission.this) {
+//                Utility.writeToFile(getMissionInfoFilePath(), gson.toJson(DownloadMission.this));
+//                mWritingToFile = false;
+//            }
+//        }
+//    };
 
     protected DownloadMission() {
 
@@ -385,30 +449,39 @@ public class DownloadMission {
     //----------------------------------------------------------operation------------------------------------------------------------
     void init() {
         currentRetryCount = missionConfig.getRetryCount();
-        threadCount = missionConfig.getThreadCount();
-        lastDone = done;
-        if (threadPoolExecutor == null || threadPoolExecutor.getCorePoolSize() != 2 * threadCount) {
-            threadPoolExecutor = ThreadPoolFactory.newFixedThreadPool(missionConfig.getThreadPoolConfig());
+        threadCount = missionConfig.getProducerThreadCount();
+//        lastDone = done;
+        lastDone = done.get();
+        if (isFinished()) {
+            return;
         }
+//        if (threadPoolExecutor == null || threadPoolExecutor.getCorePoolSize() != 2 * threadCount) {
+//            threadPoolExecutor = ThreadPoolFactory.newFixedThreadPool(missionConfig.getThreadPoolConfig());
+//        }
+        pause();
         if (hasInit) {
 //            initQueue();
-            for (long position = 0;  position < getBlocks(); position++) {
+            for (long position = 0; position < getBlocks(); position++) {
                 if (!queue.contains(position) && !finished.contains(position)) {
                     queue.add(position);
                 }
             }
             pause();
         } else {
-            writeMissionInfo();
-//            threadPoolExecutor.submit(initRunnable);
-            initMission();
+//            writeMissionInfo();
+////            threadPoolExecutor.submit(initRunnable);
+//            initMission();
         }
     }
 
     public void start() {
         if (!hasInit) {
+            currentRetryCount = missionConfig.getRetryCount();
+            threadCount = missionConfig.getProducerThreadCount();
             DownloadManagerImpl.getInstance().insertMission(this);
-            init();
+//            init();
+            writeMissionInfo();
+            initMission();
             return;
         }
         errorCount = 0;
@@ -429,47 +502,81 @@ public class DownloadMission {
                     return;
                 }
                 // In fallback mode, resuming is not supported.
-                missionConfig.getThreadPoolConfig().setCorePoolSize(1);
+//                missionConfig.getThreadPoolConfig().setCorePoolSize(1);
                 threadCount = 1;
-                done = 0;
-                doneLen.set(0);
-                blocks = 0;
+//                done = 0;
+                done.set(0);
+                blocks = 1;
             }
 
             DownloadManagerImpl.increaseDownloadingCount();
 
             missionStatus = MissionStatus.RUNNING;
 
-            aliveThreadCount = threadCount;
-            if (threadPoolExecutor == null || threadPoolExecutor.getCorePoolSize() != 2 * threadCount) {
-                threadPoolExecutor = ThreadPoolFactory.newFixedThreadPool(missionConfig.getThreadPoolConfig());
-            }
-
-            for (int i = 0; i < threadCount; i++) {
-                threadPoolExecutor.submit(new DownloadRunnable(this, i));
-            }
+            aliveThreadCount.set(threadCount);
+            finishCount.set(0);
 
             writeMissionInfo();
+
+            for (int i = 0; i < threadCount; i++) {
+                Observable.create(new DownloadBlockProducer(this, getBlockQueue()))
+                        .subscribeOn(Schedulers.io())
+                        .doOnComplete(new Action() {
+                            @Override
+                            public void run() throws Exception {
+                                aliveThreadCount.decrementAndGet();
+                            }
+                        })
+                        .subscribe();
+            }
+
+            for (int i = 0; i < getConsumerThreadCount(); i++) {
+                Observable.create(new DownloadBlockConsumer(this, getBlockQueue()))
+                        .subscribeOn(Schedulers.io())
+                        .doOnComplete(new Action() {
+                            @Override
+                            public void run() throws Exception {
+                                int count = finishCount.incrementAndGet();
+                                Log.d(TAG, "doOnComplete count=" + count);
+                                if (count >= getConsumerThreadCount() && isRunning()) {
+                                    Log.d(TAG, "doOnComplete length=" + length + " doneLen.get()=" + done.get());
+                                    if (isFallback() || done.get() == length) {
+                                        onFinish();
+                                    } else {
+                                        pause();
+                                        for (long position = 0; position < getBlocks(); position++) {
+                                            if (!queue.contains(position) && !finished.contains(position)) {
+                                                queue.add(position);
+                                            }
+                                        }
+                                        start();
+                                    }
+                                }
+                            }
+                        })
+                        .subscribe();
+            }
+
+
             notifyStatus(MissionStatus.START);
-            handler.post(progressRunnable);
+            RxHandler.post(progressAction);
         }
     }
 
     public void restart() {
         pause();
-        done = 0;
-        doneLen.set(0);
+//        done = 0;
+        done.set(0);
         finishTime = 0;
-        finishCount = 0;
+        finishCount.set(0);
         lastDone = 0;
 
         start();
     }
 
     public void pause() {
-        initCurrentRetryCount();
-        handler.removeCallbacks(progressRunnable);
         if (canPause()) {
+            initCurrentRetryCount();
             missionStatus = MissionStatus.PAUSE;
             writeMissionInfo();
             notifyStatus(missionStatus);
@@ -478,14 +585,6 @@ public class DownloadMission {
                 DownloadManagerImpl.decreaseDownloadingCount();
             }
 
-//            if (missionConfig.getEnableNotification()) {
-//                NotifyUtil.with(getContext())
-//                        .buildProgressNotify()
-//                        .setProgressAndFormat(getProgress(), false, "")
-//                        .setId(getNotifyId())
-//                        .setContentTitle("已暂停：" + name)
-//                        .show();
-//            }
             if (missionConfig.getEnableNotification() && getNotificationListener() != null) {
                 getNotificationListener().onProgress(getContext(), this, getProgress(), true);
             }
@@ -499,7 +598,6 @@ public class DownloadMission {
     }
 
     public void delete() {
-//        NotifyUtil.cancel(getNotifyId());
         if (getNotificationListener() != null) {
             getNotificationListener().onCancel(getContext(), this);
         }
@@ -507,41 +605,61 @@ public class DownloadMission {
         deleteMissionInfo();
         new File(missionConfig.getDownloadPath() + File.separator + name).delete();
         DownloadManagerImpl.getInstance().ALL_MISSIONS.remove(this);
-        if (DownloadManagerImpl.getInstance().getDownloadManagerListener() != null) {
-            DownloadManagerImpl.getInstance().getDownloadManagerListener().onMissionDelete(this);
-        }
-        for (WeakReference<MissionListener> ref : mListeners) {
-            final MissionListener listener = ref.get();
-            if (listener != null) {
-                handler.post(new Runnable() {
-                    @Override
-                    public void run() {
+        DownloadManagerImpl.onMissionDelete(this);
+//        for (WeakReference<MissionListener> ref : mListeners) {
+//            final MissionListener listener = ref.get();
+//            if (listener != null) {
+//                handler.post(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        listener.onDelete();
+//                    }
+//                });
+//
+//            }
+//        }
+        RxHandler.post(new Action() {
+            @Override
+            public void run() throws Exception {
+                for (WeakReference<MissionListener> ref : mListeners) {
+                    final MissionListener listener = ref.get();
+                    if (listener != null) {
                         listener.onDelete();
                     }
-                });
+                }
             }
-        }
+        });
     }
 
     public void clear() {
-//        NotifyUtil.cancel(getNotifyId());
         if (getNotificationListener() != null) {
             getNotificationListener().onCancel(getContext(), this);
         }
         pause();
         deleteMissionInfo();
         DownloadManagerImpl.getInstance().ALL_MISSIONS.remove(this);
-        for (WeakReference<MissionListener> ref : mListeners) {
-            final MissionListener listener = ref.get();
-            if (listener != null) {
-                handler.post(new Runnable() {
-                    @Override
-                    public void run() {
+//        for (WeakReference<MissionListener> ref : mListeners) {
+//            final MissionListener listener = ref.get();
+//            if (listener != null) {
+//                handler.post(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        listener.onClear();
+//                    }
+//                });
+//            }
+//        }
+        RxHandler.post(new Action() {
+            @Override
+            public void run() throws Exception {
+                for (WeakReference<MissionListener> ref : mListeners) {
+                    final MissionListener listener = ref.get();
+                    if (listener != null) {
                         listener.onClear();
                     }
-                });
+                }
             }
-        }
+        });
     }
 
     public boolean renameTo(String newFileName) {
@@ -554,46 +672,44 @@ public class DownloadMission {
         return success;
     }
 
-    public void openFile(Context context) {
+    public boolean openFile(Context context) {
         File file = getFile();
         if (file.exists()) {
-            FileUtil.openFile(context, getFile());
+            FileUtils.openFile(context, getFile());
+            return true;
         } else {
-            Toast.makeText(context, "下载文件不存在!", Toast.LENGTH_SHORT).show();
+            return false;
         }
     }
 
-    public void openFile() {
-        openFile(getContext());
+    public boolean openFile() {
+        return openFile(getContext());
     }
 
     //------------------------------------------------------------notify------------------------------------------------------------
-    synchronized void notifyProgress(long deltaLen) {
-        if (doneLen.addAndGet(deltaLen) > length) {
-            doneLen.set(length);
-        }
-        done += deltaLen;
-        if (done > length) {
-            done = length;
+    void notifyProgress(long deltaLen) {
+        if (done.addAndGet(deltaLen) > length) {
+            done.set(length);
         }
     }
 
-    synchronized void notifyFinished() {
-        Log.d(TAG, "notifyFinished errCode=" + errCode + " done=" + done + " length=" + length + " doneLen=" + doneLen.get());
-        if (errCode > 0) {
-            return;
-        }
-
-        finishCount++;
-
-//        File file = getFile();
-        if (isFallback() || done == length) { //  || (file != null && length == file.length())
-            onFinish();
-        } else {
-            pause();
-            start();
-        }
-    }
+//    synchronized void notifyFinished() {
+//        Log.d(TAG, "notifyFinished errCode=" + errCode + " done=" + done + " length=" + length + " doneLen=" + doneLen.get());
+//        if (errCode > 0) {
+//            return;
+//        }
+//
+////        finishCount++;
+//        finishCount.incrementAndGet();
+//
+////        File file = getFile();
+//        if (isFallback() || done == length) { //  || (file != null && length == file.length())
+//            onFinish();
+//        } else {
+//            pause();
+//            start();
+//        }
+//    }
 
     synchronized void notifyError(Error e, boolean fromThread) {
         Log.d(TAG, "err=" + e.getErrorMsg() + " fromThread=" + fromThread);
@@ -601,18 +717,25 @@ public class DownloadMission {
         if (!(e == Error.WITHOUT_STORAGE_PERMISSIONS || e == Error.FILE_NOT_FOUND)) {
             errorCount++;
             if (fromThread) {
-                aliveThreadCount--;
-                finishCount++;
+                aliveThreadCount.decrementAndGet();
+//                finishCount++;
+                finishCount.incrementAndGet();
             }
             Log.d(TAG, "aliveThreadCount=" + aliveThreadCount + " fromThread=" + fromThread);
-            if (aliveThreadCount <= 0 && errorCount >= threadCount) {
+            if (aliveThreadCount.get() <= 0 && errorCount >= threadCount) {
                 currentRetryCount--;
                 if (currentRetryCount >= 0) {
                     pause();
                     notifyStatus(MissionStatus.RETRY);
-                    handler.postDelayed(new Runnable() {
+//                    handler.postDelayed(new Runnable() {
+//                        @Override
+//                        public void run() {
+//                            start();
+//                        }
+//                    }, missionConfig.getRetryDelay());
+                    RxHandler.post(new Action() {
                         @Override
-                        public void run() {
+                        public void run() throws Exception {
                             start();
                         }
                     }, missionConfig.getRetryDelay());
@@ -639,41 +762,90 @@ public class DownloadMission {
 
         if (missionConfig.getEnableNotification() && getNotificationListener() != null) {
             getNotificationListener().onError(getContext(), this, errCode);
-//            NotifyUtil.with(getContext())
-//                    .buildNotify()
-//                    .setContentTitle("下载出错" + errCode + ":" + name)
-//                    .setId(getNotifyId())
-//                    .show();
         }
     }
 
     protected void notifyError(final Error e) {
-        for (WeakReference<MissionListener> ref : mListeners) {
-            final MissionListener listener = ref.get();
-            if (listener != null) {
-                handler.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        listener.onError(e);
-                    }
-                });
-//                MissionListener.HANDLER_STORE.get(listener).post(new Runnable() {
+//        for (WeakReference<MissionListener> ref : mListeners) {
+//            final MissionListener listener = ref.get();
+//            if (listener != null) {
+//                handler.post(new Runnable() {
 //                    @Override
 //                    public void run() {
 //                        listener.onError(e);
 //                    }
 //                });
+////                MissionListener.HANDLER_STORE.get(listener).post(new Runnable() {
+////                    @Override
+////                    public void run() {
+////                        listener.onError(e);
+////                    }
+////                });
+//            }
+//        }
+        RxHandler.post(new Action() {
+            @Override
+            public void run() throws Exception {
+                for (WeakReference<MissionListener> ref : mListeners) {
+                    final MissionListener listener = ref.get();
+                    if (listener != null) {
+                        listener.onError(e);
+                    }
+                }
             }
-        }
+        });
     }
 
     protected void notifyStatus(final MissionStatus status) {
-        for (WeakReference<MissionListener> ref : mListeners) {
-            final MissionListener listener = ref.get();
-            if (listener != null) {
-                handler.post(new Runnable() {
-                    @Override
-                    public void run() {
+//        for (WeakReference<MissionListener> ref : mListeners) {
+//            final MissionListener listener = ref.get();
+//            if (listener != null) {
+//                handler.post(new Runnable() {
+//                    @Override
+//                    public void run() {
+//                        switch (status) {
+//                            case INITING:
+//                                listener.onInit();
+//                                break;
+//                            case START:
+//                                listener.onStart();
+//                                break;
+//                            case RUNNING:
+//                                listener.onProgress(updateInfo);
+//                                break;
+//                            case WAITING:
+//                                listener.onWaiting();
+//                                break;
+//                            case PAUSE:
+//                                listener.onPause();
+//                                break;
+//                            case RETRY:
+//                                listener.onRetry();
+//                                break;
+//                            case FINISHED:
+//                                updateInfo.setDone(getDone());
+//                                updateInfo.setSize(getLength());
+//                                updateInfo.setProgress(100);
+//                                updateInfo.setFileSizeStr(getFileSizeStr());
+//                                updateInfo.setDownloadedSizeStr(getDownloadedSizeStr());
+//                                updateInfo.setProgressStr(String.format(Locale.US, "%.2f%%", getProgress()));
+//                                updateInfo.setSpeedStr(tempSpeed);
+//                                listener.onProgress(updateInfo);
+//                                listener.onFinish();
+//                                break;
+//                            default:
+//                                break;
+//                        }
+//                    }
+//                });
+//            }
+//        }
+        RxHandler.post(new Action() {
+            @Override
+            public void run() throws Exception {
+                for (WeakReference<MissionListener> ref : mListeners) {
+                    final MissionListener listener = ref.get();
+                    if (listener != null) {
                         switch (status) {
                             case INITING:
                                 listener.onInit();
@@ -708,9 +880,9 @@ public class DownloadMission {
                                 break;
                         }
                     }
-                });
+                }
             }
-        }
+        });
     }
 
     protected void onFinish() {
@@ -718,9 +890,9 @@ public class DownloadMission {
             return;
         }
         Log.d(TAG, "onFinish");
-        done = length;
-        doneLen.set(length);
-        handler.removeCallbacks(progressRunnable);
+//        done = length;
+        done.set(length);
+//        handler.removeCallbacks(progressRunnable);
 
         missionStatus = MissionStatus.FINISHED;
         finishTime = System.currentTimeMillis();
@@ -730,20 +902,10 @@ public class DownloadMission {
 
         DownloadManagerImpl.decreaseDownloadingCount();
 
-//        if (missionConfig.getEnableNotification()) {
-//            NotifyUtil.with(getContext())
-//                    .buildNotify()
-//                    .setContentTitle(name)
-//                    .setContentText("下载已完成")
-//                    .setId(getNotifyId())
-//                    .show();
-//        }
         if (missionConfig.getEnableNotification() && getNotificationListener() != null) {
             getNotificationListener().onFinished(getContext(), this);
         }
-        if (DownloadManagerImpl.getInstance().getDownloadManagerListener() != null) {
-            DownloadManagerImpl.getInstance().getDownloadManagerListener().onMissionFinished(this);
-        }
+        DownloadManagerImpl.onMissionFinished(this);
     }
 
     public synchronized void addListener(MissionListener listener) {
@@ -771,12 +933,23 @@ public class DownloadMission {
     }
 
     private void writeMissionInfo() {
-        if (!mWritingToFile) {
-            mWritingToFile = true;
-            if (threadPoolExecutor == null) {
-                threadPoolExecutor = ThreadPoolFactory.newFixedThreadPool(missionConfig.getThreadPoolConfig());
-            }
-            threadPoolExecutor.submit(writeMissionInfoRunnable);
+        if (mWritingToFile.getAndSet(true)) {
+//            if (threadPoolExecutor == null) {
+//                threadPoolExecutor = ThreadPoolFactory.newFixedThreadPool(missionConfig.getThreadPoolConfig());
+//            }
+//            threadPoolExecutor.submit(writeMissionInfoRunnable);
+            Observable.create(
+                    new ObservableOnSubscribe<Object>() {
+                        @Override
+                        public void subscribe(@io.reactivex.annotations.NonNull ObservableEmitter<Object> emitter) throws Exception {
+//                            writeMissionInfoRunnable.run();
+                            FileUtils.writeToFile(getMissionInfoFilePath(), new Gson().toJson(DownloadMission.this));
+                            mWritingToFile.set(false);
+                            emitter.onComplete();
+                        }
+                    })
+                    .subscribeOn(Schedulers.io())
+                    .subscribe();
         }
     }
 
@@ -842,12 +1015,24 @@ public class DownloadMission {
         return threadCount;
     }
 
+    public int getProducerThreadCount() {
+        return missionConfig.getProducerThreadCount();
+    }
+
+    public int getConsumerThreadCount() {
+        return missionConfig.getConsumerThreadCount();
+    }
+
+    int getAliveThreadCount() {
+        return aliveThreadCount.get();
+    }
+
     public long getBlocks() {
         return blocks;
     }
 
     public int getFinishCount() {
-        return finishCount;
+        return finishCount.get();
     }
 
     public long getLength() {
@@ -855,7 +1040,7 @@ public class DownloadMission {
     }
 
     public long getDone() {
-        return done;
+        return done.get();
     }
 
     public MissionStatus getStatus() {
@@ -894,9 +1079,9 @@ public class DownloadMission {
         return new File(getFilePath());
     }
 
-    public String getMimeType() {
-        return FileUtil.getMIMEType(getFile());
-    }
+//    public String getMimeType() {
+//        return FileUtil.getMIMEType(getFile());
+//    }
 
     public String getFileSuffix() {
         return MimeTypeMap.getFileExtensionFromUrl(getFile().toURI().toString()).toLowerCase(Locale.US);
@@ -943,7 +1128,7 @@ public class DownloadMission {
     }
 
     public float getProgress() {
-        return getProgress(done, length);
+        return getProgress(getDone(), length);
     }
 
     public String getProgressStr() {
@@ -951,11 +1136,11 @@ public class DownloadMission {
     }
 
     public String getFileSizeStr() {
-        return Utility.formatSize(length);
+        return FormatUtils.formatSize(length);
     }
 
     public String getDownloadedSizeStr() {
-        return Utility.formatSize(done);
+        return FormatUtils.formatSize(done.get());
     }
 
     public String getSpeed() {
@@ -963,10 +1148,11 @@ public class DownloadMission {
     }
 
     public int getNotifyId() {
-        if (notifyId == 0) {
-            notifyId = (int) (createTime / 10000) + (int) (createTime % 10000) * 100000;
-        }
-        return notifyId;
+//        if (notifyId == 0) {
+//            notifyId = (int) (createTime / 10000) + (int) (createTime % 10000) * 100000;
+//        }
+//        return notifyId;
+        return hashCode();
     }
 
     long getNextPosition() {
@@ -1013,20 +1199,21 @@ public class DownloadMission {
     }
 
 
-
     //----------------------------------------------------------------other
 
     public boolean isBlockFinished(long block) {
-        synchronized (finished) {
-            return finished.contains(block);
-        }
+//        synchronized (finished) {
+//            return finished.contains(block);
+//        }
+        return finished.contains(block);
     }
 
     void onBlockFinished(long block) {
         Log.d("DownloadRunnableLog", block + " finished");
-        synchronized (finished) {
-            finished.add(block);
-        }
+//        synchronized (finished) {
+//            finished.add(block);
+//        }
+        finished.add(block);
     }
 
     private boolean handleResponse(Connection.Response response, DownloadMission mission) {
@@ -1093,13 +1280,13 @@ public class DownloadMission {
                 if (!TextUtils.isEmpty(mission.originUrl) && !TextUtils.equals(url, mission.originUrl)) {
                     String originName = getMissionNameFromUrl(mission, mission.originUrl);
                     Log.d("getMissionNameFromUrl", "3");
-                    if (FileUtil.checkFileType(originName) != FileUtil.FILE_TYPE.UNKNOWN) {
+                    if (FileUtils.checkFileType(originName) != FileUtils.FileType.UNKNOWN) {
                         Log.d("getMissionNameFromUrl", "4");
                         return originName;
                     }
                 }
 
-                if (FileUtil.checkFileType(name) != FileUtil.FILE_TYPE.UNKNOWN || name.contains(".")) {
+                if (FileUtils.checkFileType(name) != FileUtils.FileType.UNKNOWN || name.contains(".")) {
                     Log.d("getMissionNameFromUrl", "5");
                     return name;
                 } else {
@@ -1117,7 +1304,7 @@ public class DownloadMission {
             mission.errCode = ErrorCode.ERROR_SERVER_UNSUPPORTED;
             mission.notifyError(Error.SERVER_UNSUPPORTED, false);
             return false;
-        } else if (mission.length >= Utility.getAvailableSize()) {
+        } else if (mission.length >= FileUtils.getAvailableSize()) {
             mission.errCode = ErrorCode.ERROR_NO_ENOUGH_SPACE;
             mission.notifyError(Error.NO_ENOUGH_SPACE, false);
             return false;

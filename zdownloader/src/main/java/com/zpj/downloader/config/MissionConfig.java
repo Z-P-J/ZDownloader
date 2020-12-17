@@ -14,14 +14,13 @@ public class MissionConfig extends BaseConfig<MissionConfig> {
     public static MissionConfig with() {
         DownloaderConfig config = DownloadManagerImpl.getInstance().getDownloaderConfig();
         if (config == null) {
-            throw new RuntimeException("DownloaderConfig is null in DownloadManagerImp. You must init first!");
+            config = DownloaderConfig.with(DownloadManagerImpl.getInstance().getContext());
         }
         return new MissionConfig()
                 .setNotificationInterceptor(config.notificationInterceptor)
                 .setDownloadPath(config.downloadPath)
                 .setBufferSize(config.bufferSize)
                 .setProgressInterval(config.progressInterval)
-                .setThreadPoolConfig(config.threadPoolConfig)
                 .setBlockSize(config.blockSize)
                 .setRetryCount(config.retryCount)
                 .setRetryDelay(config.retryDelay)
@@ -32,15 +31,4 @@ public class MissionConfig extends BaseConfig<MissionConfig> {
                 .setEnableNotification(config.enableNotification);
     }
 
-    public int getThreadCount() {
-        return threadPoolConfig.getCorePoolSize();
-    }
-
-    public int getKeepAliveTime() {
-        return threadPoolConfig.getKeepAliveTime();
-    }
-
-    public int getMaximumPoolSize() {
-        return threadPoolConfig.getMaximumPoolSize();
-    }
 }
