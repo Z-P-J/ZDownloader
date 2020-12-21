@@ -16,8 +16,8 @@ import android.widget.Toast;
 
 import com.zpj.downloader.ZDownloader;
 import com.zpj.downloader.constant.Error;
-import com.zpj.downloader.core.DownloadManager;
-import com.zpj.downloader.core.DownloadMission;
+import com.zpj.downloader.DownloadManager;
+import com.zpj.downloader.DownloadMission;
 import com.zpj.mydownloader.widget.ActionBottomPopup;
 
 import java.io.File;
@@ -45,7 +45,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 	MissionAdapter(Context context, boolean isLinear) {
 		mContext = context;
 		mManager = ZDownloader.getDownloadManager();
-		mManager.setDownloadManagerListener(this);
+		mManager.addDownloadManagerListener(this);
 		
 		mLayout = isLinear ? R.layout.mission_item_linear : R.layout.mission_item;
 	}
@@ -127,11 +127,11 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		return position;
 	}
 	
-	private void updateProgress(ViewHolder h, DownloadMission.UpdateInfo updateInfo) {
-		updateProgress(h, updateInfo, false);
+	private void updateProgress(ViewHolder h, DownloadMission.ProgressInfo progressInfo) {
+		updateProgress(h, progressInfo, false);
 	}
 	
-	private void updateProgress(ViewHolder h, DownloadMission.UpdateInfo updateInfo, boolean finished) {
+	private void updateProgress(ViewHolder h, DownloadMission.ProgressInfo progressInfo, boolean finished) {
 		if (h.mission == null) {
 			return;
 		}
@@ -140,7 +140,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 			downloadCallback.onDownloadFinished();
 			h.status.setText("已完成");
 		} else {
-			if (updateInfo == null) {
+			if (progressInfo == null) {
 				h.menu.setProgress(h.mission.getProgress());
 				h.size.setText(h.mission.getFileSizeStr() + File.separator + h.mission.getDownloadedSizeStr() + "  " + h.mission.getSpeed());
 				if (h.mission.isRunning()) {
@@ -149,9 +149,9 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 					h.status.setText(h.mission.getStatus().toString());
 				}
 			} else {
-				h.status.setText(updateInfo.getProgressStr());
-				h.menu.setProgress(updateInfo.getProgress());
-				h.size.setText(updateInfo.getFileSizeStr() + File.separator + updateInfo.getDownloadedSizeStr() + "  " + updateInfo.getSpeedStr());
+				h.status.setText(progressInfo.getProgressStr());
+				h.menu.setProgress(progressInfo.getProgress());
+				h.size.setText(progressInfo.getFileSizeStr() + File.separator + progressInfo.getDownloadedSizeStr() + "  " + progressInfo.getSpeedStr());
 			}
 		}
 	}
@@ -240,7 +240,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		}
 
 		@Override
-		public void onProgress(DownloadMission.UpdateInfo update) {
+		public void onProgress(DownloadMission.ProgressInfo update) {
 			if (TextUtils.equals(mHolder.name.getText().toString(), STATUS_INIT) && !TextUtils.isEmpty(mHolder.mission.getTaskName())) {
 				mHolder.name.setText(mHolder.mission.getTaskName());
 			}

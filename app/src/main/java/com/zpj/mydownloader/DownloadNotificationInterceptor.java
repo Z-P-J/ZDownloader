@@ -4,8 +4,8 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 
-import com.zpj.downloader.core.DownloadMission;
-import com.zpj.downloader.core.INotificationInterceptor;
+import com.zpj.downloader.DownloadMission;
+import com.zpj.downloader.INotificationInterceptor;
 import com.zpj.notification.ZNotify;
 
 public class DownloadNotificationInterceptor implements INotificationInterceptor {

@@ -1,4 +1,4 @@
-package com.zpj.downloader.core;
+package com.zpj.downloader;
 
 import android.util.Log;
 
@@ -6,14 +6,13 @@ import com.zpj.downloader.constant.Error;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
-import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import io.reactivex.ObservableEmitter;
 import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.annotations.NonNull;
 
-public class DownloadBlockProducer implements ObservableOnSubscribe<DownloadBlock> {
+class DownloadBlockProducer implements ObservableOnSubscribe<DownloadBlock> {
 
     private static final String TAG = "DownloadProducer";
 
@@ -22,7 +21,7 @@ public class DownloadBlockProducer implements ObservableOnSubscribe<DownloadBloc
     private final int blockSize;
     private final int maxSize;
 
-    public DownloadBlockProducer(DownloadMission mission, ConcurrentLinkedQueue<DownloadBlock> queue) {
+    DownloadBlockProducer(DownloadMission mission, ConcurrentLinkedQueue<DownloadBlock> queue) {
         this.mMission = mission;
         this.queue = queue;
         this.blockSize = mission.getBlockSize();

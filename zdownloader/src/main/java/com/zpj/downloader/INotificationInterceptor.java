@@ -1,4 +1,4 @@
-package com.zpj.downloader.core;
+package com.zpj.downloader;
 
 import android.content.Context;
 

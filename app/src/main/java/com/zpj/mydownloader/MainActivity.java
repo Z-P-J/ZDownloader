@@ -17,16 +17,15 @@ import android.view.View;
 import com.lxj.xpermission.PermissionConstants;
 import com.lxj.xpermission.XPermission;
 import com.zpj.downloader.ZDownloader;
-import com.zpj.downloader.config.DownloaderConfig;
-import com.zpj.downloader.core.DownloadManager;
-import com.zpj.downloader.core.DownloadMission;
+import com.zpj.downloader.DownloadManager;
+import com.zpj.downloader.DownloadMission;
 import com.zpj.mydownloader.widget.ActionBottomPopup;
 import com.zpj.mydownloader.widget.AddTaskPopup;
 import com.zpj.popup.ZPopup;
 
 /**
  * @author Z-P-J
- * */
+ */
 public class MainActivity extends AppCompatActivity
         implements MissionAdapter.DownloadCallback {
 
@@ -34,33 +33,6 @@ public class MainActivity extends AppCompatActivity
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
-        DownloaderConfig options = DownloaderConfig.with(this)
-                .setBlockSize(1024 * 1024)
-                .setNotificationInterceptor(new DownloadNotificationInterceptor())
-//                .setThreadCount(5)
-//                .setThreadPoolConfig(
-//                        ThreadPoolConfig.build()
-//                        .setCorePoolSize(5)
-//                        .setMaximumPoolSize(36)
-//                        .setKeepAliveTime(60)
-//                        .setWorkQueue(new LinkedBlockingQueue<Runnable>())
-//                        .setHandler(new ThreadPoolExecutor.AbortPolicy())
-//                        .setThreadFactory(new ThreadFactory() {
-//                            @Override
-//                            public Thread newThread(Runnable r) {
-//                                return new Thread(r);
-//                            }
-//                        })
-//                )
-                .setRetryCount(10);
-//                .setProxy(Proxy.NO_PROXY)
-//                .setProxy("127.0.0.1", 80)
-//                .setUserAgent("")
-//                .setCookie("");
-
-        ZDownloader.init(options);
-
         showRequestPermissionPopup();
     }
 

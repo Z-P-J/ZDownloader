@@ -3,14 +3,11 @@ package com.zpj.mydownloader.widget;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
-import android.os.Parcelable;
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.view.View;
 import android.widget.LinearLayout;
 
-import com.zpj.downloader.ZDownloader;
-import com.zpj.downloader.core.DownloadMission;
+import com.zpj.downloader.DownloadMission;
 import com.zpj.mydownloader.R;
 import com.zpj.popup.core.BottomPopupView;
 

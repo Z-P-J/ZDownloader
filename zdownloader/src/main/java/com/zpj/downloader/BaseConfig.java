@@ -1,9 +1,8 @@
-package com.zpj.downloader.config;
+package com.zpj.downloader;
 
 import android.content.Context;
 
 import com.zpj.downloader.constant.DefaultConstant;
-import com.zpj.downloader.core.INotificationInterceptor;
 
 import java.net.InetSocketAddress;
 import java.net.Proxy;
@@ -45,6 +44,9 @@ abstract class BaseConfig<T extends BaseConfig<T>> {
      * */
     int bufferSize = DefaultConstant.BUFFER_SIZE;
 
+    /**
+     * 进度更新频率，默认1000ms更新一次（单位ms）
+     * */
     long progressInterval =DefaultConstant.PROGRESS_INTERVAL;
 
     /**
@@ -86,6 +88,8 @@ abstract class BaseConfig<T extends BaseConfig<T>> {
      * 下载时传入的cookie额值
      * */
     String cookie = "";
+
+    boolean allowAllSSL = true;
 
     final Map<String, String> headers = new HashMap<>();
 
@@ -150,6 +154,10 @@ abstract class BaseConfig<T extends BaseConfig<T>> {
         return readOutTime;
     }
 
+    public boolean isAllowAllSSL() {
+        return allowAllSSL;
+    }
+
     public Map<String, String> getHeaders() {
         return headers;
     }
@@ -172,12 +180,14 @@ abstract class BaseConfig<T extends BaseConfig<T>> {
     }
 
     public T setNotificationInterceptor(INotificationInterceptor interceptor) {
+        this.enableNotification = interceptor != null;
         this.notificationInterceptor = interceptor;
         return (T) this;
     }
 
     public T setProducerThreadCount(int producerThreadCount) {
         this.producerThreadCount = producerThreadCount;
+        this.consumerThreadCount = 3 * producerThreadCount;
         return (T) this;
     }
 
@@ -241,6 +251,11 @@ abstract class BaseConfig<T extends BaseConfig<T>> {
 
     public T setReadOutTime(int readOutTime) {
         this.readOutTime = readOutTime;
+        return (T) this;
+    }
+
+    public T setAllowAllSSL(boolean allowAllSSL) {
+        this.allowAllSSL = allowAllSSL;
         return (T) this;
     }
 

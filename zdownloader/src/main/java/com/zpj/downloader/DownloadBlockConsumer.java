@@ -1,4 +1,4 @@
-package com.zpj.downloader.core;
+package com.zpj.downloader;
 
 import android.util.Log;
 
@@ -9,14 +9,13 @@ import java.io.BufferedInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Queue;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import io.reactivex.ObservableEmitter;
 import io.reactivex.ObservableOnSubscribe;
 import io.reactivex.annotations.NonNull;
 
-public class DownloadBlockConsumer implements ObservableOnSubscribe<DownloadBlock> {
+class DownloadBlockConsumer implements ObservableOnSubscribe<DownloadBlock> {
 
     private static final String TAG = "DownloadConsumer";
 
@@ -26,7 +25,7 @@ public class DownloadBlockConsumer implements ObservableOnSubscribe<DownloadBloc
     private final ConcurrentLinkedQueue<DownloadBlock> queue;
     private final int maxSize;
 
-    public DownloadBlockConsumer(DownloadMission mission, ConcurrentLinkedQueue<DownloadBlock> queue) {
+    DownloadBlockConsumer(DownloadMission mission, ConcurrentLinkedQueue<DownloadBlock> queue) {
         this.mMission = mission;
         this.queue = queue;
         this.maxSize = 2 * mission.getThreadCount();
@@ -103,7 +102,7 @@ public class DownloadBlockConsumer implements ObservableOnSubscribe<DownloadBloc
                             f.write(buf, 0, len);
                             total += len;
                             Log.d(TAG, threadName + " notifyProgress len=" + len);
-                            mMission.notifyProgress(len);
+                            mMission.notifyDownloaded(len);
                         }
                     }
                     Log.d(TAG, threadName + " start=" + start + " end=" + end + " total=" + total);
@@ -112,7 +111,7 @@ public class DownloadBlockConsumer implements ObservableOnSubscribe<DownloadBloc
                     mMission.onBlockFinished(position);
                     Log.d(TAG, threadName + " onBlockFinished position=" + position);
                 } catch (Exception e) {
-                    mMission.notifyProgress(-total);
+                    mMission.notifyDownloaded(-total);
                     mMission.onPositionDownloadFailed(position);
                 }
                 block.disconnect();

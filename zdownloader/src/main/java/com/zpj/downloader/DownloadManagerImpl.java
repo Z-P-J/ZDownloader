@@ -1,23 +1,24 @@
-package com.zpj.downloader.core;
+package com.zpj.downloader;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.IntentFilter;
 import android.text.TextUtils;
 import android.util.Log;
 
 import com.google.gson.Gson;
-import com.zpj.downloader.config.DownloaderConfig;
-import com.zpj.downloader.config.MissionConfig;
 import com.zpj.downloader.constant.DefaultConstant;
 import com.zpj.downloader.util.FileUtils;
 import com.zpj.downloader.util.NetworkChangeReceiver;
 
 import java.io.File;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
@@ -35,11 +36,11 @@ public class DownloadManagerImpl implements DownloadManager {
 
 	static String MISSION_INFO_FILE_SUFFIX_NAME = ".zpj";
 
+	@SuppressLint("StaticFieldLeak")
 	private static DownloadManagerImpl mManager;
 	
 	private final Context mContext;
 
-//	private DownloadManagerListener downloadManagerListener;
 	private final ArrayList<WeakReference<DownloadManagerListener>> mListeners = new ArrayList<>();
 
 	private final DownloaderConfig options;
@@ -62,7 +63,7 @@ public class DownloadManagerImpl implements DownloadManager {
 		}
 	}
 
-	public static DownloadManager getInstance() {
+	public static DownloadManagerImpl getInstance() {
 		if (mManager == null) {
 			throw new RuntimeException("must register first!");
 		}
@@ -70,16 +71,27 @@ public class DownloadManagerImpl implements DownloadManager {
 	}
 
 	public static DownloadManagerImpl get() {
+		if (mManager == null) {
+			synchronized (DownloadManagerImpl.class) {
+				if (mManager == null) {
+					return null;
+				}
+			}
+		}
 		return mManager;
 	}
 
 	public static <T extends DownloadMission> void register(DownloaderConfig options, Class<T> clazz) {
 		if (mManager == null) {
-			mManager = new DownloadManagerImpl(options.getContext(), options);
-			mManager.loadMissions(clazz);
-			IntentFilter intentFilter = new IntentFilter();
-			intentFilter.addAction("android.net.conn.CONNECTIVITY_CHANGE");
-			options.getContext().registerReceiver(NetworkChangeReceiver.getInstance(), intentFilter);
+			synchronized (DownloadManagerImpl.class) {
+				if (mManager == null) {
+					mManager = new DownloadManagerImpl(options.getContext(), options);
+					mManager.loadMissions(clazz);
+					IntentFilter intentFilter = new IntentFilter();
+					intentFilter.addAction("android.net.conn.CONNECTIVITY_CHANGE");
+					options.getContext().registerReceiver(NetworkChangeReceiver.getInstance(), intentFilter);
+				}
+			}
 		}
 	}
 
@@ -91,7 +103,7 @@ public class DownloadManagerImpl implements DownloadManager {
 		if (interceptor != null) {
 			interceptor.onCancelAll(getInstance().getContext());
 		}
-		ALL_MISSIONS.clear();
+		get().ALL_MISSIONS.clear();
 		mManager = null;
 	}
 
@@ -109,7 +121,7 @@ public class DownloadManagerImpl implements DownloadManager {
 
 	static void decreaseDownloadingCount() {
 		downloadingCount.decrementAndGet();
-		for (DownloadMission mission : ALL_MISSIONS) {
+		for (DownloadMission mission : get().ALL_MISSIONS) {
 			if (!mission.isFinished() && mission.isWaiting()) {
 				mission.start();
 				break;
@@ -131,11 +143,6 @@ public class DownloadManagerImpl implements DownloadManager {
 		return options;
 	}
 
-//	@Override
-//	public ThreadPoolConfig getThreadPoolConfig() {
-//		return options.getThreadPoolConfig();
-//	}
-
 	@Override
 	public List<DownloadMission> getMissions() {
 		Collections.sort(ALL_MISSIONS, new Comparator<DownloadMission>() {
@@ -153,7 +160,7 @@ public class DownloadManagerImpl implements DownloadManager {
 	}
 
 	@Override
-	public <T extends DownloadMission> void loadMissions(Class<T> clazz) {
+	public <S extends DownloadMission> void loadMissions(Class<S> clazz) {
 		long time1 = System.currentTimeMillis();
 		ALL_MISSIONS.clear();
 		File f;
@@ -211,53 +218,53 @@ public class DownloadManagerImpl implements DownloadManager {
 		}
 	}
 
-	@Override
-	public int startMission(String url) {
-		return startMission(url, "");
-	}
-
-	@Override
-	public int startMission(String url, String name) {
-		return startMission(url, name, MissionConfig.with());
-	}
-
-	@Override
-	public int startMission(String url, String name, MissionConfig config) {
-		DownloadMission mission = DownloadMission.create(url, name, config);
-		int i = insertMission(mission);
-//		if (downloadManagerListener != null) {
-//			downloadManagerListener.onMissionAdd(mission);
+//	@Override
+//	public int startMission(String url) {
+//		return startMission(url, "");
+//	}
+//
+//	@Override
+//	public int startMission(String url, String name) {
+//		return startMission(url, name, MissionConfig.with(null));
+//	}
+//
+//	@Override
+//	public int startMission(String url, String name, MissionConfig config) {
+//		DownloadMission mission = DownloadMission.create(url, name, config);
+//		int i = insertMission(mission);
+////		if (downloadManagerListener != null) {
+////			downloadManagerListener.onMissionAdd(mission);
+////		}
+//		mission.init();
+//		return i;
+//	}
+//
+//	@Override
+//	public void resumeMission(int i) {
+//		getMission(i).start();
+//	}
+//
+//	@Override
+//	public void resumeMission(String uuid) {
+//		getMission(uuid).start();
+//	}
+//
+//	@Override
+//	public void resumeAllMissions() {
+//		for (DownloadMission downloadMission : ALL_MISSIONS) {
+//			downloadMission.start();
 //		}
-		mission.init();
-		return i;
-	}
-
-	@Override
-	public void resumeMission(int i) {
-		getMission(i).start();
-	}
-
-	@Override
-	public void resumeMission(String uuid) {
-		getMission(uuid).start();
-	}
-
-	@Override
-	public void resumeAllMissions() {
-		for (DownloadMission downloadMission : ALL_MISSIONS) {
-			downloadMission.start();
-		}
-	}
-
-	@Override
-	public void pauseMission(int i) {
-		getMission(i).pause();
-	}
-
-	@Override
-	public void pauseMission(String uuid) {
-		getMission(uuid).pause();
-	}
+//	}
+//
+//	@Override
+//	public void pauseMission(int i) {
+//		getMission(i).pause();
+//	}
+//
+//	@Override
+//	public void pauseMission(String uuid) {
+//		getMission(uuid).pause();
+//	}
 
 	@Override
 	public void pauseAllMissions() {
@@ -266,28 +273,28 @@ public class DownloadManagerImpl implements DownloadManager {
 		}
 	}
 	
-	@Override
-	public void deleteMission(int i) {
-		DownloadMission d = getMission(i);
-		d.delete();
-		ALL_MISSIONS.remove(i);
-		onMissionDelete(null);
-	}
-
-	@Override
-	public void deleteMission(String uuid) {
-		DownloadMission d = getMission(uuid);
-		d.delete();
-		ALL_MISSIONS.remove(d);
-		onMissionDelete(null);
-	}
-
-	@Override
-	public void deleteMission(DownloadMission mission) {
-		mission.delete();
-		ALL_MISSIONS.remove(mission);
-		onMissionDelete(mission);
-	}
+//	@Override
+//	public void deleteMission(int i) {
+//		DownloadMission d = getMission(i);
+//		d.delete();
+//		ALL_MISSIONS.remove(i);
+//		onMissionDelete(null);
+//	}
+//
+//	@Override
+//	public void deleteMission(String uuid) {
+//		DownloadMission d = getMission(uuid);
+//		d.delete();
+//		ALL_MISSIONS.remove(d);
+//		onMissionDelete(null);
+//	}
+//
+//	@Override
+//	public void deleteMission(DownloadMission mission) {
+//		mission.delete();
+//		ALL_MISSIONS.remove(mission);
+//		onMissionDelete(mission);
+//	}
 
 	@Override
 	public void deleteAllMissions() {
@@ -298,21 +305,21 @@ public class DownloadManagerImpl implements DownloadManager {
 		onMissionDelete(null);
 	}
 
-	@Override
-	public void clearMission(int i) {
-		DownloadMission d = getMission(i);
-		d.clear();
-		ALL_MISSIONS.remove(i);
-		onMissionDelete(null);
-	}
-
-	@Override
-	public void clearMission(String uuid) {
-		DownloadMission d = getMission(uuid);
-		d.clear();
-		ALL_MISSIONS.remove(d);
-		onMissionDelete(null);
-	}
+//	@Override
+//	public void clearMission(int i) {
+//		DownloadMission d = getMission(i);
+//		d.clear();
+//		ALL_MISSIONS.remove(i);
+//		onMissionDelete(null);
+//	}
+//
+//	@Override
+//	public void clearMission(String uuid) {
+//		DownloadMission d = getMission(uuid);
+//		d.clear();
+//		ALL_MISSIONS.remove(d);
+//		onMissionDelete(null);
+//	}
 
 	@Override
 	public void clearAllMissions() {
@@ -386,4 +393,106 @@ public class DownloadManagerImpl implements DownloadManager {
 			}
 		}
 	}
+
+
+	public static List<? extends DownloadMission> getAllMissions() {
+		return DownloadManagerImpl.getInstance().getMissions();
+	}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+//	public static class MissionConfig<T extends DownloadMission> extends BaseConfig<MissionConfig<T>> {
+//
+//		private Class<T> clazz;
+//		private DownloadManager<T> manager;
+//		private transient String url;
+//
+//		private transient String name;
+//
+//		MissionConfig() {
+//
+//		}
+//
+//		public static MissionConfig<? extends DownloadMission> with(String url) {
+//			DownloaderConfig config = DownloadManagerImpl.getInstance().getDownloaderConfig();
+//			if (config == null) {
+//				config = DownloaderConfig.with(DownloadManagerImpl.getInstance().getContext());
+//			}
+//			MissionConfig<?> missionConfig = new MissionConfig<>().setUrl(url);
+//			missionConfig.setNotificationInterceptor(config.getNotificationInterceptor())
+//					.setDownloadPath(config.getDownloadPath())
+//					.setBufferSize(config.getBufferSize())
+//					.setProgressInterval(config.getProgressInterval())
+//					.setBlockSize(config.getBlockSize())
+//					.setRetryCount(config.getRetryCount())
+//					.setRetryDelay(config.getRetryDelay())
+//					.setConnectOutTime(config.getConnectOutTime())
+//					.setReadOutTime(config.getReadOutTime())
+//					.setUserAgent(config.getUserAgent())
+//					.setCookie(config.getCookie())
+//					.setEnableNotification(config.getEnableNotification());
+//			return missionConfig;
+////        return new MissionConfig(url)
+////                .setNotificationInterceptor(config.notificationInterceptor)
+////                .setDownloadPath(config.downloadPath)
+////                .setBufferSize(config.bufferSize)
+////                .setProgressInterval(config.progressInterval)
+////                .setBlockSize(config.blockSize)
+////                .setRetryCount(config.retryCount)
+////                .setRetryDelay(config.retryDelay)
+////                .setConnectOutTime(config.connectOutTime)
+////                .setReadOutTime(config.readOutTime)
+////                .setUserAgent(config.userAgent)
+////                .setCookie(config.cookie)
+////                .setEnableNotification(config.enableNotification);
+//		}
+//
+//		MissionConfig<T> setUrl(String url) {
+//			this.url = url;
+//			return this;
+//		}
+//
+//		MissionConfig<T> setManager(DownloadManager<T> manager) {
+//			this.manager = manager;
+//			return this;
+//		}
+//
+//		public MissionConfig<T> setName(String name) {
+//			this.name = name;
+//			return this;
+//		}
+//
+//		public T buildMission() {
+//			T mission = manager.createMission(url, name, this);
+//			mission.start();
+//			return mission;
+//		}
+//
+//		public void start() {
+//			buildMission().start();
+//		}
+//
+//	}
+
 }

@@ -2,14 +2,10 @@ package com.zpj.downloader;
 
 import android.content.Context;
 
-import com.zpj.downloader.config.DownloaderConfig;
-import com.zpj.downloader.core.DownloadManager;
-import com.zpj.downloader.core.DownloadManagerImpl;
-import com.zpj.downloader.core.DownloadMission;
-import com.zpj.downloader.core.INotificationInterceptor;
-
+import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 /**
  *
@@ -23,17 +19,54 @@ public class ZDownloader {
         throw new RuntimeException("Wrong operation!");
     }
 
-    public static void init(Context context) {
-        init(DownloaderConfig.with(context));
+    public static DownloaderConfig config(Context context) {
+        return config(context, DownloadMission.class);
     }
 
-    public static <T extends DownloadMission> void init(final DownloaderConfig options, Class<T> clazz) {
-        DownloadManagerImpl.register(options, clazz);
+    public static DownloaderConfig config(Context context, Class<? extends DownloadMission> clazz) {
+        DownloadManagerImpl manager = DownloadManagerImpl.get();
+        if (manager != null && manager.getDownloaderConfig() != null) {
+            return manager.getDownloaderConfig();
+        }
+        return DownloaderConfig.with(context, clazz);
     }
 
-    public static void init(final DownloaderConfig options) {
-        init(options, DownloadMission.class);
+    public static DownloadMission download(String url) {
+        return download(url, null, DownloadMission.class);
     }
+
+    public static DownloadMission download(String url, String name) {
+        return download(url, name, DownloadMission.class);
+    }
+
+    public static <T extends DownloadMission> T download(String url, Class<T> clazz) {
+        return download(url, null, clazz);
+    }
+
+    public static <T extends DownloadMission> T download(String url, String name, Class<T> clazz) {
+        return createMission(url, name, clazz);
+    }
+
+    private static <R extends DownloadMission> R createMission(String url, String name, Class<R> clazz) {
+        R mission = null;
+        try {
+//				mission = clazz.newInstance();
+            Constructor<R> constructor = clazz.getDeclaredConstructor();
+            constructor.setAccessible(true);
+            mission = constructor.newInstance();
+            mission.url = url;
+            mission.originUrl = url;
+            mission.name = name;
+            mission.uuid = UUID.randomUUID().toString();
+            mission.createTime = System.currentTimeMillis();
+            mission.missionStatus = DownloadMission.MissionStatus.INITING;
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return mission;
+    }
+
+
 
     public static void setDownloadConcurrentCount(int count) {
         DownloadManagerImpl.getInstance().getDownloaderConfig().setConcurrentMissionCount(count);
@@ -90,7 +123,7 @@ public class ZDownloader {
         return getDownloadManager().getContext();
     }
 
-    public static List<DownloadMission> getAllMissions() {
+    public static List<? extends DownloadMission> getAllMissions() {
         return DownloadManagerImpl.getInstance().getMissions();
     }
 
@@ -171,7 +204,7 @@ public class ZDownloader {
         config.setEnableNotification(value);
         if (affectPresent) {
             for (DownloadMission mission : getAllMissions()) {
-                mission.getMissionConfig().setEnableNotification(value);
+                mission.setEnableNotification(value);
             }
             if (!value) {
                 INotificationInterceptor interceptor = config.getNotificationInterceptor();

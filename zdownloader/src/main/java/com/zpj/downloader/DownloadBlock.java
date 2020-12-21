@@ -1,4 +1,4 @@
-package com.zpj.downloader.core;
+package com.zpj.downloader;
 
 import android.support.annotation.Keep;
 
@@ -7,7 +7,7 @@ import java.io.InputStream;
 import java.net.HttpURLConnection;
 
 @Keep
-public class DownloadBlock {
+class DownloadBlock {
 
     private final long position;
     private final long blockSize;
@@ -18,7 +18,7 @@ public class DownloadBlock {
 //    private InputStream inputStream;
     private final HttpURLConnection conn;
 
-    public DownloadBlock(long position, long blockSize, long start, long end, HttpURLConnection conn) {
+    DownloadBlock(long position, long blockSize, long start, long end, HttpURLConnection conn) {
         this.position = position;
         this.blockSize = blockSize;
 //        this.start = position * blockSize;

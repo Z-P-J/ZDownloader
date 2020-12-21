@@ -10,9 +10,10 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.zpj.downloader.DownloadMission;
 import com.zpj.downloader.ZDownloader;
-import com.zpj.downloader.config.MissionConfig;
-import com.zpj.downloader.core.DownloadMission;
+import com.zpj.downloader.constant.Error;
+import com.zpj.mydownloader.DownloadNotificationInterceptor;
 import com.zpj.mydownloader.R;
 import com.zpj.popup.core.BottomPopupView;
 
@@ -114,16 +115,17 @@ public class AddTaskPopup extends BottomPopupView implements View.OnClickListene
                 Toast.makeText(getContext(), "链接为空", Toast.LENGTH_SHORT).show();
                 return;
             }
-            MissionConfig config = MissionConfig.with();
             String bufferSize = etBufferSize.getText().toString();
+            int buffer;
             if (TextUtils.isDigitsOnly(bufferSize)) {
-                config.setBufferSize(Integer.parseInt(bufferSize) * 1024);
+                buffer = Integer.parseInt(bufferSize) * 1024;
             } else {
-                config.setBufferSize(1024);
+                buffer = 1024;
             }
-            DownloadMission mission = DownloadMission.create(url, name.getText().toString(), config);
-            mission.start();
-//            ZDownloader.download(url, config);
+            ZDownloader.download(url, name.getText().toString())
+                    .setBufferSize(buffer)
+                    .start();
+
         }
     }
 }
