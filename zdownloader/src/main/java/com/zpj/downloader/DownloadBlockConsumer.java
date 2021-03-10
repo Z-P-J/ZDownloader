@@ -21,14 +21,17 @@ class DownloadBlockConsumer implements ObservableOnSubscribe<DownloadBlock> {
 
     private static final int BUFFER_SIZE = 1024;
 
-    private final DownloadMission mMission;
+    private final BaseMission<?> mMission;
     private final ConcurrentLinkedQueue<DownloadBlock> queue;
     private final int maxSize;
 
-    DownloadBlockConsumer(DownloadMission mission, ConcurrentLinkedQueue<DownloadBlock> queue) {
+    DownloadBlockConsumer(BaseMission<?> mission, ConcurrentLinkedQueue<DownloadBlock> queue) {
         this.mMission = mission;
         this.queue = queue;
-        this.maxSize = 2 * mission.getThreadCount();
+//        this.maxSize = 3 * mission. ();
+//        this.maxSize = mission.getConsumerThreadCount() / 2;
+        this.maxSize = mission.getConsumerThreadCount();
+//        this.maxSize = 9;
     }
 
     @Override
@@ -63,7 +66,7 @@ class DownloadBlockConsumer implements ObservableOnSubscribe<DownloadBlock> {
 //                }
 //            }
 
-            Log.e(TAG, "isEmpty=" + queue.isEmpty() + " getAliveThreadCount=" + mMission.getAliveThreadCount());
+            Log.w(TAG, "isEmpty=" + queue.isEmpty() + " getAliveThreadCount=" + mMission.getAliveThreadCount());
             if (queue.isEmpty()) {
                 if (mMission.getAliveThreadCount() == 0) {
                     break;
@@ -71,9 +74,12 @@ class DownloadBlockConsumer implements ObservableOnSubscribe<DownloadBlock> {
             } else {
                 block = queue.poll();
             }
-            if (queue.size() < maxSize || !mMission.isRunning()) {
+            int size = queue.size();
+            Log.w(TAG, "pollBlock size=" + size + " maxSize=" + maxSize);
+            if (size < maxSize || !mMission.isRunning()) {
                 synchronized (queue) {
                     try {
+                        Log.w(TAG, "pollBlock queue.notifyAll()");
                         queue.notifyAll();
                     } catch (Exception e) {
                         e.printStackTrace();
@@ -85,8 +91,8 @@ class DownloadBlockConsumer implements ObservableOnSubscribe<DownloadBlock> {
                 long start = block.getStart();
                 long end = block.getEnd();
                 long position = block.getPosition();
-                Log.d(TAG, threadName + " start=" + start + " end=" + end + " position=" + position);
-                Log.d(TAG, threadName + " total=" + (end - start));
+//                Log.d(TAG, threadName + " start=" + start + " end=" + end + " position=" + position);
+//                Log.d(TAG, threadName + " total=" + (end - start));
                 int total = 0;
                 try {
                     f.seek(start);
@@ -101,21 +107,21 @@ class DownloadBlockConsumer implements ObservableOnSubscribe<DownloadBlock> {
                             start += len;
                             f.write(buf, 0, len);
                             total += len;
-                            Log.d(TAG, threadName + " notifyProgress len=" + len);
+//                            Log.d(TAG, threadName + " notifyProgress len=" + len);
                             mMission.notifyDownloaded(len);
                         }
                     }
-                    Log.d(TAG, threadName + " start=" + start + " end=" + end + " total=" + total);
+//                    Log.d(TAG, threadName + " start=" + start + " end=" + end + " total=" + total);
                     ipt.close();
                     f.flush();
                     mMission.onBlockFinished(position);
-                    Log.d(TAG, threadName + " onBlockFinished position=" + position);
+//                    Log.d(TAG, threadName + " onBlockFinished position=" + position);
                 } catch (Exception e) {
                     mMission.notifyDownloaded(-total);
                     mMission.onPositionDownloadFailed(position);
                 }
                 block.disconnect();
-                Log.e(TAG, threadName + " DownloadBlockConsumer Finished Time=" + (System.currentTimeMillis() - startTime));
+//                Log.e(TAG, threadName + " DownloadBlockConsumer Finished Time=" + (System.currentTimeMillis() - startTime));
             }
         }
         try {

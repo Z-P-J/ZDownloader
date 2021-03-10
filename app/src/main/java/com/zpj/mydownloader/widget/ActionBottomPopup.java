@@ -7,15 +7,16 @@ import android.support.annotation.NonNull;
 import android.view.View;
 import android.widget.LinearLayout;
 
+import com.zpj.downloader.BaseMission;
 import com.zpj.downloader.DownloadMission;
 import com.zpj.mydownloader.R;
 import com.zpj.popup.core.BottomPopupView;
 
 public class ActionBottomPopup extends BottomPopupView {
 
-    private final DownloadMission mission;
+    private final BaseMission<?> mission;
 
-    public ActionBottomPopup(@NonNull Context context, DownloadMission mission) {
+    public ActionBottomPopup(@NonNull Context context, BaseMission<?> mission) {
         super(context);
         this.mission = mission;
     }

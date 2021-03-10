@@ -4,6 +4,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 
+import com.zpj.downloader.BaseMission;
 import com.zpj.downloader.DownloadMission;
 import com.zpj.downloader.INotificationInterceptor;
 import com.zpj.notification.ZNotify;
@@ -11,7 +12,7 @@ import com.zpj.notification.ZNotify;
 public class DownloadNotificationInterceptor implements INotificationInterceptor {
 
     @Override
-    public void onProgress(Context context, DownloadMission mission, float progress, boolean isPause) {
+    public void onProgress(Context context, BaseMission<?> mission, float progress, boolean isPause) {
         Intent intent = new Intent(context, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         ZNotify.with(context)
@@ -24,7 +25,7 @@ public class DownloadNotificationInterceptor implements INotificationInterceptor
     }
 
     @Override
-    public void onFinished(Context context, DownloadMission mission) {
+    public void onFinished(Context context, BaseMission<?> mission) {
         Intent intent = new Intent(context, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         ZNotify.with(context)
@@ -37,7 +38,7 @@ public class DownloadNotificationInterceptor implements INotificationInterceptor
     }
 
     @Override
-    public void onError(Context context, DownloadMission mission, int errCode) {
+    public void onError(Context context, BaseMission<?> mission, int errCode) {
         Intent intent = new Intent(context, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         ZNotify.with(context)
@@ -49,7 +50,7 @@ public class DownloadNotificationInterceptor implements INotificationInterceptor
     }
 
     @Override
-    public void onCancel(Context context, DownloadMission mission) {
+    public void onCancel(Context context, BaseMission<?> mission) {
         ZNotify.cancel(mission.getNotifyId());
     }
 

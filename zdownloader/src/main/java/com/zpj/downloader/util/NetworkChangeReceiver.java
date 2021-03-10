@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
-import android.widget.Toast;
 
 import com.zpj.downloader.ZDownloader;
 
@@ -18,7 +17,11 @@ public class NetworkChangeReceiver extends BroadcastReceiver {
 
     public synchronized static NetworkChangeReceiver getInstance() {
         if (networkChangeReceiver == null) {
-            networkChangeReceiver = new NetworkChangeReceiver();
+            synchronized (NetworkChangeReceiver.class) {
+                if (networkChangeReceiver == null) {
+                    networkChangeReceiver = new NetworkChangeReceiver();
+                }
+            }
         }
         return networkChangeReceiver;
     }

@@ -1,9 +1,13 @@
 package com.zpj.downloader;
 
 import android.content.Context;
+import android.support.annotation.Keep;
+import android.text.TextUtils;
 
 import com.zpj.downloader.constant.DefaultConstant;
+import com.zpj.downloader.util.SerializableProxy;
 
+import java.io.Serializable;
 import java.net.InetSocketAddress;
 import java.net.Proxy;
 import java.util.HashMap;
@@ -12,7 +16,8 @@ import java.util.Map;
 /**
  * @author Z-P-J
  * */
-abstract class BaseConfig<T extends BaseConfig<T>> {
+@Keep
+abstract class BaseConfig<T extends BaseConfig<T>> implements Serializable {
 
     /**
      * context
@@ -91,9 +96,9 @@ abstract class BaseConfig<T extends BaseConfig<T>> {
 
     boolean allowAllSSL = true;
 
-    final Map<String, String> headers = new HashMap<>();
+    final HashMap<String, String> headers = new HashMap<>();
 
-    Proxy proxy;
+    SerializableProxy proxy;
 
 
     //-----------------------------------------------------------getter-------------------------------------------------------------
@@ -107,14 +112,23 @@ abstract class BaseConfig<T extends BaseConfig<T>> {
     }
 
     public int getProducerThreadCount() {
+        if (producerThreadCount < 1) {
+            producerThreadCount = DefaultConstant.THREAD_COUNT;
+        }
         return producerThreadCount;
     }
 
     public int getConsumerThreadCount() {
+        if (consumerThreadCount < 2) {
+            consumerThreadCount = 2 * getProducerThreadCount();
+        }
         return consumerThreadCount;
     }
 
     public String getDownloadPath() {
+        if (TextUtils.isEmpty(downloadPath)) {
+            return DefaultConstant.DOWNLOAD_PATH;
+        }
         return downloadPath;
     }
 
@@ -163,7 +177,10 @@ abstract class BaseConfig<T extends BaseConfig<T>> {
     }
 
     public Proxy getProxy() {
-        return proxy;
+        if (proxy == null) {
+            return null;
+        }
+        return proxy.proxy();
     }
 
     public boolean getEnableNotification() {
@@ -270,14 +287,17 @@ abstract class BaseConfig<T extends BaseConfig<T>> {
         return (T) this;
     }
 
-    public T setProxy(Proxy proxy) {
+    public T setProxy(SerializableProxy proxy) {
         this.proxy = proxy;
         return (T) this;
     }
 
+    public T setProxy(Proxy proxy) {
+        return setProxy(SerializableProxy.with(proxy));
+    }
+
     public T setProxy(String host, int port) {
-        this.proxy = new Proxy(Proxy.Type.HTTP, InetSocketAddress.createUnresolved(host, port));
-        return (T) this;
+        return setProxy(new Proxy(Proxy.Type.HTTP, InetSocketAddress.createUnresolved(host, port)));
     }
 
     public T setEnableNotification(boolean enableNotification) {

@@ -1,11 +1,11 @@
 package com.zpj.mydownloader;
 
-import com.zpj.downloader.util.FileUtils;
+import com.zpj.utils.FileUtils;
 
 public class Utils {
 
     public static int getFileTypeIconId(String fileName) {
-        FileUtils.FileType fileType = FileUtils.checkFileType(fileName);
+        FileUtils.FileType fileType = FileUtils.getFileType(fileName);
         if (fileType.equals(FileUtils.FileType.TORRENT)) {
             return R.drawable.wechat_icon_bt;
         } else if (fileType.equals(FileUtils.FileType.TXT)) {

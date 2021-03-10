@@ -7,14 +7,18 @@ import java.util.List;
 
 public interface DownloadManager {
 
-    List<DownloadMission> ALL_MISSIONS = new ArrayList<>();
+    List<BaseMission<?>> ALL_MISSIONS = new ArrayList<>();
 
     interface DownloadManagerListener {
-        void onMissionAdd(DownloadMission mission);
+        void onMissionAdd(BaseMission<?> mission);
 
-        void onMissionDelete(DownloadMission mission);
+        void onMissionDelete(BaseMission<?> mission);
 
-        void onMissionFinished(DownloadMission mission);
+        void onMissionFinished(BaseMission<?> mission);
+    }
+
+    interface OnLoadMissionListener<T extends BaseMission<?>> {
+        void onLoaded(List<T> missions);
     }
 
 //    T createMission(String url, String name);
@@ -51,11 +55,11 @@ public interface DownloadManager {
 
     void clearAllMissions();
 
-    DownloadMission getMission(int id);
+    BaseMission<?> getMission(int id);
 
-    DownloadMission getMission(String uuid);
+    BaseMission<?> getMission(String uuid);
 
-    int insertMission(DownloadMission mission);
+    int insertMission(BaseMission<?> mission);
 
     int getCount();
 
@@ -69,14 +73,18 @@ public interface DownloadManager {
 
     void loadMissions();
 
-    <T extends DownloadMission> void loadMissions(Class<T> clazz);
+    void loadMissions(Class<? extends BaseMission<?>> clazz);
+
+    void loadMissions(OnLoadMissionListener<BaseMission<?>> listener);
+
+    boolean isLoaded();
 
     void addDownloadManagerListener(DownloadManagerListener downloadManagerListener);
 
     void removeDownloadManagerListener(DownloadManagerListener downloadManagerListener);
 
-//    DownloadManagerListener getDownloadManagerListener();
+    List<BaseMission<?>> getMissions();
 
-    List<DownloadMission> getMissions();
+    void onDestroy();
 
 }

@@ -14,6 +14,7 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.zpj.downloader.BaseMission;
 import com.zpj.downloader.ZDownloader;
 import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.DownloadManager;
@@ -21,6 +22,8 @@ import com.zpj.downloader.DownloadMission;
 import com.zpj.mydownloader.widget.ActionBottomPopup;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * @author Z-P-J
@@ -28,26 +31,22 @@ import java.io.File;
 public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHolder>
 		implements DownloadManager.DownloadManagerListener {
 
-	private static final int BACKGROUND_COLOR = Color.parseColor("#FF9800");
-	private static final int FOREGROUND_COLOR = Color.parseColor("#EF6C00");
-
-	private static final int DELTA_TIME_LIMIT = 1000;
+	private final List<BaseMission<?>> list = new ArrayList<>();
 
 	private static final String STATUS_INIT = "初始化中...";
 	
 	private final Context mContext;
-	private final DownloadManager mManager;
-//	private DownloadManagerService.DMBinder mBinder;
 
 	private final int mLayout;
-	private DownloadCallback downloadCallback;
 	
-	MissionAdapter(Context context, boolean isLinear) {
+	MissionAdapter(Context context, List<BaseMission<?>> list) {
 		mContext = context;
-		mManager = ZDownloader.getDownloadManager();
-		mManager.addDownloadManagerListener(this);
+		this.list.clear();
+		this.list.addAll(list);
+		ZDownloader.getDownloadManager()
+				.addDownloadManagerListener(this);
 		
-		mLayout = isLinear ? R.layout.mission_item_linear : R.layout.mission_item;
+		mLayout = R.layout.mission_item_linear; // R.layout.mission_item;
 	}
 
 	@NonNull
@@ -68,7 +67,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 
 	@Override
 	public void onBindViewHolder(@NonNull MissionAdapter.ViewHolder h, @SuppressLint("RecyclerView") int pos) {
-		DownloadMission mission = mManager.getMission(pos);
+		BaseMission<?> mission = list.get(pos);
 		if (h.observer != null) {
 			mission.removeListener(h.observer);
 		}
@@ -119,7 +118,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 
 	@Override
 	public int getItemCount() {
-		return mManager.getCount();
+		return list.size();
 	}
 
 	@Override
@@ -137,7 +136,6 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		}
 
 		if (finished) {
-			downloadCallback.onDownloadFinished();
 			h.status.setText("已完成");
 		} else {
 			if (progressInfo == null) {
@@ -156,29 +154,27 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		}
 	}
 
-	public void refresh() {
-		mManager.loadMissions();
+	@Override
+	public void onMissionAdd(BaseMission<?> mission) {
+		list.add(0, mission);
+//		notifyDataSetChanged();
+		notifyItemInserted(0);
+	}
+
+	@Override
+	public void onMissionDelete(BaseMission<?> mission) {
+		list.remove(mission);
 		notifyDataSetChanged();
 	}
 
 	@Override
-	public void onMissionAdd(DownloadMission mission) {
-		notifyDataSetChanged();
-	}
-
-	@Override
-	public void onMissionDelete(DownloadMission mission) {
-		notifyDataSetChanged();
-	}
-
-	@Override
-	public void onMissionFinished(DownloadMission mission) {
+	public void onMissionFinished(BaseMission<?> mission) {
 
 	}
 
 
 	static class ViewHolder extends RecyclerView.ViewHolder {
-		DownloadMission mission;
+		BaseMission<?> mission;
 		int position;
 
 		CardView cardView;
@@ -273,19 +269,4 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		}
 	}
 
-	public interface DownloadCallback {
-
-		void onEmpty();
-
-		void onDownloadFinished();
-
-		void onItemClicked(View view, ViewHolder holder, DownloadManager mManager);
-
-		void onItemLongClicked(View view, ViewHolder holder, DownloadManager mManager);
-
-	}
-
-	void setMissionAdapterClickListener(DownloadCallback downloadCallback) {
-		this.downloadCallback = downloadCallback;
-	}
 }

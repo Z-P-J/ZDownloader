@@ -8,13 +8,13 @@ import android.content.Context;
  */
 public interface INotificationInterceptor {
 
-    void onProgress(Context context, DownloadMission mission, float progress, boolean isPause);
+    void onProgress(Context context, BaseMission<?> mission, float progress, boolean isPause);
 
-    void onFinished(Context context, DownloadMission mission);
+    void onFinished(Context context, BaseMission<?> mission);
 
-    void onError(Context context, DownloadMission mission, int errCode);
+    void onError(Context context, BaseMission<?> mission, int errCode);
 
-    void onCancel(Context context, DownloadMission mission);
+    void onCancel(Context context, BaseMission<?> mission);
 
     void onCancelAll(Context context);
 

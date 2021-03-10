@@ -16,6 +16,7 @@ import android.view.View;
 
 import com.lxj.xpermission.PermissionConstants;
 import com.lxj.xpermission.XPermission;
+import com.zpj.downloader.BaseMission;
 import com.zpj.downloader.ZDownloader;
 import com.zpj.downloader.DownloadManager;
 import com.zpj.downloader.DownloadMission;
@@ -23,11 +24,12 @@ import com.zpj.mydownloader.widget.ActionBottomPopup;
 import com.zpj.mydownloader.widget.AddTaskPopup;
 import com.zpj.popup.ZPopup;
 
+import java.util.List;
+
 /**
  * @author Z-P-J
  */
-public class MainActivity extends AppCompatActivity
-        implements MissionAdapter.DownloadCallback {
+public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -61,27 +63,6 @@ public class MainActivity extends AppCompatActivity
         ZDownloader.onDestroy();
     }
 
-    @Override
-    public void onEmpty() {
-
-    }
-
-    @Override
-    public void onDownloadFinished() {
-
-    }
-
-    @Override
-    public void onItemClicked(View view, MissionAdapter.ViewHolder holder, DownloadManager mManager) {
-
-    }
-
-    @Override
-    public void onItemLongClicked(View view, MissionAdapter.ViewHolder holder, DownloadManager mManager) {
-        DownloadMission mission = mManager.getMission(holder.position);
-        new ActionBottomPopup(this, mission).show();
-    }
-
     private void showRequestPermissionPopup() {
         if (hasStoragePermissions(getApplicationContext())) {
             requestPermission();
@@ -107,12 +88,17 @@ public class MainActivity extends AppCompatActivity
                 .callback(new XPermission.SimpleCallback() {
                     @Override
                     public void onGranted() {
-                        RecyclerView recyclerView = findViewById(R.id.recycler_view);
-                        recyclerView.setLayoutManager(new LinearLayoutManager(MainActivity.this));
 
-                        MissionAdapter missionAdapter = new MissionAdapter(MainActivity.this, true);
-                        missionAdapter.setMissionAdapterClickListener(MainActivity.this);
-                        recyclerView.setAdapter(missionAdapter);
+
+                        ZDownloader.getAllMissions(new DownloadManager.OnLoadMissionListener<BaseMission<?>>() {
+                            @Override
+                            public void onLoaded(List<BaseMission<?>> missions) {
+                                RecyclerView recyclerView = findViewById(R.id.recycler_view);
+                                recyclerView.setLayoutManager(new LinearLayoutManager(MainActivity.this));
+                                MissionAdapter missionAdapter = new MissionAdapter(MainActivity.this, missions);
+                                recyclerView.setAdapter(missionAdapter);
+                            }
+                        });
                     }
 
                     @Override

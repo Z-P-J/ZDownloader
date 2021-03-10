@@ -17,7 +17,7 @@ import javax.net.ssl.SSLSocketFactory;
 class HttpUrlConnectionFactory {
 
 
-    static HttpURLConnection getConnection(DownloadMission mission, long start, long end) throws IOException {
+    static HttpURLConnection getConnection(BaseMission<?> mission, long start, long end) throws IOException {
         URL url = new URL(mission.getUrl());
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         wrapConnection(conn, mission);
@@ -25,14 +25,34 @@ class HttpUrlConnectionFactory {
         return conn;
     }
 
-    static HttpURLConnection getConnection(DownloadMission mission) throws IOException {
+    static HttpURLConnection getConnection(BaseMission<?> mission) throws IOException {
         URL url = new URL(mission.getUrl());
         HttpURLConnection conn = (HttpURLConnection)url.openConnection();
         wrapConnection(conn, mission);
         return conn;
     }
 
-    private static void wrapConnection(HttpURLConnection conn, DownloadMission mission) {
+    static HttpURLConnection getConnection(BaseMission<?> mission, long position) throws IOException {
+        URL url = new URL(mission.getUrl());
+        HttpURLConnection conn = (HttpURLConnection)url.openConnection();
+        wrapConnection(conn, mission);
+        if (!mission.fallback) {
+            long start = position * mission.getBlockSize();
+            long end = start + mission.getBlockSize() - 1;
+
+            if (start >= mission.getLength()) {
+                return null;
+            }
+
+            if (end >= mission.getLength()) {
+                end = mission.getLength() - 1;
+            }
+            conn.setRequestProperty(HttpHeader.RANGE, "bytes=" + start + "-" + end);
+        }
+        return conn;
+    }
+
+    private static void wrapConnection(HttpURLConnection conn, BaseMission<?> mission) {
         if (conn instanceof HttpsURLConnection) {
 //			HttpsURLConnection httpsURLConnection = (HttpsURLConnection) conn;
             SSLContext sslContext =

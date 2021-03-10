@@ -23,7 +23,7 @@ public class ZDownloader {
         return config(context, DownloadMission.class);
     }
 
-    public static DownloaderConfig config(Context context, Class<? extends DownloadMission> clazz) {
+    public static DownloaderConfig config(Context context, Class<? extends BaseMission<?>> clazz) {
         DownloadManagerImpl manager = DownloadManagerImpl.get();
         if (manager != null && manager.getDownloaderConfig() != null) {
             return manager.getDownloaderConfig();
@@ -39,15 +39,15 @@ public class ZDownloader {
         return download(url, name, DownloadMission.class);
     }
 
-    public static <T extends DownloadMission> T download(String url, Class<T> clazz) {
+    public static <T extends BaseMission<?>> T download(String url, Class<T> clazz) {
         return download(url, null, clazz);
     }
 
-    public static <T extends DownloadMission> T download(String url, String name, Class<T> clazz) {
+    public static <T extends BaseMission<?>> T download(String url, String name, Class<T> clazz) {
         return createMission(url, name, clazz);
     }
 
-    private static <R extends DownloadMission> R createMission(String url, String name, Class<R> clazz) {
+    private static <R extends BaseMission<?>> R createMission(String url, String name, Class<R> clazz) {
         R mission = null;
         try {
 //				mission = clazz.newInstance();
@@ -59,7 +59,7 @@ public class ZDownloader {
             mission.name = name;
             mission.uuid = UUID.randomUUID().toString();
             mission.createTime = System.currentTimeMillis();
-            mission.missionStatus = DownloadMission.MissionStatus.INITING;
+            mission.missionStatus = BaseMission.MissionStatus.INITING;
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -77,7 +77,7 @@ public class ZDownloader {
     }
 
     public static void onDestroy() {
-        DownloadManagerImpl.unRegister();
+        DownloadManagerImpl.getInstance().onDestroy();
 //        System.exit(0);
     }
 
@@ -87,7 +87,7 @@ public class ZDownloader {
 
     public static void waitingForInternet() {
         waitingForInternet = true;
-        for (DownloadMission mission : DownloadManagerImpl.getInstance().getMissions()) {
+        for (BaseMission<?> mission : DownloadManagerImpl.getInstance().getMissions()) {
             if (mission.isRunning()) {
                 mission.waiting();
             }
@@ -100,7 +100,7 @@ public class ZDownloader {
 
     public static void resumeAll() {
         waitingForInternet = false;
-        for (DownloadMission mission : DownloadManagerImpl.getInstance().getMissions()) {
+        for (BaseMission<?> mission : DownloadManagerImpl.getInstance().getMissions()) {
             if (mission.isWaiting()) {
                 mission.start();
             }
@@ -123,76 +123,199 @@ public class ZDownloader {
         return getDownloadManager().getContext();
     }
 
-    public static List<? extends DownloadMission> getAllMissions() {
+    public static List<? extends BaseMission<?>> getAllMissions() {
         return DownloadManagerImpl.getInstance().getMissions();
     }
 
-    public static <T extends DownloadMission> List<T> getAllMissions(Class<T> clazz) {
-        List<T> downloadMissionList = new ArrayList<>();
-        for (DownloadMission mission : getAllMissions()) {
-            downloadMissionList.add((T) mission);
-        }
-        return downloadMissionList;
+    public static void getAllMissions(DownloadManager.OnLoadMissionListener<BaseMission<?>> listener) {
+        DownloadManagerImpl.getInstance().loadMissions(listener);
     }
 
-    public static List<DownloadMission> getAllMissions(boolean downloading) {
-        List<DownloadMission> downloadMissionList = new ArrayList<>();
-        for (DownloadMission mission : getAllMissions()) {
-            if (mission.isFinished() != downloading) {
-                downloadMissionList.add(mission);
+//    public static <T extends BaseMission<T>> List<T> getAllMissions(Class<T> clazz) {
+//        List<T> downloadMissionList = new ArrayList<>();
+//        for (BaseMission<?> mission : getAllMissions()) {
+//            downloadMissionList.add(clazz.cast(mission));
+//        }
+//        return downloadMissionList;
+//    }
+
+    public static <T extends BaseMission<T>> void getAllMissions(final Class<T> clazz, final DownloadManager.OnLoadMissionListener<T> listener) {
+        getAllMissions(new DownloadManager.OnLoadMissionListener<BaseMission<?>>() {
+            @Override
+            public void onLoaded(List<BaseMission<?>> missions) {
+                List<T> downloadMissionList = new ArrayList<>();
+                for (BaseMission<?> mission : missions) {
+                    downloadMissionList.add(clazz.cast(mission));
+                }
+                listener.onLoaded(downloadMissionList);
             }
-        }
-        return downloadMissionList;
+        });
     }
 
-    public static <T extends DownloadMission> List<T> getAllMissions(boolean downloading, Class<T> clazz) {
-        List<T> downloadMissionList = new ArrayList<>();
-        for (DownloadMission mission : getAllMissions()) {
-            if (mission.isFinished() != downloading) {
-                downloadMissionList.add((T) mission);
+//    public static List<BaseMission<?>> getAllMissions(boolean downloading) {
+//        List<BaseMission<?>> downloadMissionList = new ArrayList<>();
+//        for (BaseMission<?> mission : getAllMissions()) {
+//            if (mission.isFinished() != downloading) {
+//                downloadMissionList.add(mission);
+//            }
+//        }
+//        return downloadMissionList;
+//    }
+
+    public static void getAllMissions(final boolean downloading, final DownloadManager.OnLoadMissionListener<BaseMission<?>> listener) {
+        getAllMissions(new DownloadManager.OnLoadMissionListener<BaseMission<?>>() {
+            @Override
+            public void onLoaded(List<BaseMission<?>> missions) {
+                List<BaseMission<?>> downloadMissionList = new ArrayList<>();
+                for (BaseMission<?> mission : missions) {
+                    if (mission.isFinished() != downloading) {
+                        downloadMissionList.add(mission);
+                    }
+                }
+                if (listener != null) {
+                    listener.onLoaded(downloadMissionList);
+                }
             }
-        }
-        return downloadMissionList;
+        });
     }
 
-    public static <T extends DownloadMission> List<T> getRunningMissions(Class<T> clazz) {
-        List<T> downloadMissionList = new ArrayList<>();
-        for (DownloadMission mission : getAllMissions()) {
-            if (mission.isRunning()) {
-                downloadMissionList.add((T) mission);
+//    public static <T extends BaseMission<?>> List<T> getAllMissions(boolean downloading, Class<T> clazz) {
+//        List<T> downloadMissionList = new ArrayList<>();
+//        for (BaseMission<?> mission : getAllMissions()) {
+//            if (mission.isFinished() != downloading) {
+//                downloadMissionList.add(clazz.cast(mission));
+//            }
+//        }
+//        return downloadMissionList;
+//    }
+
+    public static <T extends BaseMission<?>> void getAllMissions(final boolean downloading, final Class<T> clazz,
+                                                                 final DownloadManager.OnLoadMissionListener<T> listener) {
+        getAllMissions(new DownloadManager.OnLoadMissionListener<BaseMission<?>>() {
+            @Override
+            public void onLoaded(List<BaseMission<?>> missions) {
+                List<T> downloadMissionList = new ArrayList<>();
+                for (BaseMission<?> mission : missions) {
+                    if (mission.isFinished() != downloading) {
+                        downloadMissionList.add(clazz.cast(mission));
+                    }
+                }
+                if (listener != null) {
+                    listener.onLoaded(downloadMissionList);
+                }
             }
-        }
-        return downloadMissionList;
+        });
     }
 
-    public static List<DownloadMission> getRunningMissions() {
-        List<DownloadMission> downloadMissionList = new ArrayList<>();
-        for (DownloadMission mission : getAllMissions()) {
-            if (mission.isRunning()) {
-                downloadMissionList.add(mission);
+//    public static <T extends BaseMission<?>> List<T> getRunningMissions(Class<T> clazz) {
+//        List<T> downloadMissionList = new ArrayList<>();
+//        for (BaseMission<?> mission : getAllMissions()) {
+//            if (mission.isRunning()) {
+//                downloadMissionList.add(clazz.cast(mission));
+//            }
+//        }
+//        return downloadMissionList;
+//    }
+
+    public static <T extends BaseMission<?>> void getRunningMissions(final Class<T> clazz,
+                                                                     final DownloadManager.OnLoadMissionListener<T> listener) {
+        getAllMissions(new DownloadManager.OnLoadMissionListener<BaseMission<?>>() {
+            @Override
+            public void onLoaded(List<BaseMission<?>> missions) {
+                List<T> downloadMissionList = new ArrayList<>();
+                for (BaseMission<?> mission : missions) {
+                    if (mission.isRunning()) {
+                        downloadMissionList.add(clazz.cast(mission));
+                    }
+                }
+                if (listener != null) {
+                    listener.onLoaded(downloadMissionList);
+                }
             }
-        }
-        return downloadMissionList;
+        });
     }
 
-    public static List<DownloadMission> getMissions(DownloadMission.MissionStatus status) {
-        List<DownloadMission> downloadMissionList = new ArrayList<>();
-        for (DownloadMission mission : getAllMissions()) {
-            if (status == mission.getStatus()) {
-                downloadMissionList.add(mission);
+//    public static List<BaseMission<?>> getRunningMissions() {
+//        List<BaseMission<?>> downloadMissionList = new ArrayList<>();
+//        for (BaseMission<?> mission : getAllMissions()) {
+//            if (mission.isRunning()) {
+//                downloadMissionList.add(mission);
+//            }
+//        }
+//        return downloadMissionList;
+//    }
+
+    public static void getRunningMissions(final DownloadManager.OnLoadMissionListener<BaseMission<?>> listener) {
+        getAllMissions(new DownloadManager.OnLoadMissionListener<BaseMission<?>>() {
+            @Override
+            public void onLoaded(List<BaseMission<?>> missions) {
+                List<BaseMission<?>> downloadMissionList = new ArrayList<>();
+                for (BaseMission<?> mission : getAllMissions()) {
+                    if (mission.isRunning()) {
+                        downloadMissionList.add(mission);
+                    }
+                }
+                if (listener != null) {
+                    listener.onLoaded(downloadMissionList);
+                }
             }
-        }
-        return downloadMissionList;
+        });
     }
 
-    public static <T extends DownloadMission> List<T> getMissions(DownloadMission.MissionStatus status, Class<T> clazz) {
-        List<T> downloadMissionList = new ArrayList<>();
-        for (DownloadMission mission : getAllMissions()) {
-            if (status == mission.getStatus()) {
-                downloadMissionList.add((T) mission);
+//    public static List<BaseMission<?>> getMissions(DownloadMission.MissionStatus status) {
+//        List<BaseMission<?>> downloadMissionList = new ArrayList<>();
+//        for (BaseMission<?> mission : getAllMissions()) {
+//            if (status == mission.getStatus()) {
+//                downloadMissionList.add(mission);
+//            }
+//        }
+//        return downloadMissionList;
+//    }
+
+    public static void getMissions(final DownloadMission.MissionStatus status,
+                                                   final DownloadManager.OnLoadMissionListener<BaseMission<?>> listener) {
+        getAllMissions(new DownloadManager.OnLoadMissionListener<BaseMission<?>>() {
+            @Override
+            public void onLoaded(List<BaseMission<?>> missions) {
+                List<BaseMission<?>> downloadMissionList = new ArrayList<>();
+                for (BaseMission<?> mission : getAllMissions()) {
+                    if (status == mission.getStatus()) {
+                        downloadMissionList.add(mission);
+                    }
+                }
+                if (listener != null) {
+                    listener.onLoaded(downloadMissionList);
+                }
             }
-        }
-        return downloadMissionList;
+        });
+    }
+
+//    public static <T extends BaseMission<T>> List<T> getMissions(DownloadMission.MissionStatus status, Class<T> clazz) {
+//        List<T> downloadMissionList = new ArrayList<>();
+//        for (BaseMission<?> mission : getAllMissions()) {
+//            if (status == mission.getStatus()) {
+//                downloadMissionList.add(clazz.cast(mission));
+//            }
+//        }
+//        return downloadMissionList;
+//    }
+
+    public static <T extends BaseMission<T>> void getMissions(final DownloadMission.MissionStatus status, final Class<T> clazz,
+                                                                 final DownloadManager.OnLoadMissionListener<T> listener) {
+        getAllMissions(new DownloadManager.OnLoadMissionListener<BaseMission<?>>() {
+            @Override
+            public void onLoaded(List<BaseMission<?>> missions) {
+                List<T> downloadMissionList = new ArrayList<>();
+                for (BaseMission<?> mission : getAllMissions()) {
+                    if (status == mission.getStatus()) {
+                        downloadMissionList.add(clazz.cast(mission));
+                    }
+                }
+                if (listener != null) {
+                    listener.onLoaded(downloadMissionList);
+                }
+            }
+        });
     }
 
     public static void setEnableNotification(boolean value) {
@@ -203,7 +326,7 @@ public class ZDownloader {
         DownloaderConfig config = DownloadManagerImpl.getInstance().getDownloaderConfig();
         config.setEnableNotification(value);
         if (affectPresent) {
-            for (DownloadMission mission : getAllMissions()) {
+            for (BaseMission<?> mission : getAllMissions()) {
                 mission.setEnableNotification(value);
             }
             if (!value) {
