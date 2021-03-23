@@ -1,8 +1,12 @@
 # ZDownloader
+Android多线程下载库，可以自定义下载任务，可扩展性强。
 
-----------------------------------
-### 待完善后发布到jCenter或jitpack
-----------------------------------
+## Install
+
+#### Latest Version：[![Download](https://api.bintray.com/packages/z-p-j/maven/ZDownloader/images/download.svg?version-1.0.0)](https://bintray.com/z-p-j/maven/ZDownloader/1.0.0/link)
+```groovy
+implementation 'com.zpj.downloader:ZDownloader:latest_version'
+```
 
 ## How To Use？
 ### 一. 简单使用
@@ -121,7 +125,7 @@ mission.renameTo(newName);
 ```
 
 ### 二. 高级使用
-#### 1. 在Activity中初始化时进行全局设置
+#### 1. 在Application中初始化时进行全局设置
 ```java
 public class MyApplication extends Application {
 
@@ -156,7 +160,7 @@ public class MyApplication extends Application {
 }            
 ```
 
-#### 1. 创建下载任务时单独设置下载配置
+#### 2. 创建下载任务时单独设置下载配置
 ```java
 //为每个下载任务进行设置，优先使用单独设置的参数
 ZDownloader.download(url)
@@ -181,3 +185,5 @@ ZDownloader.download(url)
     .addListener(listener) // 下载进度回调
     .start();
 ```
+
+#### 3. 自定义下载任务（TODO）
