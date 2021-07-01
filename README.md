@@ -1,16 +1,23 @@
 # ZDownloader
 Android多线程下载库，可以自定义下载任务，可扩展性强。
 
+
+[The demo](https://github.com/Z-P-J/RxLife/tree/master/app)
+
+ <div>
+     <img src="./demo.gif" width="30%">
+ </div>
+
 ## Install
 
-#### Latest Version：[![Download](https://api.bintray.com/packages/z-p-j/maven/ZDownloader/images/download.svg?version-1.0.0)](https://bintray.com/z-p-j/maven/ZDownloader/1.0.0/link)
+#### Latest Version：1.0.0
 ```groovy
-implementation 'com.zpj.downloader:ZDownloader:latest_version'
+implementation 'com.github.Z-P-J:ZDownloader:latest_version'
 ```
 
 ## How To Use？
 ### 一. 简单使用
-#### 1. 推荐在Activity中初始化
+#### 1. 初始化
 ```java
 public class MyApplication extends Application {
 
@@ -186,4 +193,72 @@ ZDownloader.download(url)
     .start();
 ```
 
-#### 3. 自定义下载任务（TODO）
+#### 3. 通知拦截
+```java
+/**
+ * 实现INotificationInterceptor接口，在onProgress、onFinished、onError方法中更新通知
+ */
+public class DownloadNotificationInterceptor implements INotificationInterceptor {
+
+    @Override
+    public void onProgress(Context context, BaseMission<?> mission, float progress, boolean isPause) {
+        Intent intent = new Intent(context, MainActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        ZNotify.with(context)
+                .buildProgressNotify()
+                .setProgressAndFormat(progress, false, "")
+                .setContentTitle((isPause ? "已暂停：" : "") + mission.getTaskName())
+                .setContentIntent(pendingIntent)
+                .setId(mission.getNotifyId())
+                .show();
+    }
+
+    @Override
+    public void onFinished(Context context, BaseMission<?> mission) {
+        Intent intent = new Intent(context, MainActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        ZNotify.with(context)
+                .buildNotify()
+                .setContentTitle(mission.getTaskName())
+                .setContentText("下载已完成")
+                .setContentIntent(pendingIntent)
+                .setId(mission.getNotifyId())
+                .show();
+    }
+
+    @Override
+    public void onError(Context context, BaseMission<?> mission, int errCode) {
+        Intent intent = new Intent(context, MainActivity.class);
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+        ZNotify.with(context)
+                .buildNotify()
+                .setContentTitle("下载出错" + errCode + ":" + mission.getTaskName())
+                .setContentIntent(pendingIntent)
+                .setId(mission.getNotifyId())
+                .show();
+    }
+
+    @Override
+    public void onCancel(Context context, BaseMission<?> mission) {
+        ZNotify.cancel(mission.getNotifyId());
+    }
+
+    @Override
+    public void onCancelAll(Context context) {
+        ZNotify.cancelAll();
+    }
+
+}
+
+// 全局设置通知拦截器
+ZDownloader.config(this)
+            .setNotificationInterceptor(new DownloadNotificationInterceptor())
+            .init();
+
+// 或者下载时单独设置通知拦截器
+ZDownloader.download(url)
+    .setNotificationInterceptor(new DownloadNotificationInterceptor())
+    .start();
+```
+
+#### 4. 自定义下载任务（TODO）

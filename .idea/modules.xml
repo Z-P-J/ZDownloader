@@ -5,7 +5,6 @@
       <module fileurl="file://$PROJECT_DIR$/ZDownloader.iml" filepath="$PROJECT_DIR$/ZDownloader.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/app/ZDownloader.app.iml" filepath="$PROJECT_DIR$/.idea/modules/app/ZDownloader.app.iml" />
       <module fileurl="file://$PROJECT_DIR$/.idea/modules/zdownloader/ZDownloader.zdownloader.iml" filepath="$PROJECT_DIR$/.idea/modules/zdownloader/ZDownloader.zdownloader.iml" />
-      <module fileurl="file://$PROJECT_DIR$/.idea/modules/zpopup/ZDownloader.zpopup.iml" filepath="$PROJECT_DIR$/.idea/modules/zpopup/ZDownloader.zpopup.iml" />
     </modules>
   </component>
 </project>

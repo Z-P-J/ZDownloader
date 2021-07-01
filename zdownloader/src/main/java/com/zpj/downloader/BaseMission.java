@@ -1,10 +1,14 @@
 package com.zpj.downloader;
 
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 import android.support.annotation.Keep;
 import android.support.annotation.NonNull;
+import android.support.v4.content.FileProvider;
 import android.text.TextUtils;
 import android.util.Log;
 import android.webkit.MimeTypeMap;
@@ -682,7 +686,22 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
     }
 
     public boolean openFile(Context context) {
-        return FileUtils.openFile(context, getFilePath());
+        File file = new File(getFilePath());
+        Uri uri = Uri.fromFile(file);
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            Uri contentUri = FileProvider.getUriForFile(context, FileUtils.getFileProviderName(context), file);
+
+            context.grantUriPermission(context.getPackageName(), contentUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            intent.setDataAndType(contentUri, FileUtils.getMIMEType(file));
+        } else {
+            intent.setDataAndType(uri, FileUtils.getMIMEType(file));
+        }
+        context.startActivity(intent);
+        return true;
+//        return FileUtils.openFile(context, getFilePath());
     }
 
     public boolean openFile() {

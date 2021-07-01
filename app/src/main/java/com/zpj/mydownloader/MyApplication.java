@@ -3,6 +3,7 @@ package com.zpj.mydownloader;
 import android.app.Application;
 
 import com.zpj.downloader.ZDownloader;
+import com.zpj.mydownloader.utils.DownloadNotificationInterceptor;
 
 /**
  * @author Z-P-J

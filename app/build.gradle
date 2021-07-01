@@ -34,9 +34,10 @@ dependencies {
 
     implementation 'com.lxj:xpermission:1.0.1'
     implementation 'com.github.Z-P-J:ZUtils:1.0.0'
+    implementation 'com.github.Z-P-J:Fragmentation-Dialog:1.2.3'
+    implementation 'com.github.Z-P-J:Fragmentation:1.1.4'
 
     implementation project(':zdownloader')
-    implementation project(':zpopup')
 
 //    implementation 'cn.yc:notificationLib:1.0.2'
 }
