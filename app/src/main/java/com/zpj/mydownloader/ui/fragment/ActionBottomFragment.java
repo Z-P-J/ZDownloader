@@ -46,7 +46,7 @@ public class ActionBottomFragment extends BottomDragDialogFragment<ActionBottomF
             resumeDownload.setVisibility(View.GONE);
         } else if (mission.isError()) {
             pauseDownload.setVisibility(View.GONE);
-        } else if (mission.isIniting()) {
+        } else if (mission.isPrepare()) {
             pauseDownload.setVisibility(View.GONE);
             resumeDownload.setVisibility(View.GONE);
         } else if (mission.isPause()) {

@@ -59,7 +59,7 @@ public class ZDownloader {
             mission.name = name;
             mission.uuid = UUID.randomUUID().toString();
             mission.createTime = System.currentTimeMillis();
-            mission.missionStatus = BaseMission.MissionStatus.INITING;
+            mission.missionStatus = BaseMission.MissionStatus.PREPARING;
         } catch (Exception e) {
             e.printStackTrace();
         }

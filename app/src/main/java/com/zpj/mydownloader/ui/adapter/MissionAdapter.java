@@ -37,7 +37,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 
 	private final int mLayout;
 	
-	MissionAdapter(Context context, List<BaseMission<?>> list) {
+	public MissionAdapter(Context context, List<BaseMission<?>> list) {
 		mContext = context;
 		this.list = list;
 		

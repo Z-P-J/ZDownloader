@@ -77,14 +77,14 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
 
     @Keep
     public enum MissionStatus {
-        INITING("准备中"),
+        PREPARING("准备中"),
         START("已开始"),
         RUNNING("下载中"),
         WAITING("等待中"),
-        PAUSE("已暂停"),
+        PAUSED("已暂停"),
         FINISHED("已完成"),
         ERROR("出错了"),
-        RETRY("重试中");
+        RETRYING("重试中");
 
         private final String statusName;
 
@@ -110,15 +110,13 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
     protected String originUrl = "";
     protected long createTime = 0;
     protected long finishTime = 0;
-    //    protected int notifyId = 0;
     protected long blocks = 1;
     protected long length = 0;
-    //    protected long done = 0;
     protected AtomicLong done = new AtomicLong(0);
-    protected MissionStatus missionStatus = MissionStatus.INITING;
+    protected MissionStatus missionStatus = MissionStatus.PREPARING;
     protected boolean fallback = false;
     protected int errCode = -1;
-    protected boolean hasInit = false;
+    protected boolean hasPrepared = false;
 
     //-----------------------------------------------------transient---------------------------------------------------------------
 
@@ -165,6 +163,14 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         return handler;
     }
 
+    public void post(Runnable runnable) {
+        getHandler().post(runnable);
+    }
+
+    public void postDelayed(Runnable runnable, long delayMillis) {
+        getHandler().postDelayed(runnable, delayMillis);
+    }
+
     public ProgressInfo getProgressInfo() {
         if (progressInfo == null) {
             synchronized (BaseMission.class) {
@@ -176,21 +182,19 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         return progressInfo;
     }
 
-    protected void initMission() {
-        notifyStatus(missionStatus);
-        Log.d(TAG, "init url=" + url);
+    private static class PrepareStrategy {
+
+
+    }
+
+    protected void prepareMission() {
+        notifyStatus(MissionStatus.PREPARING);
         ZHttp.get(url)
-//                .proxy(Proxy.NO_PROXY)
                 .userAgent(getUserAgent())
                 .cookie(getCookie())
-//                .accept("*/*")
                 .referer(url)
                 .headers(getHeaders())
-//                .connection("close")
                 .range("bytes=0-")
-//                .header("Pragma", "no-cache")
-//                .header("Cache-Control", "no-cache")
-//                .acceptEncoding("identity")
                 .connectTimeout(getConnectOutTime())
                 .readTimeout(getReadOutTime())
                 .ignoreContentType(true)
@@ -198,36 +202,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                 .maxBodySize(0)
                 .execute()
                 .observeOn(Schedulers.io())
-//                .onNext(new HttpObserver.OnNextListener<IHttp.Response, IHttp.Response>() {
-//                    @Override
-//                    public HttpObserver<IHttp.Response> onNext(IHttp.Response res) {
-//                        if (handleResponse(res, BaseMission.this)) {
-//                            Log.d(TAG, "handleResponse--111");
-//                            return null;
-//                        }
-////                        Log.d(TAG, "init onNext--new Task");
-//                        return ZHttp.get(url)
-//                                .proxy(Proxy.NO_PROXY)
-//                                .userAgent(getUserAgent())
-//                                .cookie(getCookie())
-////                                .accept("*/*")
-//                                .referer(url)
-////                                .range("bytes=0-")
-//                                .header(HttpHeader.RANGE, "bytes=0-")
-//                                .header("Pragma", "no-cache")
-//                                .header("Cache-Control", "no-cache")
-//                                .header("Access-Control-Expose-Headers", "Content-Disposition")
-//                                .acceptEncoding("identity")
-//                                .headers(getHeaders())
-////                                .connection("close")
-//                                .connectTimeout(getConnectOutTime())
-//                                .readTimeout(getReadOutTime())
-//                                .ignoreContentType(true)
-//                                .ignoreHttpErrors(false)
-//                                .maxBodySize(0)
-//                                .execute();
-//                    }
-//                })
                 .onSuccess(new IHttp.OnSuccessListener<IHttp.Response>() {
                     @Override
                     public void onSuccess(IHttp.Response res) throws Exception {
@@ -288,7 +262,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                         }
 
                         Log.d(TAG, "storage=" + FileUtils.getAvailableSize());
-                        hasInit = true;
+                        hasPrepared = true;
 
                         saveMissionInfo();
                         start();
@@ -316,7 +290,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                                 notifyStatus(missionStatus);
                                 return;
                             }
-                            getHandler().postDelayed(getProgressRunnable(), getProgressInterval());
+                            postDelayed(getProgressRunnable(), getProgressInterval());
                             long downloaded = done.get();
                             long delta = downloaded - lastDone;
                             Log.d(TAG, "progressRunnable--delta=" + delta);
@@ -355,8 +329,8 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
     }
 
     //-------------------------下载任务状态-----------------------------------
-    public boolean isIniting() {
-        return missionStatus == MissionStatus.INITING;
+    public boolean isPrepare() {
+        return missionStatus == MissionStatus.PREPARING;
     }
 
     public boolean isRunning() {
@@ -368,7 +342,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
     }
 
     public boolean isPause() {
-        return missionStatus == MissionStatus.PAUSE;
+        return missionStatus == MissionStatus.PAUSED;
     }
 
     public boolean isFinished() {
@@ -380,7 +354,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
     }
 
     public boolean canPause() {
-        return isRunning() || isWaiting() || isIniting();
+        return isRunning() || isWaiting() || isPrepare();
     }
 
     public boolean canStart() {
@@ -389,7 +363,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
 
 
     //----------------------------------------------------------operation------------------------------------------------------------
-    void init() {
+    private void onStart() {
         if (isFinished()) {
             return;
         }
@@ -409,16 +383,15 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         currentRetryCount = getRetryCount();
         threadCount = getProducerThreadCount();
         lastDone = done.get();
-        if (hasInit) {
+        if (hasPrepared) {
             for (long position = 0; position < getBlocks(); position++) {
                 if (!queue.contains(position) && !finished.contains(position)) {
                     queue.add(position);
                 }
             }
-//            pause();
         }
         if (canPause()) {
-            missionStatus = MissionStatus.PAUSE;
+            missionStatus = MissionStatus.PAUSED;
             try {
                 saveMissionInfo();
             } catch (Exception e) {
@@ -444,16 +417,15 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
 
     public void start() {
         firstCreate();
-        init();
-        Log.d(TAG, "start hasInit=" + hasInit);
-        if (!hasInit) {
+        onStart();
+        if (!hasPrepared) {
             currentRetryCount = getRetryCount();
             threadCount = getProducerThreadCount();
             DownloadManagerImpl.getInstance().insertMission(this);
 //            init();
             writeMissionInfo();
             Log.d(TAG, "start hasInit=false initMission");
-            initMission();
+            prepareMission();
             return;
         }
         errorCount = 0;
@@ -501,7 +473,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
             writeMissionInfo();
 
             for (int i = 0; i < threadCount; i++) {
-                Observable.create(new DownloadBlockProducer2(this))
+                Observable.create(new DownloadBlockProducer(this))
                         .subscribeOn(Schedulers.io())
                         .doOnComplete(new Action() {
                             @Override
@@ -568,7 +540,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
 
 
             notifyStatus(MissionStatus.START);
-            getHandler().post(getProgressRunnable());
+            post(getProgressRunnable());
         }
     }
 
@@ -583,11 +555,11 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         finishCount.set(0);
         aliveThreadCount.set(0);
         lastDone = 0;
-        hasInit = false;
+        hasPrepared = false;
         url = originUrl;
         redirectUrl = "";
         name = "";
-        missionStatus = MissionStatus.INITING;
+        missionStatus = MissionStatus.PREPARING;
         fallback = false;
         errCode = -1;
 
@@ -606,7 +578,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
     public void pause() {
         if (canPause()) {
             initCurrentRetryCount();
-            missionStatus = MissionStatus.PAUSE;
+            missionStatus = MissionStatus.PAUSED;
             writeMissionInfo();
             notifyStatus(missionStatus);
 
@@ -636,7 +608,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         new File(getDownloadPath() + File.separator + name).delete();
         DownloadManagerImpl.getInstance().getMissions().remove(this);
         DownloadManagerImpl.onMissionDelete(this);
-        getHandler().post(new Runnable() {
+        post(new Runnable() {
             @Override
             public void run() {
                 if (mListeners == null) {
@@ -659,7 +631,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         pause();
         deleteMissionInfo();
         DownloadManagerImpl.getInstance().getMissions().remove(this);
-        getHandler().post(new Runnable() {
+        post(new Runnable() {
             @Override
             public void run() {
                 if (mListeners == null) {
@@ -730,7 +702,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
 //                if (currentRetryCount >= 0) {
 //                    pause();
 //                    notifyStatus(MissionStatus.RETRY);
-//                    getHandler().postDelayed(new Runnable() {
+//                    postDelayed(new Runnable() {
 //                        @Override
 //                        public void run() {
 //                            start();
@@ -753,7 +725,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
 
         writeMissionInfo();
 
-        getHandler().post(new Runnable() {
+        post(new Runnable() {
             @Override
             public void run() {
                 if (mListeners == null) {
@@ -780,7 +752,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
     }
 
     protected void notifyStatus(final MissionStatus status) {
-        getHandler().post(new Runnable() {
+        post(new Runnable() {
             @Override
             public void run() {
                 if (mListeners == null) {
@@ -790,7 +762,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                     final MissionListener listener = ref.get();
                     if (listener != null) {
                         switch (status) {
-                            case INITING:
+                            case PREPARING:
                                 listener.onInit();
                                 break;
                             case START:
@@ -802,10 +774,10 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                             case WAITING:
                                 listener.onWaiting();
                                 break;
-                            case PAUSE:
+                            case PAUSED:
                                 listener.onPause();
                                 break;
-                            case RETRY:
+                            case RETRYING:
                                 listener.onRetry();
                                 break;
                             case FINISHED:
@@ -1017,7 +989,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
     }
 
     public boolean hasInit() {
-        return hasInit;
+        return hasPrepared;
     }
 
     public String getFilePath() {
@@ -1125,7 +1097,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         finished.add(block);
     }
 
-    private boolean handleResponse(IHttp.Response response, BaseMission mission) {
+    private boolean handleResponse(IHttp.Response response, BaseMission<?> mission) {
         Log.d("statusCode11111111", "       " + response.statusCode());
 //        Log.d("response.headers()", "1111" + response.headers());
         if (TextUtils.isEmpty(mission.name)) {
@@ -1208,7 +1180,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         return "未知文件.ext";
     }
 
-    private boolean checkLength(BaseMission mission) {
+    private boolean checkLength(BaseMission<?> mission) {
         if (mission.length <= 0) {
             mission.errCode = ErrorCode.ERROR_SERVER_UNSUPPORTED;
             mission.notifyError(Error.SERVER_UNSUPPORTED, false);
@@ -1307,7 +1279,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                 ", missionStatus=" + missionStatus +
                 ", fallback=" + fallback +
                 ", errCode=" + errCode +
-                ", hasInit=" + hasInit +
+                ", hasInit=" + hasPrepared +
                 ", currentRetryCount=" + currentRetryCount +
                 ", finishCount=" + finishCount +
                 ", aliveThreadCount=" + aliveThreadCount +
