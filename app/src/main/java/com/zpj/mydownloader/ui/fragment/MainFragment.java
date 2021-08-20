@@ -9,14 +9,14 @@ import android.view.View;
 import com.zpj.downloader.BaseMission;
 import com.zpj.downloader.DownloadManager;
 import com.zpj.downloader.ZDownloader;
-import com.zpj.fragmentation.BaseFragment;
-import com.zpj.mydownloader.ui.adapter.MissionAdapter;
+import com.zpj.fragmentation.SimpleFragment;
 import com.zpj.mydownloader.R;
+import com.zpj.mydownloader.ui.adapter.MissionAdapter;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class MainFragment extends BaseFragment implements DownloadManager.DownloadManagerListener {
+public class MainFragment extends SimpleFragment implements DownloadManager.DownloadManagerListener {
 
     private final List<BaseMission<?>> mMissions = new ArrayList<>();
 
