@@ -1,4 +1,4 @@
-package com.zpj.downloader.util.ssl;
+package com.zpj.downloader.utils.ssl;
 
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;

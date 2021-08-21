@@ -1,4 +1,4 @@
-package com.zpj.downloader.util.io;
+package com.zpj.downloader.utils.io;
 
 
 import java.io.IOException;

@@ -17,8 +17,6 @@ import com.zpj.downloader.constant.DefaultConstant;
 import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.constant.ErrorCode;
 import com.zpj.downloader.constant.ResponseCode;
-import com.zpj.http.ZHttp;
-import com.zpj.http.core.IHttp;
 import com.zpj.utils.FileUtils;
 import com.zpj.utils.FormatUtils;
 
@@ -28,27 +26,22 @@ import java.io.FileOutputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.lang.ref.WeakReference;
+import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Locale;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.concurrent.LinkedBlockingQueue;
+import java.util.concurrent.ThreadPoolExecutor;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
-
-import io.reactivex.Observable;
-import io.reactivex.ObservableEmitter;
-import io.reactivex.ObservableOnSubscribe;
-import io.reactivex.functions.Action;
-import io.reactivex.schedulers.Schedulers;
 
 /**
  * @author Z-P-J
  */
 @Keep
 public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> implements Serializable {
-
-//    private static final long serialVersionUID = 123; // 7826851042599540920L
-//    1852858528945825651
 
     private static final String TAG = BaseMission.class.getSimpleName();
 
@@ -125,8 +118,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
     protected transient AtomicInteger finishCount;
     private transient AtomicInteger aliveThreadCount;
 
-    private transient int threadCount = DefaultConstant.THREAD_COUNT;
-
     protected transient ArrayList<WeakReference<MissionListener>> mListeners;
 
     private transient int errorCount = 0;
@@ -137,6 +128,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
     private transient ConcurrentLinkedQueue<DownloadBlock> blockQueue;
     private transient Runnable progressRunnable;
     private transient boolean isCreate = false;
+    private transient ThreadPoolExecutor threadPoolExecutor;
 
 
     //------------------------------------------------------runnables---------------------------------------------
@@ -189,92 +181,83 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
 
     protected void prepareMission() {
         notifyStatus(MissionStatus.PREPARING);
-        ZHttp.get(url)
-                .userAgent(getUserAgent())
-                .cookie(getCookie())
-                .referer(url)
-                .headers(getHeaders())
-                .range("bytes=0-")
-                .connectTimeout(getConnectOutTime())
-                .readTimeout(getReadOutTime())
-                .ignoreContentType(true)
-                .ignoreHttpErrors(false)
-                .maxBodySize(0)
-                .execute()
-                .observeOn(Schedulers.io())
-                .onSuccess(new IHttp.OnSuccessListener<IHttp.Response>() {
-                    @Override
-                    public void onSuccess(IHttp.Response res) throws Exception {
-                        if (handleResponse(res, BaseMission.this)) {
-                            Log.d(TAG, "handleResponse--222");
-                            return;
-                        }
 
-                        if (res.statusCode() != ResponseCode.RESPONSE_206) {
-                            // Fallback to single thread if no partial content support
-                            fallback = true;
+        new ObservableTask<Void>() {
 
-                            Log.d(TAG, "falling back");
-                        }
+            @Override
+            protected Void run() throws Exception {
+                HttpURLConnection connection = HttpUrlConnectionFactory.getFileInfo(BaseMission.this);
+                if (handleResponse(connection, BaseMission.this)) {
+                    Log.d(TAG, "handleResponse--222");
+                    return null;
+                }
 
-                        Log.d("mission.name", "mission.name444=" + name);
-                        if (TextUtils.isEmpty(name)) {
-                            Log.d("Initializer", "getMissionNameFromUrl--url=" + url);
-                            name = getMissionNameFromUrl(BaseMission.this, url);
-                        }
+                if (connection.getResponseCode() != ResponseCode.RESPONSE_206) {
+                    // Fallback to single thread if no partial content support
+                    fallback = true;
 
-                        Log.d("mission.name", "mission.name555=" + name);
+                    Log.d(TAG, "falling back");
+                }
 
-                        for (BaseMission<?> downloadMission : DownloadManagerImpl.getInstance().getMissions()) {
-                            if (!TextUtils.equals(uuid, downloadMission.uuid) && TextUtils.equals(name, downloadMission.name) && // !downloadMission.isIniting() &&
-                                    (TextUtils.equals(downloadMission.originUrl.trim(), url.trim()) ||
-                                            TextUtils.equals(downloadMission.redirectUrl.trim(), url.trim()))) {
-                                Log.d(TAG, "has mission---url=" + downloadMission.url);
-                                downloadMission.start();
-                                return;
-                            }
-                        }
+                Log.d("mission.name", "mission.name444=" + name);
+                if (TextUtils.isEmpty(name)) {
+                    Log.d("Initializer", "getMissionNameFromUrl--url=" + url);
+                    name = getMissionNameFromUrl(BaseMission.this, url);
+                }
 
-                        if (fallback) {
-                            blocks = 1;
-                        } else {
-                            blocks = length / getBlockSize();
-                            if (blocks * getBlockSize() < length) {
-                                blocks++;
-                            }
-                        }
-                        Log.d(TAG, "blocks=" + blocks);
+                Log.d("mission.name", "mission.name555=" + name);
 
-                        queue.clear();
-                        for (long position = 0; position < blocks; position++) {
-                            Log.d(TAG, "initQueue add position=" + position);
-                            queue.add(position);
-                        }
-
-
-                        File loacation = new File(getDownloadPath());
-                        if (!loacation.exists()) {
-                            loacation.mkdirs();
-                        }
-                        File file = new File(getFilePath());
-                        if (!file.exists()) {
-                            file.createNewFile();
-                        }
-
-                        Log.d(TAG, "storage=" + FileUtils.getAvailableSize());
-                        hasPrepared = true;
-
-                        saveMissionInfo();
-                        start();
+                for (BaseMission<?> downloadMission : DownloadManagerImpl.getInstance().getMissions()) {
+                    if (!TextUtils.equals(uuid, downloadMission.uuid) && TextUtils.equals(name, downloadMission.name) && // !downloadMission.isIniting() &&
+                            (TextUtils.equals(downloadMission.originUrl.trim(), url.trim()) ||
+                                    TextUtils.equals(downloadMission.redirectUrl.trim(), url.trim()))) {
+                        Log.d(TAG, "has mission---url=" + downloadMission.url);
+                        downloadMission.start();
+                        return null;
                     }
-                })
-                .onError(new IHttp.OnErrorListener() {
+                }
+
+                if (fallback) {
+                    blocks = 1;
+                } else {
+                    blocks = length / getBlockSize();
+                    if (blocks * getBlockSize() < length) {
+                        blocks++;
+                    }
+                }
+                Log.d(TAG, "blocks=" + blocks);
+
+                queue.clear();
+                for (long position = 0; position < blocks; position++) {
+                    Log.d(TAG, "initQueue add position=" + position);
+                    queue.add(position);
+                }
+
+
+                File loacation = new File(getDownloadPath());
+                if (!loacation.exists()) {
+                    loacation.mkdirs();
+                }
+                File file = new File(getFilePath());
+                if (!file.exists()) {
+                    file.createNewFile();
+                }
+
+                Log.d(TAG, "storage=" + FileUtils.getAvailableSize());
+                hasPrepared = true;
+
+                saveMissionInfo();
+                start();
+                return null;
+            }
+        }
+                .onError(new ObservableTask.OnErrorListener() {
                     @Override
                     public void onError(Throwable throwable) {
                         notifyError(new Error(throwable.getMessage()));
                     }
                 })
-                .subscribe();
+                .execute();
     }
 
     private Runnable getProgressRunnable() {
@@ -284,7 +267,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                     progressRunnable = new Runnable() {
                         @Override
                         public void run() {
-                            Log.d(TAG, "progressRunnable--start isRunning=" + isRunning() + " missionStatus=" + missionStatus);
+                            Log.d(TAG, "progressRunnable--start isRunning=" + isRunning() + " missionStatus=" + missionStatus + " aliveThreadCount=" + aliveThreadCount.get());
                             if (isFinished() || errCode != -1 || aliveThreadCount.get() < 1 || !isRunning()) {
                                 getHandler().removeCallbacks(getProgressRunnable());
                                 notifyStatus(missionStatus);
@@ -367,6 +350,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         if (isFinished()) {
             return;
         }
+        errCode = -1;
         if (length < 0) {
             length = 0;
         }
@@ -381,7 +365,13 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
             aliveThreadCount.set(0);
         }
         currentRetryCount = getRetryCount();
-        threadCount = getProducerThreadCount();
+        if (fallback) {
+            setThreadCount(1);
+            done.set(0);
+            blocks = 1;
+            queue.clear();
+            queue.add(0L);
+        }
         lastDone = done.get();
         if (hasPrepared) {
             for (long position = 0; position < getBlocks(); position++) {
@@ -397,6 +387,14 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }
+        if (threadPoolExecutor == null) {
+            threadPoolExecutor = new ThreadPoolExecutor(threadCount, threadCount * 2,
+                    0L, TimeUnit.MILLISECONDS,
+                    new LinkedBlockingQueue<Runnable>());
+        } else {
+            threadPoolExecutor.setCorePoolSize(threadCount);
+            threadPoolExecutor.setMaximumPoolSize(threadCount * 2);
         }
     }
 
@@ -420,7 +418,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         onStart();
         if (!hasPrepared) {
             currentRetryCount = getRetryCount();
-            threadCount = getProducerThreadCount();
             DownloadManagerImpl.getInstance().insertMission(this);
 //            init();
             writeMissionInfo();
@@ -436,32 +433,15 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                 return;
             }
 
-            if (fallback) {
-//                if (isPause() || isError()) {
-//                    missionStatus = MissionStatus.INITING;
-//                    redirectUrl = "";
-//                    url = originUrl;
-////                    threadPoolExecutor.submit(initRunnable);
-//                    Log.d(TAG, "start hasInit=true fallback initMission");
-//                    initMission();
-//                    return;
-//                }
-                // In fallback mode, resuming is not supported.
-//                missionConfig.getThreadPoolConfig().setCorePoolSize(1);
-                threadCount = 1;
-                setProducerThreadCount(1);
-//                done = 0;
-                done.set(0);
-                blocks = 1;
-                queue.clear();
-                queue.add(0L);
-            }
-
-            // TODO
-//            setConsumerThreadCount(getProducerThreadCount() * 3);
-//            threadCount = 1;
-//            setProducerThreadCount(1);
-
+//            if (fallback) {
+//                threadCount = 1;
+//                setThreadCount(1);
+////                done = 0;
+//                done.set(0);
+//                blocks = 1;
+//                queue.clear();
+//                queue.add(0L);
+//            }
 
             DownloadManagerImpl.increaseDownloadingCount();
 
@@ -473,73 +453,30 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
             writeMissionInfo();
 
             for (int i = 0; i < threadCount; i++) {
-                Observable.create(new DownloadBlockProducer(this))
-                        .subscribeOn(Schedulers.io())
-                        .doOnComplete(new Action() {
-                            @Override
-                            public void run() throws Exception {
-                                int count = aliveThreadCount.decrementAndGet();
-                                if (count == 0 && isRunning()) {
-                                    Log.d(TAG, "doOnComplete length=" + length + " doneLen.get()=" + done.get());
-                                    if (isFallback() || done.get() == length) {
-                                        onFinish();
-                                    } else {
-                                        pause();
-                                        for (long position = 0; position < getBlocks(); position++) {
-                                            if (!queue.contains(position) && !finished.contains(position)) {
-                                                queue.add(position);
-                                            }
-                                        }
-                                        start();
+                threadPoolExecutor.submit(new DownloadTransfer(this) {
+                    @Override
+                    public void onFinished() {
+                        int count = aliveThreadCount.decrementAndGet();
+                        if (count == 0 && isRunning()) {
+                            Log.d(TAG, "doOnComplete length=" + length + " doneLen.get()=" + done.get());
+                            if (isFallback() || done.get() == length) {
+                                onFinish();
+                            } else {
+                                pause();
+                                for (long position = 0; position < getBlocks(); position++) {
+                                    if (!queue.contains(position) && !finished.contains(position)) {
+                                        queue.add(position);
                                     }
                                 }
+                                start();
                             }
-                        })
-                        .subscribe();
+                        }
+                    }
+                });
             }
 
-
-//            for (int i = 0; i < threadCount; i++) {
-//                Observable.create(new DownloadBlockProducer(this, getBlockQueue()))
-//                        .subscribeOn(Schedulers.io())
-//                        .doOnComplete(new Action() {
-//                            @Override
-//                            public void run() throws Exception {
-//                                aliveThreadCount.decrementAndGet();
-//                            }
-//                        })
-//                        .subscribe();
-//            }
-//
-//            for (int i = 0; i < getConsumerThreadCount(); i++) {
-//                Observable.create(new DownloadBlockConsumer(this, getBlockQueue()))
-//                        .subscribeOn(Schedulers.io())
-//                        .doOnComplete(new Action() {
-//                            @Override
-//                            public void run() throws Exception {
-//                                int count = finishCount.incrementAndGet();
-//                                Log.d(TAG, "doOnComplete count=" + count);
-//                                if (count >= getConsumerThreadCount() && isRunning()) {
-//                                    Log.d(TAG, "doOnComplete length=" + length + " doneLen.get()=" + done.get());
-//                                    if (isFallback() || done.get() == length) {
-//                                        onFinish();
-//                                    } else {
-//                                        pause();
-//                                        for (long position = 0; position < getBlocks(); position++) {
-//                                            if (!queue.contains(position) && !finished.contains(position)) {
-//                                                queue.add(position);
-//                                            }
-//                                        }
-//                                        start();
-//                                    }
-//                                }
-//                            }
-//                        })
-//                        .subscribe();
-//            }
-
-
             notifyStatus(MissionStatus.START);
+            missionStatus = MissionStatus.RUNNING;
             post(getProgressRunnable());
         }
     }
@@ -565,7 +502,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
 
 
         currentRetryCount = DefaultConstant.RETRY_COUNT;
-        threadCount = DefaultConstant.THREAD_COUNT;
         errorCount = 0;
         lastDone = -1;
         tempSpeed = "0 KB/s";
@@ -689,34 +625,9 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
 
     synchronized void notifyError(final Error e, boolean fromThread) {
         Log.d(TAG, "err=" + e.getErrorMsg() + " fromThread=" + fromThread);
-//        if (!(e == Error.WITHOUT_STORAGE_PERMISSIONS || e == Error.FILE_NOT_FOUND)) {
-//            errorCount++;
-//            if (fromThread) {
-//                aliveThreadCount.decrementAndGet();
-////                finishCount++;
-//                finishCount.incrementAndGet();
-//            }
-//            Log.d(TAG, "aliveThreadCount=" + aliveThreadCount + " fromThread=" + fromThread);
-//            if (aliveThreadCount.get() <= 0 && errorCount >= threadCount) {
-//                currentRetryCount--;
-//                if (currentRetryCount >= 0) {
-//                    pause();
-//                    notifyStatus(MissionStatus.RETRY);
-//                    postDelayed(new Runnable() {
-//                        @Override
-//                        public void run() {
-//                            start();
-//                        }
-//                    }, getRetryDelay());
-//                    return;
-//                }
-//            } else {
-//                return;
-//            }
-//        }
-
         missionStatus = MissionStatus.ERROR;
 
+        // TODO 出错重试
         currentRetryCount = getRetryCount();
 
         errCode = 1;
@@ -874,19 +785,16 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
     }
 
     private void writeMissionInfo() {
-        Observable.create(
-                new ObservableOnSubscribe<Object>() {
-                    @Override
-                    public void subscribe(@io.reactivex.annotations.NonNull ObservableEmitter<Object> emitter) throws Exception {
-                        saveMissionInfo();
-//                        String json = getGson().toJson(BaseMission.this);
-//                        Log.d(TAG, "writeMissionInfo json=" + json);
-//                        FileUtils.writeToFile(getMissionInfoFilePath(), json);
-                        emitter.onComplete();
-                    }
-                })
-                .subscribeOn(Schedulers.io())
-                .subscribe();
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    saveMissionInfo();
+                } catch (Exception exception) {
+                    exception.printStackTrace();
+                }
+            }
+        }).start();
     }
 
     private void saveMissionInfo() throws Exception {
@@ -950,10 +858,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
 
     public long getFinishTime() {
         return finishTime;
-    }
-
-    public int getThreadCount() {
-        return threadCount;
     }
 
     int getAliveThreadCount() {
@@ -1097,28 +1001,27 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         finished.add(block);
     }
 
-    private boolean handleResponse(IHttp.Response response, BaseMission<?> mission) {
-        Log.d("statusCode11111111", "       " + response.statusCode());
-//        Log.d("response.headers()", "1111" + response.headers());
+    private boolean handleResponse(HttpURLConnection connection, BaseMission<?> mission) throws Exception {
         if (TextUtils.isEmpty(mission.name)) {
-            mission.name = getMissionNameFromResponse(response);
+            mission.name = getMissionNameFromResponse(connection);
             Log.d("mission.name", "mission.name333=" + mission.name);
         }
-        if (response.statusCode() == ResponseCode.RESPONSE_302
-                || response.statusCode() == ResponseCode.RESPONSE_301
-                || response.statusCode() == ResponseCode.RESPONSE_300) {
-            String redictUrl = response.header("location");
-            Log.d(TAG, "redirectUrl=" + redictUrl);
-            if (!TextUtils.isEmpty(redictUrl)) {
-                mission.url = redictUrl;
-                mission.redirectUrl = redictUrl;
+        int statusCode = connection.getResponseCode();
+        if (statusCode == ResponseCode.RESPONSE_302
+                || statusCode == ResponseCode.RESPONSE_301
+                || statusCode == ResponseCode.RESPONSE_300) {
+            String redirectUrl = connection.getHeaderField("location");
+            Log.d(TAG, "redirectUrl=" + redirectUrl);
+            if (!TextUtils.isEmpty(redirectUrl)) {
+                mission.url = redirectUrl;
+                mission.redirectUrl = redirectUrl;
             }
-        } else if (response.statusCode() == ErrorCode.ERROR_SERVER_404) {
+        } else if (statusCode == ErrorCode.ERROR_SERVER_404) {
             mission.errCode = ErrorCode.ERROR_SERVER_404;
             mission.notifyError(Error.HTTP_404, false);
             return true;
-        } else if (response.statusCode() == ResponseCode.RESPONSE_206) {
-            String contentLength = response.header("Content-Length");
+        } else if (statusCode == ResponseCode.RESPONSE_206) {
+            String contentLength = connection.getHeaderField("Content-Length");
             if (contentLength != null) {
                 mission.length = Long.parseLong(contentLength);
             }
@@ -1128,8 +1031,8 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         return false;
     }
 
-    private String getMissionNameFromResponse(IHttp.Response response) {
-        String contentDisposition = response.header("Content-Disposition");
+    private String getMissionNameFromResponse(HttpURLConnection connection) {
+        String contentDisposition = connection.getHeaderField("Content-Disposition");
         Log.d("contentDisposition", "contentDisposition=" + contentDisposition);
         if (contentDisposition != null) {
             String[] dispositions = contentDisposition.split(";");
@@ -1143,7 +1046,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         return "";
     }
 
-    protected String getMissionNameFromUrl(BaseMission mission, String url) {
+    protected String getMissionNameFromUrl(BaseMission<?> mission, String url) {
         Log.d("getMissionNameFromUrl", "1");
         if (!TextUtils.isEmpty(url)) {
             int index = url.lastIndexOf("/");
@@ -1293,8 +1196,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                 ", blockQueue=" + blockQueue +
                 ", progressRunnable=" + progressRunnable +
                 ", notificationInterceptor=" + notificationInterceptor +
-                ", producerThreadCount=" + producerThreadCount +
-                ", consumerThreadCount=" + consumerThreadCount +
                 ", downloadPath='" + downloadPath + '\'' +
                 ", bufferSize=" + bufferSize +
                 ", progressInterval=" + progressInterval +

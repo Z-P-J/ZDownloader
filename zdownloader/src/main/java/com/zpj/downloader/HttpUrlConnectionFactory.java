@@ -2,8 +2,8 @@ package com.zpj.downloader;
 
 import android.text.TextUtils;
 
-import com.zpj.downloader.util.ssl.SSLContextUtil;
-import com.zpj.http.core.HttpHeader;
+import com.zpj.downloader.constant.HttpHeader;
+import com.zpj.downloader.utils.ssl.SSLContextUtil;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -22,6 +22,14 @@ class HttpUrlConnectionFactory {
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
         wrapConnection(conn, mission);
         conn.setRequestProperty(HttpHeader.RANGE, "bytes=" + start + "-" + end);
+        return conn;
+    }
+
+    static HttpURLConnection getFileInfo(BaseMission<?> mission) throws IOException {
+        URL url = new URL(mission.getUrl());
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        wrapConnection(conn, mission);
+        conn.setRequestProperty(HttpHeader.RANGE, "bytes=0-");
         return conn;
     }
 
@@ -54,7 +62,6 @@ class HttpUrlConnectionFactory {
 
     private static void wrapConnection(HttpURLConnection conn, BaseMission<?> mission) {
         if (conn instanceof HttpsURLConnection) {
-//			HttpsURLConnection httpsURLConnection = (HttpsURLConnection) conn;
             SSLContext sslContext =
                     SSLContextUtil.getSSLContext(DownloadManagerImpl.getInstance().getContext(), SSLContextUtil.CA_ALIAS, SSLContextUtil.CA_PATH);
             if (sslContext == null) {
@@ -64,14 +71,12 @@ class HttpUrlConnectionFactory {
             ((HttpsURLConnection) conn).setSSLSocketFactory(ssf);
             ((HttpsURLConnection) conn).setHostnameVerifier(SSLContextUtil.HOSTNAME_VERIFIER);
         }
-//        conn.setInstanceFollowRedirects(false);
         conn.setConnectTimeout(mission.getConnectOutTime());
         conn.setReadTimeout(mission.getReadOutTime());
         if (!TextUtils.isEmpty(mission.getCookie().trim())) {
             conn.setRequestProperty(HttpHeader.COOKIE, mission.getCookie());
         }
         conn.setRequestProperty(HttpHeader.USER_AGENT, mission.getUserAgent());
-//        conn.setRequestProperty("Accept", "*/*");
         conn.setRequestProperty(HttpHeader.REFERER, mission.getUrl());
         conn.setConnectTimeout(mission.getConnectOutTime());
         conn.setReadTimeout(mission.getReadOutTime());

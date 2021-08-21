@@ -47,10 +47,10 @@ public class ZDownloader {
         return createMission(url, name, clazz);
     }
 
+    // TODO 下载任务冲突处理
     private static <R extends BaseMission<?>> R createMission(String url, String name, Class<R> clazz) {
         R mission = null;
         try {
-//				mission = clazz.newInstance();
             Constructor<R> constructor = clazz.getDeclaredConstructor();
             constructor.setAccessible(true);
             mission = constructor.newInstance();

@@ -1,4 +1,4 @@
-package com.zpj.downloader.util;
+package com.zpj.downloader.utils;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;

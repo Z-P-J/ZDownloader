@@ -1,4 +1,4 @@
-package com.zpj.downloader.util;
+package com.zpj.downloader.utils;
 
 import java.io.Serializable;
 import java.net.InetSocketAddress;

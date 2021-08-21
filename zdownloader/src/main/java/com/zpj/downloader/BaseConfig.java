@@ -5,7 +5,7 @@ import android.support.annotation.Keep;
 import android.text.TextUtils;
 
 import com.zpj.downloader.constant.DefaultConstant;
-import com.zpj.downloader.util.SerializableProxy;
+import com.zpj.downloader.utils.SerializableProxy;
 
 import java.io.Serializable;
 import java.net.InetSocketAddress;
@@ -32,12 +32,7 @@ abstract class BaseConfig<T extends BaseConfig<T>> implements Serializable {
     /*
     * 生产者线程数
     * */
-    int producerThreadCount = DefaultConstant.THREAD_COUNT;
-
-    /**
-     * 消费者线程数
-     */
-    int consumerThreadCount = 3 * DefaultConstant.THREAD_COUNT;
+    int threadCount = DefaultConstant.THREAD_COUNT;
 
     /**
      * 下载路径
@@ -111,18 +106,11 @@ abstract class BaseConfig<T extends BaseConfig<T>> implements Serializable {
         return notificationInterceptor;
     }
 
-    public int getProducerThreadCount() {
-        if (producerThreadCount < 1) {
-            producerThreadCount = DefaultConstant.THREAD_COUNT;
+    public int getThreadCount() {
+        if (threadCount < 1) {
+            threadCount = 1;
         }
-        return producerThreadCount;
-    }
-
-    public int getConsumerThreadCount() {
-        if (consumerThreadCount < 2) {
-            consumerThreadCount = 2 * getProducerThreadCount();
-        }
-        return consumerThreadCount;
+        return threadCount;
     }
 
     public String getDownloadPath() {
@@ -202,27 +190,13 @@ abstract class BaseConfig<T extends BaseConfig<T>> implements Serializable {
         return (T) this;
     }
 
-    public T setProducerThreadCount(int producerThreadCount) {
-        this.producerThreadCount = producerThreadCount;
-        this.consumerThreadCount = 3 * producerThreadCount;
-        return (T) this;
-    }
-
-    public T setConsumerThreadCount(int consumerThreadCount) {
-        this.consumerThreadCount = consumerThreadCount;
-        return (T) this;
-    }
-
     public T setDownloadPath(String downloadPath) {
         this.downloadPath = downloadPath;
         return (T) this;
     }
 
-    @Deprecated
     public T setThreadCount(int threadCount) {
-//        threadPoolConfig.setCorePoolSize(threadCount);
-        this.producerThreadCount = threadCount;
-        this.consumerThreadCount = 3 * threadCount;
+        this.threadCount = threadCount;
         return (T) this;
     }
 
