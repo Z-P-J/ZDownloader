@@ -2,6 +2,7 @@ package com.zpj.mydownloader;
 
 import android.app.Application;
 
+import com.zpj.downloader.impl.DefaultConflictPolicy;
 import com.zpj.downloader.ZDownloader;
 import com.zpj.mydownloader.utils.DownloadNotificationInterceptor;
 
@@ -22,6 +23,7 @@ public class MyApplication extends Application {
 //                .setProxy("127.0.0.1", 80)
 //                .setUserAgent("")
 //                .setCookie("")
+                .setConflictPolicy(new DefaultConflictPolicy())
                 .init();
     }
 

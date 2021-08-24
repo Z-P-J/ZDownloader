@@ -5,6 +5,7 @@ import android.support.annotation.Keep;
 import android.text.TextUtils;
 
 import com.zpj.downloader.constant.DefaultConstant;
+import com.zpj.downloader.impl.DefaultConflictPolicy;
 import com.zpj.downloader.utils.SerializableProxy;
 
 import java.io.Serializable;
@@ -29,8 +30,10 @@ abstract class BaseConfig<T extends BaseConfig<T>> implements Serializable {
      */
     transient INotificationInterceptor notificationInterceptor;
 
+    private transient ConflictPolicy policy;
+
     /*
-    * 生产者线程数
+    * 下载线程数
     * */
     int threadCount = DefaultConstant.THREAD_COUNT;
 
@@ -104,6 +107,13 @@ abstract class BaseConfig<T extends BaseConfig<T>> implements Serializable {
 
     public INotificationInterceptor getNotificationInterceptor() {
         return notificationInterceptor;
+    }
+
+    public ConflictPolicy getConflictPolicy() {
+        if (policy == null) {
+            policy = new DefaultConflictPolicy();
+        }
+        return policy;
     }
 
     public int getThreadCount() {
@@ -190,6 +200,11 @@ abstract class BaseConfig<T extends BaseConfig<T>> implements Serializable {
         return (T) this;
     }
 
+    public T setConflictPolicy(ConflictPolicy policy) {
+        this.policy = policy;
+        return (T) this;
+    }
+
     public T setDownloadPath(String downloadPath) {
         this.downloadPath = downloadPath;
         return (T) this;
@@ -267,6 +282,9 @@ abstract class BaseConfig<T extends BaseConfig<T>> implements Serializable {
     }
 
     public T setProxy(Proxy proxy) {
+        if (proxy == null) {
+            return (T) this;
+        }
         return setProxy(SerializableProxy.with(proxy));
     }
 

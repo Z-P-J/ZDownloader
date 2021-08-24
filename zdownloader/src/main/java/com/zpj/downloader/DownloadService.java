@@ -12,6 +12,7 @@ import android.os.Message;
 import android.util.Log;
 
 import com.zpj.downloader.constant.Error;
+import com.zpj.downloader.impl.DownloadMission;
 
 public class DownloadService extends Service implements DownloadMission.MissionListener {
 
@@ -100,7 +101,7 @@ public class DownloadService extends Service implements DownloadMission.MissionL
 
 
     @Override
-    public void onInit() {
+    public void onPrepare() {
 
     }
 
@@ -110,7 +111,7 @@ public class DownloadService extends Service implements DownloadMission.MissionL
     }
 
     @Override
-    public void onPause() {
+    public void onPaused() {
 
     }
 
@@ -120,17 +121,17 @@ public class DownloadService extends Service implements DownloadMission.MissionL
     }
 
     @Override
-    public void onRetry() {
+    public void onRetrying() {
 
     }
 
     @Override
-    public void onProgress(DownloadMission.ProgressInfo update) {
+    public void onProgress(BaseMission.ProgressUpdater update) {
         postUpdateMessage();
     }
 
     @Override
-    public void onFinish() {
+    public void onFinished() {
         postUpdateMessage();
     }
 

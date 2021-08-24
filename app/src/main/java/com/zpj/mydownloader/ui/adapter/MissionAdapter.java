@@ -15,7 +15,7 @@ import android.widget.Toast;
 
 import com.zpj.downloader.BaseMission;
 import com.zpj.downloader.constant.Error;
-import com.zpj.downloader.DownloadMission;
+import com.zpj.downloader.impl.DownloadMission;
 import com.zpj.mydownloader.R;
 import com.zpj.mydownloader.utils.Utils;
 import com.zpj.mydownloader.ui.fragment.ActionBottomFragment;
@@ -150,25 +150,18 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 				menu.setVisibility(View.GONE);
 			} else {
 				menu.setVisibility(View.VISIBLE);
-				DownloadMission.ProgressInfo progressInfo = mission.getProgressInfo();
-				if (progressInfo == null) {
-					menu.setProgress(mission.getProgress());
-					size.setText(mission.getFileSizeStr() + File.separator + mission.getDownloadedSizeStr() + "  " + mission.getSpeed());
-					if (mission.isRunning()) {
-						status.setText(mission.getProgressStr());
-					} else {
-						status.setText(mission.getStatus().toString());
-					}
+				if (mission.isRunning()) {
+					status.setText(mission.getProgressStr());
 				} else {
-					status.setText(progressInfo.getProgressStr());
-					menu.setProgress(progressInfo.getProgress());
-					size.setText(progressInfo.getFileSizeStr() + File.separator + progressInfo.getDownloadedSizeStr() + "  " + progressInfo.getSpeedStr());
+					status.setText(mission.getStatus().toString());
 				}
+				menu.setProgress(mission.getProgress());
+				size.setText(mission.getFileSizeStr() + File.separator + mission.getDownloadedSizeStr() + "  " + mission.getSpeedStr());
 			}
 		}
 
 		@Override
-		public void onInit() {
+		public void onPrepare() {
 			status.setText("初始化...");
 		}
 
@@ -178,7 +171,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		}
 
 		@Override
-		public void onPause() {
+		public void onPaused() {
 			menu.pause();
 			status.setText("已暂停");
 		}
@@ -189,12 +182,12 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		}
 
 		@Override
-		public void onRetry() {
+		public void onRetrying() {
 			status.setText("重试中...");
 		}
 
 		@Override
-		public void onProgress(DownloadMission.ProgressInfo update) {
+		public void onProgress(BaseMission.ProgressUpdater update) {
 			if (TextUtils.equals(name.getText().toString(), STATUS_INIT) && !TextUtils.isEmpty(mission.getTaskName())) {
 				name.setText(mission.getTaskName());
 			}
@@ -202,7 +195,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		}
 
 		@Override
-		public void onFinish() {
+		public void onFinished() {
 			if (mission != null) {
 				size.setText(mission.getFileSizeStr());
 				updateProgress();

@@ -11,7 +11,11 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.zpj.downloader.BaseMission;
+import com.zpj.downloader.impl.DefaultConflictPolicy;
 import com.zpj.downloader.ZDownloader;
+import com.zpj.fragmentation.dialog.IDialog;
+import com.zpj.fragmentation.dialog.ZDialog;
 import com.zpj.fragmentation.dialog.base.BottomDragDialogFragment;
 import com.zpj.mydownloader.R;
 
@@ -115,8 +119,30 @@ public class AddTaskFragment extends BottomDragDialogFragment<AddTaskFragment> i
             } else {
                 buffer = 1024;
             }
+
             ZDownloader.download(url, name.getText().toString())
                     .setBufferSize(buffer)
+                    .setConflictPolicy(new DefaultConflictPolicy() {
+                        @Override
+                        public void onConflict(BaseMission<?> mission, Callback callback) {
+                            ZDialog.alert()
+                                    .setTitle("任务已存在")
+                                    .setContent("下载任务已存在，是否继续下载？")
+                                    .setPositiveButton(new IDialog.OnButtonClickListener<ZDialog.AlertDialogImpl>() {
+                                        @Override
+                                        public void onClick(ZDialog.AlertDialogImpl fragment, int which) {
+                                            callback.onResult(true);
+                                        }
+                                    })
+                                    .setNegativeButton(new IDialog.OnButtonClickListener<ZDialog.AlertDialogImpl>() {
+                                        @Override
+                                        public void onClick(ZDialog.AlertDialogImpl fragment, int which) {
+                                            callback.onResult(false);
+                                        }
+                                    })
+                                    .show(context);
+                        }
+                    })
                     .start();
 
         }

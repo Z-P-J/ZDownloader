@@ -125,7 +125,6 @@ abstract class DownloadTransfer implements Runnable {
                         String redictUrl = conn.getHeaderField("location");
                         Log.d(TAG, "redictUrl=" + redictUrl);
                         mMission.setUrl(redictUrl);
-                        mMission.setRedirectUrl(redictUrl);
                         conn.disconnect();
                         conn = HttpUrlConnectionFactory.getConnection(mMission, start, end);
                     }

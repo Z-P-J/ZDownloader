@@ -2,7 +2,7 @@
 Android多线程下载库，可以自定义下载任务，可扩展性强。
 
 
-[The demo](https://github.com/Z-P-J/RxLife/tree/master/app)
+[The demo](https://github.com/Z-P-J/ZDownloader/tree/master/app)
 
  <div>
      <img src="./demo.gif" width="30%">
@@ -35,54 +35,34 @@ public class MyApplication extends Application {
 ZDownloader.download("your download url")
     .addListener(new DownloadMission.MissionListener() {
         @Override
-        public void onInit() {
-            
-        }
+        public void onInit() {}
         
         @Override
-        public void onStart() {
-            
-        }
+        public void onStart() {}
         
         @Override
-        public void onPause() {
-            
-        }
+        public void onPause() {}
         
         @Override
-        public void onWaiting() {
-            
-        }
+        public void onWaiting() {}
         
         @Override
-        public void onRetry() {
-            
-        }
+        public void onRetry() {}
         
         @Override
-        public void onProgress(DownloadMission.ProgressInfo update) {
-            
-        }
+        public void onProgress(DownloadMission.ProgressUpdater update) {}
         
         @Override
-        public void onFinish() {
-            
-        }
+        public void onFinish() {}
         
         @Override
-        public void onError(Error e) {
-            
-        }
+        public void onError(Error e) {}
         
         @Override
-        public void onDelete() {
-            
-        }
+        public void onDelete() {}
         
         @Override
-        public void onClear() {
-            
-        }
+        public void onClear() {}
     })
     .start(); // 开始下载任务
 
@@ -161,6 +141,7 @@ public class MyApplication extends Application {
             .setProxy(Proxy.NO_PROXY) //设置代理
             //.setProxy("127.0.0.1", 80) //设置代理
             .setAllowAllSSL() // 是否取消https验证
+            .setConflictPolicy(new DefaultConflictPolicy()) // 设置下载任务冲突策略，处理相同的冲突任务，默认不处理冲突（DefaultConflictPolicy）
             .init();
     }
 
@@ -190,6 +171,27 @@ ZDownloader.download(url)
     //.setProxy("127.0.0.1", 80) //设置代理
     .setAllowAllSSL() // 是否取消https验证
     .addListener(listener) // 下载进度回调
+    .setConflictPolicy(new DefaultConflictPolicy() { // 设置下载任务冲突策略，以下展示了当冲突时弹出对话框确认是否继续下载
+        @Override
+        public void onConflict(BaseMission<?> mission, Callback callback) {
+            ZDialog.alert()
+                .setTitle("任务已存在")
+                .setContent("下载任务已存在，是否继续下载？")
+                .setPositiveButton(new IDialog.OnButtonClickListener<ZDialog.AlertDialogImpl>() {
+                    @Override
+                    public void onClick(ZDialog.AlertDialogImpl fragment, int which) {
+                        callback.onResult(true);
+                    }
+                })
+                 .setNegativeButton(new IDialog.OnButtonClickListener<ZDialog.AlertDialogImpl>() {
+                    @Override
+                    public void onClick(ZDialog.AlertDialogImpl fragment, int which) {
+                        callback.onResult(false);
+                    }
+                 })
+                 .show(context);
+        }
+    })
     .start();
 ```
 

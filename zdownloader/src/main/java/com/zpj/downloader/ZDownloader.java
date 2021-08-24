@@ -2,6 +2,8 @@ package com.zpj.downloader;
 
 import android.content.Context;
 
+import com.zpj.downloader.impl.DownloadMission;
+
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
 import java.util.List;
@@ -47,19 +49,39 @@ public class ZDownloader {
         return createMission(url, name, clazz);
     }
 
-    // TODO 下载任务冲突处理
     private static <R extends BaseMission<?>> R createMission(String url, String name, Class<R> clazz) {
         R mission = null;
         try {
             Constructor<R> constructor = clazz.getDeclaredConstructor();
             constructor.setAccessible(true);
             mission = constructor.newInstance();
+
+            DownloaderConfig config = DownloadManagerImpl.getInstance().getDownloaderConfig();
+            mission.setContext(config.getContext());
+            mission.setNotificationInterceptor(config.getNotificationInterceptor());
+            mission.setThreadCount(config.getThreadCount());
+            mission.setAllowAllSSL(config.isAllowAllSSL());
+            mission.setBlockSize(config.getBlockSize());
+            mission.setBufferSize(config.getBufferSize());
+            mission.setConnectOutTime(config.getConnectOutTime());
+            mission.setCookie(config.getCookie());
+            mission.setDownloadPath(config.getDownloadPath());
+            mission.setEnableNotification(config.getEnableNotification());
+            mission.setHeaders(config.getHeaders());
+            mission.setConflictPolicy(config.getConflictPolicy());
+            mission.setProgressInterval(config.getProgressInterval());
+            mission.setProxy(config.getProxy());
+            mission.setReadOutTime(config.getReadOutTime());
+            mission.setRetryCount(config.getRetryCount());
+            mission.setRetryDelay(config.getRetryDelay());
+            mission.setUserAgent(config.getUserAgent());
+
             mission.url = url;
             mission.originUrl = url;
             mission.name = name;
             mission.uuid = UUID.randomUUID().toString();
             mission.createTime = System.currentTimeMillis();
-            mission.missionStatus = BaseMission.MissionStatus.PREPARING;
+            mission.missionStatus = BaseMission.MissionStatus.PAUSED;
         } catch (Exception e) {
             e.printStackTrace();
         }

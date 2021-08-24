@@ -1,6 +1,8 @@
-package com.zpj.downloader;
+package com.zpj.downloader.impl;
 
 import android.support.annotation.Keep;
+
+import com.zpj.downloader.BaseMission;
 
 import java.io.Serializable;
 

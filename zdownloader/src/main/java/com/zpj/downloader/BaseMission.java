@@ -47,19 +47,19 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
 
     public interface MissionListener {
 
-        void onInit();
+        void onPrepare();
 
         void onStart();
 
-        void onPause();
+        void onPaused();
 
         void onWaiting();
 
-        void onRetry();
+        void onRetrying();
 
-        void onProgress(ProgressInfo update);
+        void onProgress(ProgressUpdater update);
 
-        void onFinish();
+        void onFinished();
 
         void onError(Error e);
 
@@ -99,19 +99,20 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
     protected String uuid = "";
     protected String name = "";
     protected String url = "";
-    protected String redirectUrl = "";
     protected String originUrl = "";
     protected long createTime = 0;
     protected long finishTime = 0;
     protected long blocks = 1;
     protected long length = 0;
     protected AtomicLong done = new AtomicLong(0);
-    protected MissionStatus missionStatus = MissionStatus.PREPARING;
+    protected MissionStatus missionStatus = MissionStatus.PAUSED;
     protected boolean fallback = false;
     protected int errCode = -1;
     protected boolean hasPrepared = false;
 
     //-----------------------------------------------------transient---------------------------------------------------------------
+
+    private volatile transient ProgressUpdater progressUpdater;
 
     private transient int currentRetryCount;
 
@@ -122,8 +123,8 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
 
     private transient int errorCount = 0;
     private transient long lastDone = -1;
-    private transient String tempSpeed = "0 KB/s";
-    private transient ProgressInfo progressInfo;
+    private transient float speed = 0f;
+
     private transient Handler handler;
     private transient ConcurrentLinkedQueue<DownloadBlock> blockQueue;
     private transient Runnable progressRunnable;
@@ -163,23 +164,22 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         getHandler().postDelayed(runnable, delayMillis);
     }
 
-    public ProgressInfo getProgressInfo() {
-        if (progressInfo == null) {
+    private ProgressUpdater getProgressUpdater() {
+        if (progressUpdater == null) {
             synchronized (BaseMission.class) {
-                if (progressInfo == null) {
-                    progressInfo = new ProgressInfo();
+                if (progressUpdater == null) {
+                    progressUpdater = new ProgressUpdater(this);
                 }
             }
         }
-        return progressInfo;
-    }
-
-    private static class PrepareStrategy {
-
-
+        return progressUpdater;
     }
 
     protected void prepareMission() {
+        currentRetryCount = getRetryCount();
+        DownloadManagerImpl.getInstance().insertMission(this);
+        writeMissionInfo();
+        Log.d(TAG, "start hasInit=false initMission");
         notifyStatus(MissionStatus.PREPARING);
 
         new ObservableTask<Void>() {
@@ -207,15 +207,15 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
 
                 Log.d("mission.name", "mission.name555=" + name);
 
-                for (BaseMission<?> downloadMission : DownloadManagerImpl.getInstance().getMissions()) {
-                    if (!TextUtils.equals(uuid, downloadMission.uuid) && TextUtils.equals(name, downloadMission.name) && // !downloadMission.isIniting() &&
-                            (TextUtils.equals(downloadMission.originUrl.trim(), url.trim()) ||
-                                    TextUtils.equals(downloadMission.redirectUrl.trim(), url.trim()))) {
-                        Log.d(TAG, "has mission---url=" + downloadMission.url);
-                        downloadMission.start();
-                        return null;
-                    }
-                }
+//                for (BaseMission<?> downloadMission : DownloadManagerImpl.getInstance().getMissions()) {
+//                    if (!TextUtils.equals(uuid, downloadMission.uuid) && TextUtils.equals(name, downloadMission.name) && // !downloadMission.isIniting() &&
+//                            (TextUtils.equals(downloadMission.originUrl.trim(), url.trim()) ||
+//                                    TextUtils.equals(downloadMission.redirectUrl.trim(), url.trim()))) {
+//                        Log.d(TAG, "has mission---url=" + downloadMission.url);
+//                        downloadMission.start();
+//                        return null;
+//                    }
+//                }
 
                 if (fallback) {
                     blocks = 1;
@@ -258,53 +258,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                     }
                 })
                 .execute();
-    }
-
-    private Runnable getProgressRunnable() {
-        if (progressRunnable == null) {
-            synchronized (BaseMission.class) {
-                if (progressRunnable == null) {
-                    progressRunnable = new Runnable() {
-                        @Override
-                        public void run() {
-                            Log.d(TAG, "progressRunnable--start isRunning=" + isRunning() + " missionStatus=" + missionStatus + " aliveThreadCount=" + aliveThreadCount.get());
-                            if (isFinished() || errCode != -1 || aliveThreadCount.get() < 1 || !isRunning()) {
-                                getHandler().removeCallbacks(getProgressRunnable());
-                                notifyStatus(missionStatus);
-                                return;
-                            }
-                            postDelayed(getProgressRunnable(), getProgressInterval());
-                            long downloaded = done.get();
-                            long delta = downloaded - lastDone;
-                            Log.d(TAG, "progressRunnable--delta=" + delta);
-                            speedHistoryList.add(delta);
-                            if (delta > 0) {
-                                lastDone = downloaded;
-                                double speed = delta * (getProgressInterval() / 1000f);
-                                tempSpeed = FormatUtils.formatSpeed(speed);
-                            }
-                            String downloadedSizeStr = FormatUtils.formatSize(downloaded);
-                            float progress = getProgress(downloaded, length);
-                            Log.d(TAG, "progressRunnable--tempSpeed=" + tempSpeed);
-                            ProgressInfo progressInfo = getProgressInfo();
-                            progressInfo.setDone(downloaded);
-                            progressInfo.setSize(length);
-                            progressInfo.setProgress(progress);
-                            progressInfo.setFileSizeStr(getFileSizeStr());
-                            progressInfo.setDownloadedSizeStr(downloadedSizeStr);
-                            progressInfo.setProgressStr(String.format(Locale.US, "%.2f%%", progress));
-                            progressInfo.setSpeedStr(tempSpeed);
-                            writeMissionInfo();
-                            notifyStatus(MissionStatus.RUNNING);
-                            if (getEnableNotification() && getNotificationInterceptor() != null) {
-                                getNotificationInterceptor().onProgress(getContext(), BaseMission.this, getProgress(), false);
-                            }
-                        }
-                    };
-                }
-            }
-        }
-        return progressRunnable;
     }
 
     protected BaseMission() {
@@ -409,19 +362,36 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
     final void firstCreate() {
         if (!isCreate) {
             isCreate = true;
+            missionStatus = MissionStatus.PAUSED;
             onCreate();
         }
     }
 
     public void start() {
+        if (!canStart()) {
+            return;
+        }
         firstCreate();
         onStart();
         if (!hasPrepared) {
-            currentRetryCount = getRetryCount();
-            DownloadManagerImpl.getInstance().insertMission(this);
-//            init();
-            writeMissionInfo();
-            Log.d(TAG, "start hasInit=false initMission");
+
+            for (BaseMission<?> downloadMission : DownloadManagerImpl.getInstance().getMissions()) {
+                ConflictPolicy policy = getConflictPolicy();
+                if (this != downloadMission && policy.isConflict(this, downloadMission)) {
+                    Log.d(TAG, "isRejectMission");
+                    policy.onConflict(this, new ConflictPolicy.Callback() {
+                        @Override
+                        public void onResult(boolean reject) {
+                            Log.d(TAG, "reject=" + reject);
+                            if (!reject) {
+                                prepareMission();
+                            }
+                        }
+                    });
+                    return;
+                }
+            }
+
             prepareMission();
             return;
         }
@@ -477,7 +447,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
 
             notifyStatus(MissionStatus.START);
             missionStatus = MissionStatus.RUNNING;
-            post(getProgressRunnable());
+            getProgressUpdater().start();
         }
     }
 
@@ -494,7 +464,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         lastDone = 0;
         hasPrepared = false;
         url = originUrl;
-        redirectUrl = "";
         name = "";
         missionStatus = MissionStatus.PREPARING;
         fallback = false;
@@ -504,8 +473,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         currentRetryCount = DefaultConstant.RETRY_COUNT;
         errorCount = 0;
         lastDone = -1;
-        tempSpeed = "0 KB/s";
-        progressInfo = null;
+        speed = 0f;
         blockQueue = null;
 
         start();
@@ -595,7 +563,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
 
     public boolean openFile(Context context) {
         File file = new File(getFilePath());
-        Uri uri = Uri.fromFile(file);
         Intent intent = new Intent(Intent.ACTION_VIEW);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -605,6 +572,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
             context.grantUriPermission(context.getPackageName(), contentUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
             intent.setDataAndType(contentUri, FileUtils.getMIMEType(file));
         } else {
+            Uri uri = Uri.fromFile(file);
             intent.setDataAndType(uri, FileUtils.getMIMEType(file));
         }
         context.startActivity(intent);
@@ -674,35 +642,27 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                     if (listener != null) {
                         switch (status) {
                             case PREPARING:
-                                listener.onInit();
+                                listener.onPrepare();
                                 break;
                             case START:
                                 listener.onStart();
                                 break;
                             case RUNNING:
-                                listener.onProgress(getProgressInfo());
+                                listener.onProgress(getProgressUpdater());
                                 break;
                             case WAITING:
                                 listener.onWaiting();
                                 break;
                             case PAUSED:
-                                listener.onPause();
+                                listener.onPaused();
                                 break;
                             case RETRYING:
-                                listener.onRetry();
+                                listener.onRetrying();
                                 break;
                             case FINISHED:
-                                ProgressInfo info = getProgressInfo();
-                                info.setDone(getDone());
-                                info.setSize(getLength());
-                                info.setProgress(100);
-                                info.setFileSizeStr(getFileSizeStr());
-                                info.setDownloadedSizeStr(getDownloadedSizeStr());
-                                info.setProgressStr(String.format(Locale.US, "%.2f%%", getProgress()));
-                                info.setSpeedStr(tempSpeed);
-                                listener.onProgress(info);
-                                listener.onFinish();
-                                progressInfo = null;
+                                done.set(length);
+                                listener.onProgress(getProgressUpdater());
+                                listener.onFinished();
                                 break;
                             default:
                                 break;
@@ -720,7 +680,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         Log.d(TAG, "onFinish");
 //        done = length;
         done.set(length);
-        getHandler().removeCallbacks(getProgressRunnable());
+        getProgressUpdater().pause();
         this.progressRunnable = null;
 
         missionStatus = MissionStatus.FINISHED;
@@ -785,7 +745,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
     }
 
     private void writeMissionInfo() {
-        new Thread(new Runnable() {
+        threadPoolExecutor.execute(new Runnable() {
             @Override
             public void run() {
                 try {
@@ -794,7 +754,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                     exception.printStackTrace();
                 }
             }
-        }).start();
+        });
     }
 
     private void saveMissionInfo() throws Exception {
@@ -846,10 +806,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
 
     public String getOriginUrl() {
         return originUrl;
-    }
-
-    public String getRedirectUrl() {
-        return redirectUrl;
     }
 
     public long getCreateTime() {
@@ -923,6 +879,9 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
     }
 
     public float getProgress() {
+        if (isFinished()) {
+            return 100f;
+        }
         return getProgress(getDone(), length);
     }
 
@@ -938,8 +897,12 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         return FormatUtils.formatSize(done.get());
     }
 
-    public String getSpeed() {
-        return tempSpeed;
+    public float getSpeed() {
+        return speed;
+    }
+
+    public String getSpeedStr() {
+        return FormatUtils.formatSpeed(speed);
     }
 
     public int getNotifyId() {
@@ -971,10 +934,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
 
     void setUrl(String url) {
         this.url = url;
-    }
-
-    void setRedirectUrl(String redirectUrl) {
-        this.redirectUrl = redirectUrl;
     }
 
     void setOriginUrl(String originUrl) {
@@ -1014,7 +973,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
             Log.d(TAG, "redirectUrl=" + redirectUrl);
             if (!TextUtils.isEmpty(redirectUrl)) {
                 mission.url = redirectUrl;
-                mission.redirectUrl = redirectUrl;
             }
         } else if (statusCode == ErrorCode.ERROR_SERVER_404) {
             mission.errCode = ErrorCode.ERROR_SERVER_404;
@@ -1096,71 +1054,81 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         return true;
     }
 
-    public static class ProgressInfo {
+    public static class ProgressUpdater {
 
-        private long size;
-        private long done;
-        private float progress;
-        private String fileSizeStr;
-        private String downloadedSizeStr;
-        private String progressStr;
-        private String speedStr;
+        private final BaseMission<?> mission;
 
-        public long getSize() {
-            return size;
+        private ProgressUpdater(BaseMission<?> mission) {
+            this.mission = mission;
         }
 
-        public void setSize(long size) {
-            this.size = size;
+        public long getSize() {
+            return mission.getLength();
         }
 
         public long getDone() {
-            return done;
-        }
-
-        public void setDone(long done) {
-            this.done = done;
+            return mission.getDone();
         }
 
         public float getProgress() {
-            return progress;
+            return mission.getProgress();
         }
 
-        void setProgress(float progress) {
-            this.progress = progress;
+        public float getSpeed() {
+            return mission.getSpeed();
         }
 
         public String getFileSizeStr() {
-            return fileSizeStr;
-        }
-
-        void setFileSizeStr(String fileSizeStr) {
-            this.fileSizeStr = fileSizeStr;
+            return mission.getFileSizeStr();
         }
 
         public String getDownloadedSizeStr() {
-            return downloadedSizeStr;
-        }
-
-        void setDownloadedSizeStr(String downloadedSizeStr) {
-            this.downloadedSizeStr = downloadedSizeStr;
+            return mission.getDownloadedSizeStr();
         }
 
         public String getProgressStr() {
-            return progressStr;
-        }
-
-        void setProgressStr(String progressStr) {
-            this.progressStr = progressStr;
+            return mission.getProgressStr();
         }
 
         public String getSpeedStr() {
-            return speedStr;
+            return mission.getSpeedStr();
         }
 
-        void setSpeedStr(String speedStr) {
-            this.speedStr = speedStr;
+        private void start() {
+            pause();
+            mission.post(progressRunnable);
         }
+
+        private void pause() {
+            mission.getHandler().removeCallbacks(progressRunnable);
+        }
+
+        private final Runnable progressRunnable = new Runnable() {
+            @Override
+            public void run() {
+                Log.d(TAG, "progressRunnable--start isRunning=" + mission.isRunning() + " missionStatus=" + mission.missionStatus + " aliveThreadCount=" + mission.aliveThreadCount.get());
+                if (mission.isFinished() || mission.errCode != -1 || mission.aliveThreadCount.get() < 1 || !mission.isRunning()) {
+                    mission.getHandler().removeCallbacks(this);
+                    mission.notifyStatus(mission.missionStatus);
+                    return;
+                }
+                mission.postDelayed(this, mission.getProgressInterval());
+                long downloaded = mission.done.get();
+                long delta = downloaded - mission.lastDone;
+                Log.d(TAG, "progressRunnable--delta=" + delta);
+                mission.speedHistoryList.add(delta);
+                if (delta > 0) {
+                    mission.lastDone = downloaded;
+                    mission.speed = delta * (mission.getProgressInterval() / 1000f);
+                }
+                mission.writeMissionInfo();
+                mission.notifyStatus(MissionStatus.RUNNING);
+                if (mission.getEnableNotification() && mission.getNotificationInterceptor() != null) {
+                    mission.getNotificationInterceptor().onProgress(mission.getContext(), mission, getProgress(), false);
+                }
+            }
+        };
+
     }
 
     @Override
@@ -1172,7 +1140,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                 ", uuid='" + uuid + '\'' +
                 ", name='" + name + '\'' +
                 ", url='" + url + '\'' +
-                ", redirectUrl='" + redirectUrl + '\'' +
                 ", originUrl='" + originUrl + '\'' +
                 ", createTime=" + createTime +
                 ", finishTime=" + finishTime +
@@ -1190,8 +1157,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                 ", mListeners=" + mListeners +
                 ", errorCount=" + errorCount +
                 ", lastDone=" + lastDone +
-                ", tempSpeed='" + tempSpeed + '\'' +
-                ", progressInfo=" + progressInfo +
+                ", progressInfo=" + progressUpdater +
                 ", handler=" + handler +
                 ", blockQueue=" + blockQueue +
                 ", progressRunnable=" + progressRunnable +

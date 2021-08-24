@@ -6,6 +6,7 @@ import android.content.IntentFilter;
 import android.text.TextUtils;
 import android.util.Log;
 
+import com.zpj.downloader.impl.DownloadMission;
 import com.zpj.downloader.utils.NetworkChangeReceiver;
 import com.zpj.downloader.utils.io.UnsafeObjectInputStream;
 
@@ -172,13 +173,14 @@ public class DownloadManagerImpl implements DownloadManager {
                                 BufferedInputStream fileIn = new BufferedInputStream(new FileInputStream(sub));
                                 ObjectInputStream in = new UnsafeObjectInputStream(fileIn);
                                 BaseMission<?> mission = clazz.cast(in.readObject());
+                                mission.setContext(getContext());
+                                mission.setNotificationInterceptor(mission.getNotificationInterceptor());
                                 in.close();
                                 fileIn.close();
                                 Log.d("initMissions", "mission=" + mission);
                                 if (mission == null) {
                                     continue;
                                 }
-//                                        mission.init();
                                 mission.firstCreate();
                                 insertMission(mission);
                             } catch (IOException | ClassNotFoundException e) {
@@ -218,77 +220,6 @@ public class DownloadManagerImpl implements DownloadManager {
             }
         })
         .execute();
-
-//        new HttpObserver<>(
-//                new ObservableOnSubscribe<Object>() {
-//                    @Override
-//                    public void subscribe(@NonNull ObservableEmitter<Object> emitter) throws Exception {
-//                        long time1 = System.currentTimeMillis();
-//                        ALL_MISSIONS.clear();
-//                        File f = getDownloaderConfig().getTaskFolder();
-//
-//                        if (f.exists() && f.isDirectory()) {
-//                            for (final File sub : f.listFiles()) {
-//                                if (sub.isDirectory()) {
-//                                    continue;
-//                                }
-//                                if (sub.getName().endsWith(MISSION_INFO_FILE_SUFFIX_NAME)) {
-//                                    try {
-//                                        BufferedInputStream fileIn = new BufferedInputStream(new FileInputStream(sub));
-//                                        ObjectInputStream in = new UnsafeObjectInputStream(fileIn);
-//                                        BaseMission<?> mission = clazz.cast(in.readObject());
-//                                        in.close();
-//                                        fileIn.close();
-//                                        Log.d("initMissions", "mission=" + mission);
-//                                        if (mission == null) {
-//                                            continue;
-//                                        }
-////                                        mission.init();
-//                                        mission.firstCreate();
-//                                        insertMission(mission);
-//                                    } catch (IOException | ClassNotFoundException e) {
-//                                        e.printStackTrace();
-//                                    }
-//                                }
-//                            }
-//                        } else {
-//                            f.mkdirs();
-//                        }
-//
-//                        Collections.sort(ALL_MISSIONS, new Comparator<BaseMission<?>>() {
-//                            @Override
-//                            public int compare(BaseMission<?> o1, BaseMission<?> o2) {
-//                                return -(int) (o1.getCreateTime() - o2.getCreateTime());
-//                            }
-//                        });
-//                        long time2 = System.currentTimeMillis();
-//                        Log.d(TAG, "deltaTime=" + (time2 - time1));
-//                        synchronized (onLoadMissionListeners) {
-//                            isLoaded.set(true);
-//                            for (int i = onLoadMissionListeners.size() - 1; i >= 0; i--) {
-//                                OnLoadMissionListener<BaseMission<?>> listener = onLoadMissionListeners.get(i).get();
-//                                if (listener != null) {
-//                                    listener.onLoaded(ALL_MISSIONS);
-//                                }
-//                                onLoadMissionListeners.remove(i);
-//                            }
-//                        }
-//                        emitter.onComplete();
-//                    }
-//                })
-//                .onComplete(new IHttp.OnCompleteListener() {
-//                    @Override
-//                    public void onComplete() throws Exception {
-//                        isLoading.set(false);
-//                    }
-//                })
-//                .onError(new IHttp.OnErrorListener() {
-//                    @Override
-//                    public void onError(Throwable throwable) {
-//                        isLoading.set(false);
-//                    }
-//                })
-//                .subscribe();
     }
 
     @Override

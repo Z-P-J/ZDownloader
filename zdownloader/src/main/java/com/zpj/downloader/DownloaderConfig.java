@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.text.TextUtils;
 
 import com.zpj.downloader.constant.DefaultConstant;
+import com.zpj.downloader.impl.DownloadMission;
 
 import java.io.File;
 
@@ -27,12 +28,6 @@ public class DownloaderConfig extends BaseConfig<DownloaderConfig> {
     private DownloaderConfig() {
 
     }
-
-//    public static DownloaderConfig with(Context context) {
-//        DownloaderConfig options = new DownloaderConfig();
-//        options.setContext(context);
-//        return options;
-//    }
 
     static DownloaderConfig with(Context context, Class<? extends BaseMission<?>> clazz) {
         DownloaderConfig options = new DownloaderConfig();
