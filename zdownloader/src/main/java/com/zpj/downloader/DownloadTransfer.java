@@ -27,25 +27,16 @@ abstract class DownloadTransfer implements Runnable {
 
     @Override
     public void run() {
-        String mId = Thread.currentThread().getName();
-        String threadName = Thread.currentThread().getName();
         byte[] buf = new byte[BUFFER_SIZE];
-        BufferedRandomAccessFile f;
+        BufferedRandomAccessFile f = null;
+        Error error = null;
         try {
             f = new BufferedRandomAccessFile(mMission.getFilePath(), "rw");
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-            synchronized (mMission) {
-                mMission.notifyError(Error.FILE_NOT_FOUND, true);
-                return;
-            }
-        }
-        if (mMission.isFallback()) {
-            try {
+            if (mMission.isFallback()) {
                 HttpURLConnection conn = HttpUrlConnectionFactory.getConnection(mMission);
                 if (conn.getResponseCode() / 100 != 2) {
                     Log.d("DownRunFallback", "error:206");
-                    mMission.notifyError(Error.SERVER_UNSUPPORTED);
+                    error = Error.SERVER_UNSUPPORTED;
                     conn.disconnect();
                     return;
                 } else {
@@ -81,70 +72,52 @@ abstract class DownloadTransfer implements Runnable {
                     ipt.close();
                     conn.disconnect();
                 }
-            } catch (IOException e) {
-                e.printStackTrace();
-//				notifyError(ErrorCode.ERROR_CONNECTION_TIMED_OUT);
-                mMission.notifyError(new Error(e.getMessage()));
-                return;
-            }
-        } else {
-            while (true) {
-                long startTime = System.currentTimeMillis();
-                synchronized (mMission) {
+            } else {
+                while (true) {
+                    long startTime = System.currentTimeMillis();
                     if (!mMission.isRunning()) {
                         break;
                     }
-                }
 
-                long position = mMission.getNextPosition();
-//            Log.d(TAG, "id=" + mId + " position=" + position + " blocks=" + mMission.getBlocks());
-                if (position < 0 || position >= mMission.getBlocks()) {
-                    break;
-                }
-
-
-
-                long start = position * blockSize;
-                long end = start + blockSize - 1;
-
-                if (start >= mMission.getLength()) {
-                    continue;
-                }
-
-                if (end >= mMission.getLength()) {
-                    end = mMission.getLength() - 1;
-                }
-
-                HttpURLConnection conn = null;
-
-                try {
-                    conn = HttpUrlConnectionFactory.getConnection(mMission, start, end);
-                    if (conn.getResponseCode() == HttpURLConnection.HTTP_MOVED_PERM
-                            || conn.getResponseCode() == HttpURLConnection.HTTP_MOVED_TEMP
-                            || conn.getResponseCode() == HttpURLConnection.HTTP_MULT_CHOICE) {
-                        String redictUrl = conn.getHeaderField("location");
-                        Log.d(TAG, "redictUrl=" + redictUrl);
-                        mMission.setUrl(redictUrl);
-                        conn.disconnect();
-                        conn = HttpUrlConnectionFactory.getConnection(mMission, start, end);
+                    long position = mMission.getNextPosition();
+                    if (position < 0 || position >= mMission.getBlocks()) {
+                        break;
                     }
 
-                    // A server may be ignoring the range requet
-                    if (conn.getResponseCode() != HttpURLConnection.HTTP_PARTIAL) {
-                        Log.d("DownRun", "error:206");
-                        mMission.onPositionDownloadFailed(position);
-                        mMission.notifyError(Error.getHttpError(conn.getResponseCode()), true);
+                    long start = position * blockSize;
+                    long end = start + blockSize - 1;
 
-                        Log.e(TAG, mId + ":Unsupported " + conn.getResponseCode());
-
-                        return;
+                    if (start >= mMission.getLength()) {
+                        continue;
                     }
+
+                    if (end >= mMission.getLength()) {
+                        end = mMission.getLength() - 1;
+                    }
+
+                    HttpURLConnection conn = null;
 
                     int total = 0;
                     try {
+                        conn = HttpUrlConnectionFactory.getConnection(mMission, start, end);
+                        if (conn.getResponseCode() == HttpURLConnection.HTTP_MOVED_PERM
+                                || conn.getResponseCode() == HttpURLConnection.HTTP_MOVED_TEMP
+                                || conn.getResponseCode() == HttpURLConnection.HTTP_MULT_CHOICE) {
+                            String redictUrl = conn.getHeaderField("location");
+                            Log.d(TAG, "redictUrl=" + redictUrl);
+                            mMission.setUrl(redictUrl);
+                            conn.disconnect();
+                            conn = HttpUrlConnectionFactory.getConnection(mMission, start, end);
+                        }
+
+                        if (conn.getResponseCode() != HttpURLConnection.HTTP_PARTIAL) {
+                            mMission.onPositionDownloadFailed(position);
+                            error = Error.getHttpError(conn.getResponseCode());
+                            break;
+                        }
+
                         f.seek(start);
                         InputStream stream = conn.getInputStream();
-                        Log.d(TAG, threadName + " stream=" + stream);
                         BufferedInputStream ipt = new BufferedInputStream(stream);
                         while (start < end) { //  && mMission.isRunning()
                             final int len = ipt.read(buf, 0, BUFFER_SIZE);
@@ -154,36 +127,43 @@ abstract class DownloadTransfer implements Runnable {
                                 start += len;
                                 f.write(buf, 0, len);
                                 total += len;
-//                            Log.d(TAG, threadName + " notifyProgress len=" + len);
                                 mMission.notifyDownloaded(len);
                             }
                         }
-//                    Log.d(TAG, threadName + " start=" + start + " end=" + end + " total=" + total);
                         ipt.close();
                         f.flush();
                         mMission.onBlockFinished(position);
-//                    Log.d(TAG, threadName + " onBlockFinished position=" + position);
-                    } catch (Exception e) {
+                    } catch (IOException e) {
+                        e.printStackTrace();
                         mMission.notifyDownloaded(-total);
                         mMission.onPositionDownloadFailed(position);
                     }
-                    conn.disconnect();
-                } catch (IOException e) {
-                    mMission.onPositionDownloadFailed(position);
-                    Log.d(TAG, mId + ":position " + position + " retrying");
+                    if (conn != null) {
+                        conn.disconnect();
+                    }
+                    Log.d(TAG, "DownloadBlockProducer Finished Time=" + (System.currentTimeMillis() - startTime));
                 }
-                Log.d(TAG, "DownloadBlockProducer Finished Time=" + (System.currentTimeMillis() - startTime));
             }
-        }
-        try {
-            f.close();
+        } catch (FileNotFoundException e) {
+            e.printStackTrace();
+            error = Error.FILE_NOT_FOUND;
         } catch (IOException e) {
             e.printStackTrace();
+            error = new Error(e.getMessage());
+        } finally {
+            try {
+                if (f != null) {
+                    f.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
         Log.e(TAG, "thread=" + Thread.currentThread().getName() + " onComplete");
+        onFinished(this, error);
     }
 
-    public abstract void onFinished();
+    public abstract void onFinished(DownloadTransfer transfer, Error error);
 
 }
 

@@ -17,12 +17,12 @@ public class DefaultConstant {
 
     public static final String USER_AGENT = System.getProperty("http.agent");
 
-    public static final int RETRY_COUNT = 3;
+    public static final int RETRY_COUNT = 5;
 
     public static final int PROGRESS_INTERVAL = 1000;
 
     // 单位毫秒
-    public static final int RETRY_DELAY = 10 * 1000;
+    public static final int RETRY_DELAY_MILLIS = 10000;
 
     public static final int CONCURRENT_MISSION_COUNT = 3;
 

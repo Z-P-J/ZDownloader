@@ -70,7 +70,7 @@ abstract class BaseConfig<T extends BaseConfig<T>> implements Serializable {
     /**
      * 下载出错重试延迟时间（单位ms）
      * */
-    int retryDelay = DefaultConstant.RETRY_DELAY;
+    int retryDelayMillis = DefaultConstant.RETRY_DELAY_MILLIS;
 
     /**
      * 下载连接超时
@@ -154,8 +154,8 @@ abstract class BaseConfig<T extends BaseConfig<T>> implements Serializable {
         return cookie == null ? "" : cookie;
     }
 
-    public int getRetryDelay() {
-        return retryDelay;
+    public int getRetryDelayMillis() {
+        return retryDelayMillis;
     }
 
     public int getConnectOutTime() {
@@ -245,8 +245,8 @@ abstract class BaseConfig<T extends BaseConfig<T>> implements Serializable {
         return (T) this;
     }
 
-    public T setRetryDelay(int retryDelay) {
-        this.retryDelay = retryDelay;
+    public T setRetryDelayMillis(int retryDelayMillis) {
+        this.retryDelayMillis = retryDelayMillis;
         return (T) this;
     }
 

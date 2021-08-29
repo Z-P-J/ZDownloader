@@ -73,7 +73,7 @@ public class ZDownloader {
             mission.setProxy(config.getProxy());
             mission.setReadOutTime(config.getReadOutTime());
             mission.setRetryCount(config.getRetryCount());
-            mission.setRetryDelay(config.getRetryDelay());
+            mission.setRetryDelayMillis(config.getRetryDelayMillis());
             mission.setUserAgent(config.getUserAgent());
 
             mission.url = url;

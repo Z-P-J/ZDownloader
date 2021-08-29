@@ -13,7 +13,6 @@ import android.text.TextUtils;
 import android.util.Log;
 import android.webkit.MimeTypeMap;
 
-import com.zpj.downloader.constant.DefaultConstant;
 import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.constant.ErrorCode;
 import com.zpj.downloader.constant.ResponseCode;
@@ -68,6 +67,18 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         void onClear();
     }
 
+    // TODO
+    public interface Status {
+        int MEW = 0;
+        int PREPARING = 1;
+        int RUNNING = 2;
+        int WAITING = 3;
+        int PAUSED = 4;
+        int ERROR = 5;
+        int RETRYING = 6;
+        int FINISHED = 7;
+    }
+
     @Keep
     public enum MissionStatus {
         PREPARING("准备中"),
@@ -105,7 +116,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
     protected long blocks = 1;
     protected long length = 0;
     protected AtomicLong done = new AtomicLong(0);
-    protected MissionStatus missionStatus = MissionStatus.PAUSED;
+    protected volatile MissionStatus missionStatus = MissionStatus.PAUSED;
     protected boolean fallback = false;
     protected int errCode = -1;
     protected boolean hasPrepared = false;
@@ -114,36 +125,34 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
 
     private volatile transient ProgressUpdater progressUpdater;
 
-    private transient int currentRetryCount;
+    private transient volatile AtomicInteger errorCount;
 
     protected transient AtomicInteger finishCount;
     private transient AtomicInteger aliveThreadCount;
 
     protected transient ArrayList<WeakReference<MissionListener>> mListeners;
 
-    private transient int errorCount = 0;
     private transient long lastDone = -1;
     private transient float speed = 0f;
 
-    private transient Handler handler;
-    private transient ConcurrentLinkedQueue<DownloadBlock> blockQueue;
-    private transient Runnable progressRunnable;
+    private transient volatile Handler handler;
+//    private transient volatile ConcurrentLinkedQueue<DownloadBlock> blockQueue;
     private transient boolean isCreate = false;
     private transient ThreadPoolExecutor threadPoolExecutor;
 
 
     //------------------------------------------------------runnables---------------------------------------------
 
-    protected ConcurrentLinkedQueue<DownloadBlock> getBlockQueue() {
-        if (blockQueue == null) {
-            synchronized (BaseMission.class) {
-                if (blockQueue == null) {
-                    blockQueue = new ConcurrentLinkedQueue<>();
-                }
-            }
-        }
-        return blockQueue;
-    }
+//    protected ConcurrentLinkedQueue<DownloadBlock> getBlockQueue() {
+//        if (blockQueue == null) {
+//            synchronized (BaseMission.class) {
+//                if (blockQueue == null) {
+//                    blockQueue = new ConcurrentLinkedQueue<>();
+//                }
+//            }
+//        }
+//        return blockQueue;
+//    }
 
     protected Handler getHandler() {
         if (handler == null) {
@@ -176,7 +185,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
     }
 
     protected void prepareMission() {
-        currentRetryCount = getRetryCount();
         DownloadManagerImpl.getInstance().insertMission(this);
         writeMissionInfo();
         Log.d(TAG, "start hasInit=false initMission");
@@ -206,16 +214,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                 }
 
                 Log.d("mission.name", "mission.name555=" + name);
-
-//                for (BaseMission<?> downloadMission : DownloadManagerImpl.getInstance().getMissions()) {
-//                    if (!TextUtils.equals(uuid, downloadMission.uuid) && TextUtils.equals(name, downloadMission.name) && // !downloadMission.isIniting() &&
-//                            (TextUtils.equals(downloadMission.originUrl.trim(), url.trim()) ||
-//                                    TextUtils.equals(downloadMission.redirectUrl.trim(), url.trim()))) {
-//                        Log.d(TAG, "has mission---url=" + downloadMission.url);
-//                        downloadMission.start();
-//                        return null;
-//                    }
-//                }
 
                 if (fallback) {
                     blocks = 1;
@@ -307,6 +305,11 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         if (length < 0) {
             length = 0;
         }
+        if (errorCount == null) {
+            errorCount = new AtomicInteger(0);
+        } else {
+            errorCount.set(0);
+        }
         if (finishCount == null) {
             finishCount = new AtomicInteger(0);
         } else {
@@ -317,7 +320,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         } else {
             aliveThreadCount.set(0);
         }
-        currentRetryCount = getRetryCount();
         if (fallback) {
             setThreadCount(1);
             done.set(0);
@@ -395,9 +397,9 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
             prepareMission();
             return;
         }
-        errorCount = 0;
+        errorCount.set(0);
         if (!isRunning() && !isFinished()) {
-            initCurrentRetryCount();
+            errorCount.set(0);
             if (DownloadManagerImpl.getInstance().shouldMissionWaiting()) {
                 waiting();
                 return;
@@ -425,7 +427,16 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
             for (int i = 0; i < threadCount; i++) {
                 threadPoolExecutor.submit(new DownloadTransfer(this) {
                     @Override
-                    public void onFinished() {
+                    public void onFinished(final DownloadTransfer transfer, Error error) {
+                        if (error != null && errorCount.getAndAdd(1) < getRetryCount()) {
+                            postDelayed(new Runnable() {
+                                @Override
+                                public void run() {
+                                    threadPoolExecutor.submit(transfer);
+                                }
+                            }, retryDelayMillis);
+                            return;
+                        }
                         int count = aliveThreadCount.decrementAndGet();
                         if (count == 0 && isRunning()) {
                             Log.d(TAG, "doOnComplete length=" + length + " doneLen.get()=" + done.get());
@@ -469,19 +480,16 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         fallback = false;
         errCode = -1;
 
-
-        currentRetryCount = DefaultConstant.RETRY_COUNT;
-        errorCount = 0;
+        errorCount.set(0);
         lastDone = -1;
         speed = 0f;
-        blockQueue = null;
-
+//        blockQueue = null;
         start();
     }
 
     public void pause() {
         if (canPause()) {
-            initCurrentRetryCount();
+            errorCount.set(0);
             missionStatus = MissionStatus.PAUSED;
             writeMissionInfo();
             notifyStatus(missionStatus);
@@ -595,9 +603,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         Log.d(TAG, "err=" + e.getErrorMsg() + " fromThread=" + fromThread);
         missionStatus = MissionStatus.ERROR;
 
-        // TODO 出错重试
-        currentRetryCount = getRetryCount();
-
         errCode = 1;
 
         Log.d("eeeeeeeeeeeeeeeeeeee", "error:" + errCode);
@@ -610,9 +615,12 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                 if (mListeners == null) {
                     return;
                 }
-                for (WeakReference<MissionListener> ref : mListeners) {
-                    final MissionListener listener = ref.get();
-                    if (listener != null) {
+                Iterator<WeakReference<MissionListener>> iterator = mListeners.iterator();
+                while (iterator.hasNext()) {
+                    MissionListener listener = iterator.next().get();
+                    if (listener == null) {
+                        iterator.remove();
+                    } else {
                         listener.onError(e);
                     }
                 }
@@ -637,9 +645,12 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                 if (mListeners == null) {
                     return;
                 }
-                for (WeakReference<MissionListener> ref : mListeners) {
-                    final MissionListener listener = ref.get();
-                    if (listener != null) {
+                Iterator<WeakReference<MissionListener>> iterator = mListeners.iterator();
+                while (iterator.hasNext()) {
+                    MissionListener listener = iterator.next().get();
+                    if (listener == null) {
+                        iterator.remove();
+                    } else {
                         switch (status) {
                             case PREPARING:
                                 listener.onPrepare();
@@ -681,7 +692,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
 //        done = length;
         done.set(length);
         getProgressUpdater().pause();
-        this.progressRunnable = null;
 
         missionStatus = MissionStatus.FINISHED;
         finishTime = System.currentTimeMillis();
@@ -709,7 +719,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
     }
 
     public synchronized boolean hasListener(MissionListener listener) {
-        if (mListeners == null) {
+        if (mListeners == null || listener == null) {
             return false;
         }
         for (WeakReference<MissionListener> weakRef : mListeners) {
@@ -721,13 +731,13 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
     }
 
     public synchronized void removeListener(MissionListener listener) {
-        if (mListeners == null) {
+        if (mListeners == null || listener == null) {
             return;
         }
         for (Iterator<WeakReference<MissionListener>> iterator = mListeners.iterator();
              iterator.hasNext(); ) {
             WeakReference<MissionListener> weakRef = iterator.next();
-            if (listener != null && listener == weakRef.get()) {
+            if (listener == weakRef.get()) {
                 iterator.remove();
             }
         }
@@ -737,11 +747,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         if (mListeners == null) {
             return;
         }
-        for (Iterator<WeakReference<MissionListener>> iterator = mListeners.iterator();
-             iterator.hasNext(); ) {
-            WeakReference<MissionListener> weakRef = iterator.next();
-            iterator.remove();
-        }
+        mListeners.clear();
     }
 
     private void writeMissionInfo() {
@@ -771,12 +777,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         File file = new File(getMissionInfoFilePath());
         if (file.exists()) {
             file.delete();
-        }
-    }
-
-    private void initCurrentRetryCount() {
-        if (currentRetryCount != getRetryCount()) {
-            currentRetryCount = getRetryCount();
         }
     }
 
@@ -1150,7 +1150,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                 ", fallback=" + fallback +
                 ", errCode=" + errCode +
                 ", hasInit=" + hasPrepared +
-                ", currentRetryCount=" + currentRetryCount +
                 ", finishCount=" + finishCount +
                 ", aliveThreadCount=" + aliveThreadCount +
                 ", threadCount=" + threadCount +
@@ -1159,8 +1158,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                 ", lastDone=" + lastDone +
                 ", progressInfo=" + progressUpdater +
                 ", handler=" + handler +
-                ", blockQueue=" + blockQueue +
-                ", progressRunnable=" + progressRunnable +
                 ", notificationInterceptor=" + notificationInterceptor +
                 ", downloadPath='" + downloadPath + '\'' +
                 ", bufferSize=" + bufferSize +
@@ -1168,7 +1165,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                 ", blockSize=" + blockSize +
                 ", userAgent='" + userAgent + '\'' +
                 ", retryCount=" + retryCount +
-                ", retryDelay=" + retryDelay +
+                ", retryDelay=" + retryDelayMillis +
                 ", connectOutTime=" + connectOutTime +
                 ", readOutTime=" + readOutTime +
                 ", enableNotification=" + enableNotification +

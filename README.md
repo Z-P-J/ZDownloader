@@ -129,7 +129,7 @@ public class MyApplication extends Application {
             .setBufferSize(1024) //设置缓存大小
             //.setThreadCount(5) //已过时。设置线程大小，默认为3
             .setRetryCount(10) //设置出错重试次数，默认为5
-            .setRetryDelay(10000) //设置重试延迟，单位为ms
+            .setRetryDelayMillis(10000) //设置重试延迟，单位为ms
             .setUserAgent("") //设置UA，默认为系统自带UA
             .setCookie("") //设置全局下载任务cookie，默认为空
             .setConnectOutTime(10000) //设置连接超时，单位ms
@@ -159,7 +159,7 @@ ZDownloader.download(url)
     .setBufferSize(1024) //设置缓存大小
     //.setThreadCount(5) //已过时。设置线程大小，默认为3
     .setRetryCount(10) //设置出错重试次数，默认为5
-    .setRetryDelay(10000) //设置重试延迟，单位为ms
+    .setRetryDelayMillis(10000) //设置重试延迟，单位为ms
     .setUserAgent("") //设置UA，默认为系统自带UA
     .setCookie("") //设置全局下载任务cookie，默认为空
     .setConnectOutTime(10000) //设置连接超时，单位ms
