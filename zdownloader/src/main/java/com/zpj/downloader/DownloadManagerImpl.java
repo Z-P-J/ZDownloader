@@ -4,17 +4,12 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.IntentFilter;
 import android.text.TextUtils;
-import android.util.Log;
 
 import com.zpj.downloader.impl.DownloadMission;
+import com.zpj.downloader.utils.ExecutorUtils;
 import com.zpj.downloader.utils.NetworkChangeReceiver;
-import com.zpj.downloader.utils.io.UnsafeObjectInputStream;
 
-import java.io.BufferedInputStream;
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -26,7 +21,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 /**
  * @author Z-P-J
  */
-public class DownloadManagerImpl implements DownloadManager {
+public class DownloadManagerImpl implements DownloadManager, MissionSerializer {
 
     private static final String TAG = DownloadManagerImpl.class.getSimpleName();
 
@@ -45,8 +40,11 @@ public class DownloadManagerImpl implements DownloadManager {
 
     private static final AtomicInteger downloadingCount = new AtomicInteger(0);
 
-    private final AtomicBoolean isLoaded = new AtomicBoolean(false);
-    private final AtomicBoolean isLoading = new AtomicBoolean(false);
+//    private final AtomicBoolean isLoaded = new AtomicBoolean(false);
+//    private final AtomicBoolean isLoading = new AtomicBoolean(false);
+
+    private volatile boolean isLoaded = false;
+    private volatile boolean isLoading = false;
 
     private DownloadManagerImpl(Context context, DownloaderConfig options) {
         mContext = context;
@@ -98,8 +96,8 @@ public class DownloadManagerImpl implements DownloadManager {
             mission.onDestroy();
         }
         ALL_MISSIONS.clear();
-        isLoading.set(true);
-        isLoaded.set(true);
+        isLoading = true;
+        isLoaded = true;
         mManager = null;
     }
 
@@ -149,59 +147,45 @@ public class DownloadManagerImpl implements DownloadManager {
 
     @Override
     public void loadMissions(final Class<? extends BaseMission<?>> clazz) {
-        if (isLoading.get()) {
+        if (isLoading) {
             return;
         }
-        isLoaded.set(false);
-        isLoading.set(true);
+        isLoaded = false;
+        isLoading = true;
 
-        new ObservableTask<Void>() {
-
+        ExecutorUtils.submitIO(new Runnable() {
             @Override
-            protected Void run() throws Exception {
-                long time1 = System.currentTimeMillis();
+            public void run() {
                 ALL_MISSIONS.clear();
                 File f = getDownloaderConfig().getTaskFolder();
-
                 if (f.exists() && f.isDirectory()) {
-                    for (final File sub : f.listFiles()) {
-                        if (sub.isDirectory()) {
-                            continue;
-                        }
-                        if (sub.getName().endsWith(MISSION_INFO_FILE_SUFFIX_NAME)) {
-                            try {
-                                BufferedInputStream fileIn = new BufferedInputStream(new FileInputStream(sub));
-                                ObjectInputStream in = new UnsafeObjectInputStream(fileIn);
-                                BaseMission<?> mission = clazz.cast(in.readObject());
-                                mission.setContext(getContext());
-                                mission.setNotificationInterceptor(mission.getNotificationInterceptor());
-                                in.close();
-                                fileIn.close();
-                                Log.d("initMissions", "mission=" + mission);
+                    File[] files = f.listFiles();
+                    if (files != null) {
+                        for (final File sub : f.listFiles()) {
+                            if (sub.isFile() && sub.exists()
+                                    && sub.getName().endsWith(MISSION_INFO_FILE_SUFFIX_NAME)) {
+                                BaseMission<?> mission = readMission(sub, clazz);
                                 if (mission == null) {
                                     continue;
                                 }
+                                mission.setContext(getContext());
+                                mission.setNotificationInterceptor(mission.getNotificationInterceptor());
                                 mission.firstCreate();
                                 insertMission(mission);
-                            } catch (IOException | ClassNotFoundException e) {
-                                e.printStackTrace();
                             }
                         }
                     }
+                    Collections.sort(ALL_MISSIONS, new Comparator<BaseMission<?>>() {
+                        @Override
+                        public int compare(BaseMission<?> o1, BaseMission<?> o2) {
+                            return -(int) (o1.getCreateTime() - o2.getCreateTime());
+                        }
+                    });
                 } else {
                     f.mkdirs();
                 }
-
-                Collections.sort(ALL_MISSIONS, new Comparator<BaseMission<?>>() {
-                    @Override
-                    public int compare(BaseMission<?> o1, BaseMission<?> o2) {
-                        return -(int) (o1.getCreateTime() - o2.getCreateTime());
-                    }
-                });
-                long time2 = System.currentTimeMillis();
-                Log.d(TAG, "deltaTime=" + (time2 - time1));
                 synchronized (onLoadMissionListeners) {
-                    isLoaded.set(true);
+                    isLoaded = true;
                     for (int i = onLoadMissionListeners.size() - 1; i >= 0; i--) {
                         OnLoadMissionListener<BaseMission<?>> listener = onLoadMissionListeners.get(i).get();
                         if (listener != null) {
@@ -210,32 +194,20 @@ public class DownloadManagerImpl implements DownloadManager {
                         onLoadMissionListeners.remove(i);
                     }
                 }
-                return null;
+                isLoading = false;
             }
-        }
-        .onComplete(new ObservableTask.OnCompleteListener() {
-            @Override
-            public void onComplete() {
-                isLoading.set(false);
-            }
-        })
-        .execute();
+        });
     }
 
     @Override
     public void loadMissions(OnLoadMissionListener<BaseMission<?>> listener) {
         synchronized (onLoadMissionListeners) {
-            if (isLoaded.get()) {
+            if (isLoaded) {
                 listener.onLoaded(ALL_MISSIONS);
             } else {
                 this.onLoadMissionListeners.add(new WeakReference<>(listener));
             }
         }
-    }
-
-    @Override
-    public boolean isLoaded() {
-        return isLoaded.get();
     }
 
     @Override
@@ -348,4 +320,13 @@ public class DownloadManagerImpl implements DownloadManager {
         return DownloadManagerImpl.getInstance().getMissions();
     }
 
+    @Override
+    public BaseMission<?> readMission(File file, Class<? extends BaseMission<?>> clazz) {
+        return options.getMissionSerializer().readMission(file, clazz);
+    }
+
+    @Override
+    public void writeMission(BaseMission<?> mission) {
+        options.getMissionSerializer().writeMission(mission);
+    }
 }

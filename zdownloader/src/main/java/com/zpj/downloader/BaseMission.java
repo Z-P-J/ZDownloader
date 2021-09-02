@@ -16,6 +16,7 @@ import android.webkit.MimeTypeMap;
 import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.constant.ErrorCode;
 import com.zpj.downloader.constant.ResponseCode;
+import com.zpj.downloader.utils.ExecutorUtils;
 import com.zpj.utils.FileUtils;
 import com.zpj.utils.FormatUtils;
 
@@ -137,7 +138,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
 
     private transient volatile Handler handler;
 //    private transient volatile ConcurrentLinkedQueue<DownloadBlock> blockQueue;
-    private transient boolean isCreate = false;
+    private transient volatile boolean isCreate = false;
     private transient ThreadPoolExecutor threadPoolExecutor;
 
 
@@ -190,72 +191,68 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         Log.d(TAG, "start hasInit=false initMission");
         notifyStatus(MissionStatus.PREPARING);
 
-        new ObservableTask<Void>() {
-
+        ExecutorUtils.submitIO(new Runnable() {
             @Override
-            protected Void run() throws Exception {
-                HttpURLConnection connection = HttpUrlConnectionFactory.getFileInfo(BaseMission.this);
-                if (handleResponse(connection, BaseMission.this)) {
-                    Log.d(TAG, "handleResponse--222");
-                    return null;
-                }
-
-                if (connection.getResponseCode() != ResponseCode.RESPONSE_206) {
-                    // Fallback to single thread if no partial content support
-                    fallback = true;
-
-                    Log.d(TAG, "falling back");
-                }
-
-                Log.d("mission.name", "mission.name444=" + name);
-                if (TextUtils.isEmpty(name)) {
-                    Log.d("Initializer", "getMissionNameFromUrl--url=" + url);
-                    name = getMissionNameFromUrl(BaseMission.this, url);
-                }
-
-                Log.d("mission.name", "mission.name555=" + name);
-
-                if (fallback) {
-                    blocks = 1;
-                } else {
-                    blocks = length / getBlockSize();
-                    if (blocks * getBlockSize() < length) {
-                        blocks++;
+            public void run() {
+                try {
+                    HttpURLConnection connection = HttpUrlConnectionFactory.getFileInfo(BaseMission.this);
+                    if (handleResponse(connection, BaseMission.this)) {
+                        Log.d(TAG, "handleResponse--222");
+                        return;
                     }
+
+                    if (connection.getResponseCode() != ResponseCode.RESPONSE_206) {
+                        // Fallback to single thread if no partial content support
+                        fallback = true;
+
+                        Log.d(TAG, "falling back");
+                    }
+
+                    Log.d("mission.name", "mission.name444=" + name);
+                    if (TextUtils.isEmpty(name)) {
+                        Log.d("Initializer", "getMissionNameFromUrl--url=" + url);
+                        name = getMissionNameFromUrl(BaseMission.this, url);
+                    }
+
+                    Log.d("mission.name", "mission.name555=" + name);
+
+                    if (fallback) {
+                        blocks = 1;
+                    } else {
+                        blocks = length / getBlockSize();
+                        if (blocks * getBlockSize() < length) {
+                            blocks++;
+                        }
+                    }
+                    Log.d(TAG, "blocks=" + blocks);
+
+                    queue.clear();
+                    for (long position = 0; position < blocks; position++) {
+                        Log.d(TAG, "initQueue add position=" + position);
+                        queue.add(position);
+                    }
+
+
+                    File loacation = new File(getDownloadPath());
+                    if (!loacation.exists()) {
+                        loacation.mkdirs();
+                    }
+                    File file = new File(getFilePath());
+                    if (!file.exists()) {
+                        file.createNewFile();
+                    }
+
+                    Log.d(TAG, "storage=" + FileUtils.getAvailableSize());
+                    hasPrepared = true;
+
+                    writeMissionInfo();
+                    start();
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    notifyError(new Error(e.getMessage()));
                 }
-                Log.d(TAG, "blocks=" + blocks);
-
-                queue.clear();
-                for (long position = 0; position < blocks; position++) {
-                    Log.d(TAG, "initQueue add position=" + position);
-                    queue.add(position);
-                }
-
-
-                File loacation = new File(getDownloadPath());
-                if (!loacation.exists()) {
-                    loacation.mkdirs();
-                }
-                File file = new File(getFilePath());
-                if (!file.exists()) {
-                    file.createNewFile();
-                }
-
-                Log.d(TAG, "storage=" + FileUtils.getAvailableSize());
-                hasPrepared = true;
-
-                saveMissionInfo();
-                start();
-                return null;
             }
-        }
-                .onError(new ObservableTask.OnErrorListener() {
-                    @Override
-                    public void onError(Throwable throwable) {
-                        notifyError(new Error(throwable.getMessage()));
-                    }
-                })
-                .execute();
+        });
     }
 
     protected BaseMission() {
@@ -337,11 +334,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         }
         if (canPause()) {
             missionStatus = MissionStatus.PAUSED;
-            try {
-                saveMissionInfo();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+            writeMissionInfo();
         }
         if (threadPoolExecutor == null) {
             threadPoolExecutor = new ThreadPoolExecutor(threadCount, threadCount * 2,
@@ -751,26 +744,12 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
     }
 
     private void writeMissionInfo() {
-        threadPoolExecutor.execute(new Runnable() {
+        ExecutorUtils.submitIO(new Runnable() {
             @Override
             public void run() {
-                try {
-                    saveMissionInfo();
-                } catch (Exception exception) {
-                    exception.printStackTrace();
-                }
+                DownloadManagerImpl.getInstance().writeMission(BaseMission.this);
             }
         });
-    }
-
-    private void saveMissionInfo() throws Exception {
-        synchronized (BaseMission.class) {
-            BufferedOutputStream fileOut = new BufferedOutputStream(new FileOutputStream(getMissionInfoFilePath()));
-            ObjectOutputStream out = new ObjectOutputStream(fileOut);
-            out.writeObject(BaseMission.this);
-            out.close();
-            fileOut.close();
-        }
     }
 
     private void deleteMissionInfo() {
@@ -921,7 +900,8 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
     }
 
     public String getMissionInfoFilePath() {
-        return DownloadManagerImpl.getInstance().getDownloaderConfig().getTaskPath() + File.separator + uuid + DownloadManagerImpl.MISSION_INFO_FILE_SUFFIX_NAME;
+        return DownloadManagerImpl.getInstance().getDownloaderConfig().getTaskPath()
+                + File.separator + uuid + DownloadManagerImpl.MISSION_INFO_FILE_SUFFIX_NAME;
     }
 
 

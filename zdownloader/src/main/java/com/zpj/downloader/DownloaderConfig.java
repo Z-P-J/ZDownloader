@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.text.TextUtils;
 
 import com.zpj.downloader.constant.DefaultConstant;
+import com.zpj.downloader.impl.DefaultMissionSerializer;
 import com.zpj.downloader.impl.DownloadMission;
 
 import java.io.File;
@@ -23,6 +24,8 @@ public class DownloaderConfig extends BaseConfig<DownloaderConfig> {
 
     private transient String taskPath;
 
+    private transient MissionSerializer mSerializer;
+
     private int concurrentMissionCount = DefaultConstant.CONCURRENT_MISSION_COUNT;
 
     private DownloaderConfig() {
@@ -37,6 +40,15 @@ public class DownloaderConfig extends BaseConfig<DownloaderConfig> {
         }
         options.clazz = clazz;
         return options;
+    }
+
+    public DownloaderConfig setMissionSerializer(MissionSerializer mSerializer) {
+        this.mSerializer = mSerializer;
+        return this;
+    }
+
+    public MissionSerializer getMissionSerializer() {
+        return mSerializer;
     }
 
     public int getConcurrentMissionCount() {
@@ -80,6 +92,9 @@ public class DownloaderConfig extends BaseConfig<DownloaderConfig> {
     }
 
     public void init() {
+        if (mSerializer == null) {
+            mSerializer = new DefaultMissionSerializer();
+        }
         File path = new File(getContext().getFilesDir(), MISSIONS_PATH);
         if (!path.exists()) {
             path.mkdirs();

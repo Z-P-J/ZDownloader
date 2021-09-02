@@ -77,8 +77,6 @@ public interface DownloadManager {
 
     void loadMissions(OnLoadMissionListener<BaseMission<?>> listener);
 
-    boolean isLoaded();
-
     void addDownloadManagerListener(DownloadManagerListener downloadManagerListener);
 
     void removeDownloadManagerListener(DownloadManagerListener downloadManagerListener);
