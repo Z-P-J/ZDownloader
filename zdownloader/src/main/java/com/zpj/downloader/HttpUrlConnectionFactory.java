@@ -44,7 +44,7 @@ class HttpUrlConnectionFactory {
         URL url = new URL(mission.getUrl());
         HttpURLConnection conn = (HttpURLConnection)url.openConnection();
         wrapConnection(conn, mission);
-        if (!mission.fallback) {
+        if (mission.isBlockDownload) {
             long start = position * mission.getBlockSize();
             long end = start + mission.getBlockSize() - 1;
 

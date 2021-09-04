@@ -103,7 +103,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 
 
 			itemView.setOnClickListener(v -> {
-				Toast.makeText(context, "点击了下载任务:" + mission.getTaskName(), Toast.LENGTH_SHORT).show();
+				Toast.makeText(context, "点击了下载任务:" + mission.getName(), Toast.LENGTH_SHORT).show();
 			});
 
 			itemView.setOnLongClickListener(v -> {
@@ -133,8 +133,8 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 			}
 			if (mission != null) {
 				mission.addListener(this);
-				icon.setImageResource(Utils.getFileTypeIconId(mission.getTaskName()));
-				name.setText(mission.getTaskName());
+				icon.setImageResource(Utils.getFileTypeIconId(mission.getName()));
+				name.setText(mission.getName());
 				size.setText(mission.getFileSizeStr());
 			}
 			this.mission = mission;
@@ -188,8 +188,8 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 
 		@Override
 		public void onProgress(BaseMission.ProgressUpdater update) {
-			if (TextUtils.equals(name.getText().toString(), STATUS_INIT) && !TextUtils.isEmpty(mission.getTaskName())) {
-				name.setText(mission.getTaskName());
+			if (TextUtils.equals(name.getText().toString(), STATUS_INIT) && !TextUtils.isEmpty(mission.getName())) {
+				name.setText(mission.getName());
 			}
 			updateProgress();
 		}

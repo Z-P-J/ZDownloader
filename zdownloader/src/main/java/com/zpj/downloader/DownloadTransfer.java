@@ -32,47 +32,7 @@ abstract class DownloadTransfer implements Runnable {
         Error error = null;
         try {
             f = new BufferedRandomAccessFile(mMission.getFilePath(), "rw");
-            if (mMission.isFallback()) {
-                HttpURLConnection conn = HttpUrlConnectionFactory.getConnection(mMission);
-                if (conn.getResponseCode() / 100 != 2) {
-                    Log.d("DownRunFallback", "error:206");
-                    error = Error.SERVER_UNSUPPORTED;
-                    conn.disconnect();
-                    return;
-                } else {
-                    f.seek(0);
-                    BufferedInputStream ipt = new BufferedInputStream(conn.getInputStream());
-
-                    int total = 0;
-//					int lastTotal = 0;
-                    while (mMission.isRunning()) {
-                        long readStartTime = System.currentTimeMillis();
-                        final int len  = ipt.read(buf, 0, BUFFER_SIZE);
-                        long readFinishedTime = System.currentTimeMillis();
-//                        Log.d(TAG, "readTime=" + (readFinishedTime - readStartTime));
-                        if (len == -1) {
-                            mMission.notifyDownloaded(0);
-                            break;
-                        }
-                        total += len;
-                        f.write(buf, 0, len);
-//						f.flush();
-                        mMission.notifyDownloaded(len);
-//						notifyProgress(total - lastTotal);
-//						lastTotal = total;
-                        mMission.setLength(total);
-
-
-                        if (Thread.currentThread().isInterrupted()) {
-                            return;
-                        }
-//                        Log.d(TAG, "writeTime=" + (System.currentTimeMillis() - readFinishedTime));
-                    }
-
-                    ipt.close();
-                    conn.disconnect();
-                }
-            } else {
+            if (mMission.isBlockDownload()) {
                 while (true) {
                     long startTime = System.currentTimeMillis();
                     if (!mMission.isRunning()) {
@@ -142,6 +102,45 @@ abstract class DownloadTransfer implements Runnable {
                         conn.disconnect();
                     }
                     Log.d(TAG, "DownloadBlockProducer Finished Time=" + (System.currentTimeMillis() - startTime));
+                }
+            } else {
+                HttpURLConnection conn = HttpUrlConnectionFactory.getConnection(mMission);
+                if (conn.getResponseCode() / 100 != 2) {
+                    Log.d("DownRunFallback", "error:206");
+                    error = Error.SERVER_UNSUPPORTED;
+                    conn.disconnect();
+                    return;
+                } else {
+                    f.seek(0);
+                    BufferedInputStream ipt = new BufferedInputStream(conn.getInputStream());
+
+                    int total = 0;
+//					int lastTotal = 0;
+                    while (mMission.isRunning()) {
+                        long readStartTime = System.currentTimeMillis();
+                        final int len  = ipt.read(buf, 0, BUFFER_SIZE);
+                        long readFinishedTime = System.currentTimeMillis();
+//                        Log.d(TAG, "readTime=" + (readFinishedTime - readStartTime));
+                        if (len == -1) {
+                            mMission.notifyDownloaded(0);
+                            break;
+                        }
+                        total += len;
+                        f.write(buf, 0, len);
+//						f.flush();
+                        mMission.notifyDownloaded(len);
+//						notifyProgress(total - lastTotal);
+//						lastTotal = total;
+                        mMission.setLength(total);
+
+
+                        if (Thread.currentThread().isInterrupted()) {
+                            return;
+                        }
+//                        Log.d(TAG, "writeTime=" + (System.currentTimeMillis() - readFinishedTime));
+                    }
+                    ipt.close();
+                    conn.disconnect();
                 }
             }
         } catch (FileNotFoundException e) {

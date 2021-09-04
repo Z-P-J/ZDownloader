@@ -14,6 +14,7 @@ import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.Iterator;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -289,27 +290,41 @@ public class DownloadManagerImpl implements DownloadManager, MissionSerializer {
 
 
     static void onMissionAdd(BaseMission<?> mission) {
-        for (WeakReference<DownloadManagerListener> reference : DownloadManagerImpl.get().mListeners) {
-            DownloadManagerListener listener = reference.get();
-            if (listener != null) {
+        Iterator<WeakReference<DownloadManagerListener>> iterator = DownloadManagerImpl.get().mListeners.iterator();
+        while (iterator.hasNext()) {
+            DownloadManagerListener listener = iterator.next().get();
+            if (listener == null) {
+                iterator.remove();
+            } else {
                 listener.onMissionAdd(mission);
             }
         }
     }
 
+    static void onMissionClear(BaseMission<?> mission) {
+        ALL_MISSIONS.remove(mission);
+    }
+
     static void onMissionDelete(BaseMission<?> mission) {
-        for (WeakReference<DownloadManagerListener> reference : DownloadManagerImpl.get().mListeners) {
-            DownloadManagerListener listener = reference.get();
-            if (listener != null) {
+        onMissionClear(mission);
+        Iterator<WeakReference<DownloadManagerListener>> iterator = DownloadManagerImpl.get().mListeners.iterator();
+        while (iterator.hasNext()) {
+            DownloadManagerListener listener = iterator.next().get();
+            if (listener == null) {
+                iterator.remove();
+            } else {
                 listener.onMissionDelete(mission);
             }
         }
     }
 
     static void onMissionFinished(BaseMission<?> mission) {
-        for (WeakReference<DownloadManagerListener> reference : DownloadManagerImpl.get().mListeners) {
-            DownloadManagerListener listener = reference.get();
-            if (listener != null) {
+        Iterator<WeakReference<DownloadManagerListener>> iterator = DownloadManagerImpl.get().mListeners.iterator();
+        while (iterator.hasNext()) {
+            DownloadManagerListener listener = iterator.next().get();
+            if (listener == null) {
+                iterator.remove();
+            } else {
                 listener.onMissionFinished(mission);
             }
         }

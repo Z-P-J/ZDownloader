@@ -21,7 +21,7 @@ public class DownloadNotificationInterceptor implements INotificationInterceptor
         ZNotify.with(context)
                 .buildProgressNotify()
                 .setProgressAndFormat(progress, false, "")
-                .setContentTitle((isPause ? "已暂停：" : "") + mission.getTaskName())
+                .setContentTitle((isPause ? "已暂停：" : "") + mission.getName())
                 .setContentIntent(pendingIntent)
                 .setId(mission.getNotifyId())
                 .show();
@@ -33,7 +33,7 @@ public class DownloadNotificationInterceptor implements INotificationInterceptor
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         ZNotify.with(context)
                 .buildNotify()
-                .setContentTitle(mission.getTaskName())
+                .setContentTitle(mission.getName())
                 .setContentText("下载已完成")
                 .setContentIntent(pendingIntent)
                 .setId(mission.getNotifyId())
@@ -46,7 +46,7 @@ public class DownloadNotificationInterceptor implements INotificationInterceptor
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         ZNotify.with(context)
                 .buildNotify()
-                .setContentTitle("下载出错" + errCode + ":" + mission.getTaskName())
+                .setContentTitle("下载出错" + errCode + ":" + mission.getName())
                 .setContentIntent(pendingIntent)
                 .setId(mission.getNotifyId())
                 .show();

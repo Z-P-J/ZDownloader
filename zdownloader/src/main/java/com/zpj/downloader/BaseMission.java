@@ -5,6 +5,7 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Looper;
 import android.support.annotation.Keep;
 import android.support.annotation.NonNull;
@@ -14,19 +15,13 @@ import android.util.Log;
 import android.webkit.MimeTypeMap;
 
 import com.zpj.downloader.constant.Error;
-import com.zpj.downloader.constant.ErrorCode;
-import com.zpj.downloader.constant.ResponseCode;
 import com.zpj.downloader.utils.ExecutorUtils;
 import com.zpj.utils.FileUtils;
 import com.zpj.utils.FormatUtils;
 
-import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.ObjectOutputStream;
 import java.io.Serializable;
 import java.lang.ref.WeakReference;
-import java.net.HttpURLConnection;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Locale;
@@ -89,7 +84,9 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         PAUSED("已暂停"),
         FINISHED("已完成"),
         ERROR("出错了"),
-        RETRYING("重试中");
+        RETRYING("重试中"),
+        DELETE("已删除"),
+        CLEAR("已清除");
 
         private final String statusName;
 
@@ -104,23 +101,23 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         }
     }
 
-    private final ConcurrentLinkedQueue<Long> queue = new ConcurrentLinkedQueue<>();
-    private final ConcurrentLinkedQueue<Long> finished = new ConcurrentLinkedQueue<>();
-    private final ArrayList<Long> speedHistoryList = new ArrayList<>();
+    protected final ConcurrentLinkedQueue<Long> queue = new ConcurrentLinkedQueue<>();
+    protected final ConcurrentLinkedQueue<Long> finished = new ConcurrentLinkedQueue<>();
+    protected final ArrayList<Long> speedHistoryList = new ArrayList<>();
+    protected final AtomicLong done = new AtomicLong(0);
 
-    protected String uuid = "";
-    protected String name = "";
-    protected String url = "";
-    protected String originUrl = "";
-    protected long createTime = 0;
-    protected long finishTime = 0;
-    protected long blocks = 1;
-    protected long length = 0;
-    protected AtomicLong done = new AtomicLong(0);
+    protected volatile String uuid = "";
+    protected volatile String name = "";
+    protected volatile String url = "";
+    protected volatile String originUrl = "";
+    protected volatile long createTime = 0;
+    protected volatile long finishTime = 0;
+    protected volatile long blocks = 1;
+    protected volatile long length = 0;
     protected volatile MissionStatus missionStatus = MissionStatus.PAUSED;
-    protected boolean fallback = false;
-    protected int errCode = -1;
-    protected boolean hasPrepared = false;
+    protected volatile boolean isBlockDownload = false;
+    protected volatile int errCode = -1;
+    protected volatile boolean hasPrepared = false;
 
     //-----------------------------------------------------transient---------------------------------------------------------------
 
@@ -140,20 +137,10 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
 //    private transient volatile ConcurrentLinkedQueue<DownloadBlock> blockQueue;
     private transient volatile boolean isCreate = false;
     private transient ThreadPoolExecutor threadPoolExecutor;
+    private transient Error error;
 
 
     //------------------------------------------------------runnables---------------------------------------------
-
-//    protected ConcurrentLinkedQueue<DownloadBlock> getBlockQueue() {
-//        if (blockQueue == null) {
-//            synchronized (BaseMission.class) {
-//                if (blockQueue == null) {
-//                    blockQueue = new ConcurrentLinkedQueue<>();
-//                }
-//            }
-//        }
-//        return blockQueue;
-//    }
 
     protected Handler getHandler() {
         if (handler == null) {
@@ -191,68 +178,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         Log.d(TAG, "start hasInit=false initMission");
         notifyStatus(MissionStatus.PREPARING);
 
-        ExecutorUtils.submitIO(new Runnable() {
-            @Override
-            public void run() {
-                try {
-                    HttpURLConnection connection = HttpUrlConnectionFactory.getFileInfo(BaseMission.this);
-                    if (handleResponse(connection, BaseMission.this)) {
-                        Log.d(TAG, "handleResponse--222");
-                        return;
-                    }
-
-                    if (connection.getResponseCode() != ResponseCode.RESPONSE_206) {
-                        // Fallback to single thread if no partial content support
-                        fallback = true;
-
-                        Log.d(TAG, "falling back");
-                    }
-
-                    Log.d("mission.name", "mission.name444=" + name);
-                    if (TextUtils.isEmpty(name)) {
-                        Log.d("Initializer", "getMissionNameFromUrl--url=" + url);
-                        name = getMissionNameFromUrl(BaseMission.this, url);
-                    }
-
-                    Log.d("mission.name", "mission.name555=" + name);
-
-                    if (fallback) {
-                        blocks = 1;
-                    } else {
-                        blocks = length / getBlockSize();
-                        if (blocks * getBlockSize() < length) {
-                            blocks++;
-                        }
-                    }
-                    Log.d(TAG, "blocks=" + blocks);
-
-                    queue.clear();
-                    for (long position = 0; position < blocks; position++) {
-                        Log.d(TAG, "initQueue add position=" + position);
-                        queue.add(position);
-                    }
-
-
-                    File loacation = new File(getDownloadPath());
-                    if (!loacation.exists()) {
-                        loacation.mkdirs();
-                    }
-                    File file = new File(getFilePath());
-                    if (!file.exists()) {
-                        file.createNewFile();
-                    }
-
-                    Log.d(TAG, "storage=" + FileUtils.getAvailableSize());
-                    hasPrepared = true;
-
-                    writeMissionInfo();
-                    start();
-                } catch (Exception e) {
-                    e.printStackTrace();
-                    notifyError(new Error(e.getMessage()));
-                }
-            }
-        });
+        ExecutorUtils.submitIO(new MissionInitializer(this));
     }
 
     protected BaseMission() {
@@ -317,7 +243,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         } else {
             aliveThreadCount.set(0);
         }
-        if (fallback) {
+        if (!isBlockDownload) {
             setThreadCount(1);
             done.set(0);
             blocks = 1;
@@ -376,9 +302,9 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                     Log.d(TAG, "isRejectMission");
                     policy.onConflict(this, new ConflictPolicy.Callback() {
                         @Override
-                        public void onResult(boolean reject) {
-                            Log.d(TAG, "reject=" + reject);
-                            if (!reject) {
+                        public void onResult(boolean accept) {
+                            Log.d(TAG, "accept=" + accept);
+                            if (accept) {
                                 prepareMission();
                             }
                         }
@@ -397,16 +323,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                 waiting();
                 return;
             }
-
-//            if (fallback) {
-//                threadCount = 1;
-//                setThreadCount(1);
-////                done = 0;
-//                done.set(0);
-//                blocks = 1;
-//                queue.clear();
-//                queue.add(0L);
-//            }
 
             DownloadManagerImpl.increaseDownloadingCount();
 
@@ -433,7 +349,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                         int count = aliveThreadCount.decrementAndGet();
                         if (count == 0 && isRunning()) {
                             Log.d(TAG, "doOnComplete length=" + length + " doneLen.get()=" + done.get());
-                            if (isFallback() || done.get() == length) {
+                            if (isBlockDownload || done.get() == length) {
                                 onFinish();
                             } else {
                                 pause();
@@ -455,9 +371,9 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         }
     }
 
-    public void restart() {
-        pause();
-//        done = 0;
+    public void reset() {
+        threadPoolExecutor.shutdownNow();
+        threadPoolExecutor = null;
         finished.clear();
         queue.clear();
         speedHistoryList.clear();
@@ -470,13 +386,17 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         url = originUrl;
         name = "";
         missionStatus = MissionStatus.PREPARING;
-        fallback = false;
+        isBlockDownload = false;
         errCode = -1;
-
+        error = null;
         errorCount.set(0);
         lastDone = -1;
         speed = 0f;
-//        blockQueue = null;
+        deleteMissionInfo();
+    }
+
+    public void restart() {
+        reset();
         start();
     }
 
@@ -486,14 +406,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
             missionStatus = MissionStatus.PAUSED;
             writeMissionInfo();
             notifyStatus(missionStatus);
-
-            if (missionStatus != MissionStatus.WAITING) {
-                DownloadManagerImpl.decreaseDownloadingCount();
-            }
-
-            if (getEnableNotification() && getNotificationInterceptor() != null) {
-                getNotificationInterceptor().onProgress(getContext(), this, getProgress(), true);
-            }
+            DownloadManagerImpl.decreaseDownloadingCount();
         }
     }
 
@@ -501,69 +414,39 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         missionStatus = MissionStatus.WAITING;
         writeMissionInfo();
         notifyStatus(missionStatus);
-//        pause();
     }
 
     public void delete() {
-        if (getNotificationInterceptor() != null) {
-            getNotificationInterceptor().onCancel(getContext(), this);
-        }
-        pause();
-        deleteMissionInfo();
-        new File(getDownloadPath() + File.separator + name).delete();
-        DownloadManagerImpl.getInstance().getMissions().remove(this);
-        DownloadManagerImpl.onMissionDelete(this);
-        post(new Runnable() {
+        reset();
+        ExecutorUtils.submitIO(new Runnable() {
             @Override
             public void run() {
-                if (mListeners == null) {
-                    return;
-                }
-                for (WeakReference<MissionListener> ref : mListeners) {
-                    final MissionListener listener = ref.get();
-                    if (listener != null) {
-                        listener.onDelete();
-                    }
+                File file = getFile();
+                if (file.exists()) {
+                    file.delete();
                 }
             }
         });
+        notifyStatus(MissionStatus.DELETE);
     }
 
     public void clear() {
-        if (getNotificationInterceptor() != null) {
-            getNotificationInterceptor().onCancel(getContext(), this);
-        }
-        pause();
-        deleteMissionInfo();
-        DownloadManagerImpl.getInstance().getMissions().remove(this);
-        post(new Runnable() {
-            @Override
-            public void run() {
-                if (mListeners == null) {
-                    return;
-                }
-                for (WeakReference<MissionListener> ref : mListeners) {
-                    final MissionListener listener = ref.get();
-                    if (listener != null) {
-                        listener.onClear();
-                    }
-                }
-            }
-        });
+        reset();
+        notifyStatus(MissionStatus.CLEAR);
     }
 
     public boolean renameTo(String newFileName) {
         File file2Rename = new File(getDownloadPath() + File.separator + newFileName);
         boolean success = getFile().renameTo(file2Rename);
         if (success) {
-            setTaskName(newFileName);
+            setName(newFileName);
             writeMissionInfo();
         }
         return success;
     }
 
     public boolean openFile(Context context) {
-        File file = new File(getFilePath());
+        File file = getFile();
         Intent intent = new Intent(Intent.ACTION_VIEW);
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
@@ -578,7 +461,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         }
         context.startActivity(intent);
         return true;
-//        return FileUtils.openFile(context, getFilePath());
     }
 
     public boolean openFile() {
@@ -594,6 +476,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
 
     synchronized void notifyError(final Error e, boolean fromThread) {
         Log.d(TAG, "err=" + e.getErrorMsg() + " fromThread=" + fromThread);
+        error = e;
         missionStatus = MissionStatus.ERROR;
 
         errCode = 1;
@@ -601,30 +484,9 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         Log.d("eeeeeeeeeeeeeeeeeeee", "error:" + errCode);
 
         writeMissionInfo();
-
-        post(new Runnable() {
-            @Override
-            public void run() {
-                if (mListeners == null) {
-                    return;
-                }
-                Iterator<WeakReference<MissionListener>> iterator = mListeners.iterator();
-                while (iterator.hasNext()) {
-                    MissionListener listener = iterator.next().get();
-                    if (listener == null) {
-                        iterator.remove();
-                    } else {
-                        listener.onError(e);
-                    }
-                }
-            }
-        });
-
         DownloadManagerImpl.decreaseDownloadingCount();
 
-        if (getEnableNotification() && getNotificationInterceptor() != null) {
-            getNotificationInterceptor().onError(getContext(), this, errCode);
-        }
+        notifyStatus(missionStatus);
     }
 
     protected void notifyError(final Error e) {
@@ -635,43 +497,74 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         post(new Runnable() {
             @Override
             public void run() {
-                if (mListeners == null) {
-                    return;
-                }
-                Iterator<WeakReference<MissionListener>> iterator = mListeners.iterator();
-                while (iterator.hasNext()) {
-                    MissionListener listener = iterator.next().get();
-                    if (listener == null) {
-                        iterator.remove();
-                    } else {
-                        switch (status) {
-                            case PREPARING:
-                                listener.onPrepare();
-                                break;
-                            case START:
-                                listener.onStart();
-                                break;
-                            case RUNNING:
-                                listener.onProgress(getProgressUpdater());
-                                break;
-                            case WAITING:
-                                listener.onWaiting();
-                                break;
-                            case PAUSED:
-                                listener.onPaused();
-                                break;
-                            case RETRYING:
-                                listener.onRetrying();
-                                break;
-                            case FINISHED:
-                                done.set(length);
-                                listener.onProgress(getProgressUpdater());
-                                listener.onFinished();
-                                break;
-                            default:
-                                break;
+                if (mListeners != null) {
+                    Iterator<WeakReference<MissionListener>> iterator = mListeners.iterator();
+                    while (iterator.hasNext()) {
+                        MissionListener listener = iterator.next().get();
+                        if (listener == null) {
+                            iterator.remove();
+                        } else {
+                            switch (status) {
+                                case PREPARING:
+                                    listener.onPrepare();
+                                    break;
+                                case START:
+                                    listener.onStart();
+                                    break;
+                                case RUNNING:
+                                    listener.onProgress(getProgressUpdater());
+                                    break;
+                                case WAITING:
+                                    listener.onWaiting();
+                                    break;
+                                case PAUSED:
+                                    listener.onPaused();
+                                    break;
+                                case RETRYING:
+                                    listener.onRetrying();
+                                    break;
+                                case ERROR:
+                                    listener.onError(error);
+                                    break;
+                                case FINISHED:
+                                    done.set(length);
+                                    listener.onProgress(getProgressUpdater());
+                                    listener.onFinished();
+                                    break;
+                                case DELETE:
+                                    listener.onDelete();
+                                    break;
+                                case CLEAR:
+                                    listener.onClear();
+                                    break;
+                                default:
+                                    break;
+                            }
                         }
                     }
+                }
+
+                if (getEnableNotification() && getNotificationInterceptor() != null) {
+                    INotificationInterceptor notificationInterceptor = getNotificationInterceptor();
+                    if(status == MissionStatus.RUNNING) {
+                        notificationInterceptor.onProgress(getContext(), BaseMission.this, getProgress(), false);
+                    } else if (status == MissionStatus.PAUSED) {
+                        notificationInterceptor.onProgress(getContext(), BaseMission.this, getProgress(), true);
+                    } else if (status == MissionStatus.FINISHED) {
+                        notificationInterceptor.onFinished(getContext(), BaseMission.this);
+                    } else if (status == MissionStatus.ERROR) {
+                        notificationInterceptor.onError(getContext(), BaseMission.this, errCode);
+                    } else if (status == MissionStatus.DELETE || status == MissionStatus.CLEAR) {
+                        notificationInterceptor.onCancel(getContext(), BaseMission.this);
+                    }
+                }
+
+                if (status == MissionStatus.FINISHED) {
+                    DownloadManagerImpl.onMissionFinished(BaseMission.this);
+                } else if (status == MissionStatus.DELETE) {
+                    DownloadManagerImpl.onMissionDelete(BaseMission.this);
+                } else if (status == MissionStatus.CLEAR) {
+                    DownloadManagerImpl.onMissionClear(BaseMission.this);
                 }
             }
         });
@@ -682,7 +575,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
             return;
         }
         Log.d(TAG, "onFinish");
-//        done = length;
         done.set(length);
         getProgressUpdater().pause();
 
@@ -690,14 +582,8 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         finishTime = System.currentTimeMillis();
         writeMissionInfo();
 
-        notifyStatus(missionStatus);
-
         DownloadManagerImpl.decreaseDownloadingCount();
-
-        if (getEnableNotification() && getNotificationInterceptor() != null) {
-            getNotificationInterceptor().onFinished(getContext(), this);
-        }
-        DownloadManagerImpl.onMissionFinished(this);
+        notifyStatus(missionStatus);
     }
 
     public synchronized T addListener(MissionListener listener) {
@@ -768,15 +654,11 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         return uuid;
     }
 
-    public String getTaskName() {
+    public String getName() {
         if (TextUtils.isEmpty(name)) {
-            return getTaskNameFromUrl();
+            return generateMissionNameFromUrl(url);
         }
         return name;
-    }
-
-    public String getTaskNameFromUrl() {
-        return getMissionNameFromUrl(this, url);
     }
 
     public String getUrl() {
@@ -823,8 +705,8 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         return errCode;
     }
 
-    public boolean isFallback() {
-        return fallback;
+    public boolean isBlockDownload() {
+        return isBlockDownload;
     }
 
     public boolean hasInit() {
@@ -908,7 +790,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
     //-----------------------------------------------------setter-----------------------------------------------------------------
 
 
-    public void setTaskName(String name) {
+    public void setName(String name) {
         this.name = name;
     }
 
@@ -940,67 +822,20 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         finished.add(block);
     }
 
-    private boolean handleResponse(HttpURLConnection connection, BaseMission<?> mission) throws Exception {
-        if (TextUtils.isEmpty(mission.name)) {
-            mission.name = getMissionNameFromResponse(connection);
-            Log.d("mission.name", "mission.name333=" + mission.name);
-        }
-        int statusCode = connection.getResponseCode();
-        if (statusCode == ResponseCode.RESPONSE_302
-                || statusCode == ResponseCode.RESPONSE_301
-                || statusCode == ResponseCode.RESPONSE_300) {
-            String redirectUrl = connection.getHeaderField("location");
-            Log.d(TAG, "redirectUrl=" + redirectUrl);
-            if (!TextUtils.isEmpty(redirectUrl)) {
-                mission.url = redirectUrl;
-            }
-        } else if (statusCode == ErrorCode.ERROR_SERVER_404) {
-            mission.errCode = ErrorCode.ERROR_SERVER_404;
-            mission.notifyError(Error.HTTP_404, false);
-            return true;
-        } else if (statusCode == ResponseCode.RESPONSE_206) {
-            String contentLength = connection.getHeaderField("Content-Length");
-            if (contentLength != null) {
-                mission.length = Long.parseLong(contentLength);
-            }
-            Log.d("mission.length", "mission.length=" + mission.length);
-            return !checkLength(mission);
-        }
-        return false;
-    }
-
-    private String getMissionNameFromResponse(HttpURLConnection connection) {
-        String contentDisposition = connection.getHeaderField("Content-Disposition");
-        Log.d("contentDisposition", "contentDisposition=" + contentDisposition);
-        if (contentDisposition != null) {
-            String[] dispositions = contentDisposition.split(";");
-            for (String disposition : dispositions) {
-                Log.d("disposition", "disposition=" + disposition);
-                if (disposition.contains("filename=")) {
-                    return disposition.replace("filename=", "").trim();
-                }
-            }
-        }
-        return "";
-    }
-
-    protected String getMissionNameFromUrl(BaseMission<?> mission, String url) {
+    protected String generateMissionNameFromUrl(String url) {
         Log.d("getMissionNameFromUrl", "1");
         if (!TextUtils.isEmpty(url)) {
             int index = url.lastIndexOf("/");
 
             if (index > 0) {
                 int end = url.lastIndexOf("?");
-
                 if (end < index) {
                     end = url.length();
                 }
-
                 String name = url.substring(index + 1, end);
                 Log.d("getMissionNameFromUrl", "2");
-
-                if (!TextUtils.isEmpty(mission.originUrl) && !TextUtils.equals(url, mission.originUrl)) {
-                    String originName = getMissionNameFromUrl(mission, mission.originUrl);
+                if (!TextUtils.isEmpty(originUrl) && !TextUtils.equals(url, originUrl)) {
+                    String originName = generateMissionNameFromUrl(originUrl);
                     Log.d("getMissionNameFromUrl", "3");
                     if (FileUtils.getFileType(originName) != FileUtils.FileType.UNKNOWN) {
                         Log.d("getMissionNameFromUrl", "4");
@@ -1018,28 +853,20 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
             }
         }
         Log.d("getMissionNameFromUrl", "7");
-        return "未知文件.ext";
-    }
-
-    private boolean checkLength(BaseMission<?> mission) {
-        if (mission.length <= 0) {
-            mission.errCode = ErrorCode.ERROR_SERVER_UNSUPPORTED;
-            mission.notifyError(Error.SERVER_UNSUPPORTED, false);
-            return false;
-        } else if (mission.length >= FileUtils.getAvailableSize()) {
-            mission.errCode = ErrorCode.ERROR_NO_ENOUGH_SPACE;
-            mission.notifyError(Error.NO_ENOUGH_SPACE, false);
-            return false;
-        }
-        return true;
+        return "Unknown.ext";
     }
 
     public static class ProgressUpdater {
 
+        private static final String TAG = "ProgressUpdater";
+
         private final BaseMission<?> mission;
+//        private final Handler handler;
 
         private ProgressUpdater(BaseMission<?> mission) {
             this.mission = mission;
+//            HandlerThread handlerThread = new HandlerThread(TAG);
+//            handler = new Handler(handlerThread.getLooper());
         }
 
         public long getSize() {
@@ -1086,7 +913,9 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         private final Runnable progressRunnable = new Runnable() {
             @Override
             public void run() {
-                Log.d(TAG, "progressRunnable--start isRunning=" + mission.isRunning() + " missionStatus=" + mission.missionStatus + " aliveThreadCount=" + mission.aliveThreadCount.get());
+                Log.d(TAG, "progressRunnable--start isRunning=" + mission.isRunning()
+                        + " missionStatus=" + mission.missionStatus
+                        + " aliveThreadCount=" + mission.aliveThreadCount.get());
                 if (mission.isFinished() || mission.errCode != -1 || mission.aliveThreadCount.get() < 1 || !mission.isRunning()) {
                     mission.getHandler().removeCallbacks(this);
                     mission.notifyStatus(mission.missionStatus);
@@ -1103,9 +932,6 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                 }
                 mission.writeMissionInfo();
                 mission.notifyStatus(MissionStatus.RUNNING);
-                if (mission.getEnableNotification() && mission.getNotificationInterceptor() != null) {
-                    mission.getNotificationInterceptor().onProgress(mission.getContext(), mission, getProgress(), false);
-                }
             }
         };
 
@@ -1127,7 +953,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                 ", length=" + length +
                 ", done=" + done +
                 ", missionStatus=" + missionStatus +
-                ", fallback=" + fallback +
+                ", isBlockDownload=" + isBlockDownload +
                 ", errCode=" + errCode +
                 ", hasInit=" + hasPrepared +
                 ", finishCount=" + finishCount +
