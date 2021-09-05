@@ -50,7 +50,7 @@ ZDownloader.download("your download url")
         public void onRetry() {}
         
         @Override
-        public void onProgress(DownloadMission.ProgressUpdater update) {}
+        public void onProgress(ProgressUpdater update) {}
         
         @Override
         public void onFinish() {}
@@ -79,35 +79,40 @@ protected void onDestroy() {
 
 #### 4. 其它操作
 ```java
-//暂停下载
-mission.pause();
 
-//恢复下载
+// 开始下载
 mission.start();
 
-//删除下载任务和下载文件
+// 暂停下载
+mission.pause();
+
+// 删除下载任务和下载文件
 mission.delete();
 
-//删除下载任务(不包含下载文件)
+// 删除下载任务(不包含下载文件)
 mission.clear();
 
-//暂停所有下载任务
+// 重新开始下载任务
+mission.restart();
+
+
+// 暂停所有下载任务
 ZDownloader.pauseAll();
 
-//恢复所有下载任务
+// 恢复所有下载任务
 ZDownloader.resumeAll();
 
-//删除所有下载任务和下载文件
+// 删除所有下载任务和下载文件
 ZDownloader.deleteAll();
 
-//删除所有下载任务(不包含下载文件)
+// 删除所有下载任务(不包含下载文件)
 ZDownloader.clearAll();
 
-//打开下载完成的文件
+// 打开下载完成的文件
 mission.openFile(); // 使用初始化时的Context
 mission.openFile(context);
 
-//重命名文件
+// 重命名文件
 mission.renameTo(newName);
 ```
 
@@ -166,7 +171,7 @@ ZDownloader.download(url)
     .setReadOutTime(10000) //设置读取请求内容超时，单位ms
     .setEnableNotification(true) //是否显示通知栏下载进度通知，默认为true
     .setNotificationInterceptor(new DownloadNotificationInterceptor()) // 设置通知拦截器
-    .setHeaders(new HashMap<>()) //设置请求头
+    .setHeaders(new HashMap<>()) //设置请求头，键值对形式
     .setProxy(Proxy.NO_PROXY) //设置代理
     //.setProxy("127.0.0.1", 80) //设置代理
     .setAllowAllSSL() // 是否取消https验证
@@ -180,13 +185,13 @@ ZDownloader.download(url)
                 .setPositiveButton(new IDialog.OnButtonClickListener<ZDialog.AlertDialogImpl>() {
                     @Override
                     public void onClick(ZDialog.AlertDialogImpl fragment, int which) {
-                        callback.onResult(true);
+                        callback.onResult(true); // 接受下载任务
                     }
                 })
                  .setNegativeButton(new IDialog.OnButtonClickListener<ZDialog.AlertDialogImpl>() {
                     @Override
                     public void onClick(ZDialog.AlertDialogImpl fragment, int which) {
-                        callback.onResult(false);
+                        callback.onResult(false); // 拒绝下载任务
                     }
                  })
                  .show(context);
@@ -263,4 +268,4 @@ ZDownloader.download(url)
     .start();
 ```
 
-#### 4. 自定义下载任务（TODO）
+#### 4. 自定义下载任务（TODO 完善README）

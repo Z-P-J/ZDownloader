@@ -11,11 +11,13 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
 
+/**
+ * 下载任务网络传输器
+ * @author Z-P-J
+ */
 abstract class DownloadTransfer implements Runnable {
 
     private static final String TAG = "DownloadProducer";
-
-    private static final int BUFFER_SIZE = 1024;
 
     private final BaseMission<?> mMission;
     private final int blockSize;
@@ -27,7 +29,7 @@ abstract class DownloadTransfer implements Runnable {
 
     @Override
     public void run() {
-        byte[] buf = new byte[BUFFER_SIZE];
+        byte[] buf = new byte[mMission.bufferSize];
         BufferedRandomAccessFile f = null;
         Error error = null;
         try {
@@ -60,9 +62,7 @@ abstract class DownloadTransfer implements Runnable {
                     int total = 0;
                     try {
                         conn = HttpUrlConnectionFactory.getConnection(mMission, start, end);
-                        if (conn.getResponseCode() == HttpURLConnection.HTTP_MOVED_PERM
-                                || conn.getResponseCode() == HttpURLConnection.HTTP_MOVED_TEMP
-                                || conn.getResponseCode() == HttpURLConnection.HTTP_MULT_CHOICE) {
+                        if (conn.getResponseCode() / 100 == 3) {
                             String redictUrl = conn.getHeaderField("location");
                             Log.d(TAG, "redictUrl=" + redictUrl);
                             mMission.setUrl(redictUrl);
@@ -72,7 +72,7 @@ abstract class DownloadTransfer implements Runnable {
 
                         if (conn.getResponseCode() != HttpURLConnection.HTTP_PARTIAL) {
                             mMission.onPositionDownloadFailed(position);
-                            error = Error.getHttpError(conn.getResponseCode());
+                            error = new Error(conn.getResponseMessage());
                             break;
                         }
 
@@ -80,7 +80,7 @@ abstract class DownloadTransfer implements Runnable {
                         InputStream stream = conn.getInputStream();
                         BufferedInputStream ipt = new BufferedInputStream(stream);
                         while (start < end) { //  && mMission.isRunning()
-                            final int len = ipt.read(buf, 0, BUFFER_SIZE);
+                            final int len = ipt.read(buf, 0, buf.length);
                             if (len == -1) {
                                 break;
                             } else {
@@ -105,20 +105,14 @@ abstract class DownloadTransfer implements Runnable {
                 }
             } else {
                 HttpURLConnection conn = HttpUrlConnectionFactory.getConnection(mMission);
-                if (conn.getResponseCode() / 100 != 2) {
-                    Log.d("DownRunFallback", "error:206");
-                    error = Error.SERVER_UNSUPPORTED;
-                    conn.disconnect();
-                    return;
-                } else {
+                if (conn.getResponseCode() / 100 == 2) {
                     f.seek(0);
                     BufferedInputStream ipt = new BufferedInputStream(conn.getInputStream());
 
-                    int total = 0;
-//					int lastTotal = 0;
+                    long total = 0;
                     while (mMission.isRunning()) {
                         long readStartTime = System.currentTimeMillis();
-                        final int len  = ipt.read(buf, 0, BUFFER_SIZE);
+                        final int len  = ipt.read(buf, 0, buf.length);
                         long readFinishedTime = System.currentTimeMillis();
 //                        Log.d(TAG, "readTime=" + (readFinishedTime - readStartTime));
                         if (len == -1) {
@@ -135,13 +129,15 @@ abstract class DownloadTransfer implements Runnable {
 
 
                         if (Thread.currentThread().isInterrupted()) {
-                            return;
+                            break;
                         }
-//                        Log.d(TAG, "writeTime=" + (System.currentTimeMillis() - readFinishedTime));
                     }
                     ipt.close();
-                    conn.disconnect();
+                } else {
+                    Log.d("DownRunFallback", "error:206");
+                    error = Error.SERVER_UNSUPPORTED;
                 }
+                conn.disconnect();
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();

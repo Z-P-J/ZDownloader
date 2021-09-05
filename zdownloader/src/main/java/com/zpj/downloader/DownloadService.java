@@ -126,7 +126,7 @@ public class DownloadService extends Service implements DownloadMission.MissionL
     }
 
     @Override
-    public void onProgress(BaseMission.ProgressUpdater update) {
+    public void onProgress(ProgressUpdater update) {
         postUpdateMessage();
     }
 

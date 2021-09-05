@@ -14,6 +14,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import com.zpj.downloader.BaseMission;
+import com.zpj.downloader.ProgressUpdater;
 import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.impl.DownloadMission;
 import com.zpj.mydownloader.R;
@@ -187,7 +188,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		}
 
 		@Override
-		public void onProgress(BaseMission.ProgressUpdater update) {
+		public void onProgress(ProgressUpdater update) {
 			if (TextUtils.equals(name.getText().toString(), STATUS_INIT) && !TextUtils.isEmpty(mission.getName())) {
 				name.setText(mission.getName());
 			}

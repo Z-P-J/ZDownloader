@@ -5,12 +5,15 @@ import android.util.Log;
 
 import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.constant.ErrorCode;
-import com.zpj.downloader.constant.ResponseCode;
 import com.zpj.utils.FileUtils;
 
 import java.io.File;
 import java.net.HttpURLConnection;
 
+/**
+ * 下载任务初始化器
+ * @author Z-P-J
+ */
 public class MissionInitializer implements Runnable {
 
     private static final String TAG = "MissionInitializer";
@@ -43,7 +46,6 @@ public class MissionInitializer implements Runnable {
                     return;
                 } else {
                     // 重定向，更新链接，重新发起请求
-                    mission.originUrl = mission.url;
                     mission.url = redirectUrl;
                     run();
                     return;
@@ -71,12 +73,12 @@ public class MissionInitializer implements Runnable {
                 return;
             }
 
-            mission.isBlockDownload = (statusCode == ResponseCode.RESPONSE_206);
+            mission.isBlockDownload = (statusCode == HttpURLConnection.HTTP_PARTIAL);
 
             Log.d("mission.name", "mission.name444=" + mission.name);
             if (TextUtils.isEmpty(mission.name)) {
                 Log.d("Initializer", "getMissionNameFromUrl--url=" + mission.url);
-                mission.name = mission.generateMissionNameFromUrl(mission.url);
+                mission.name = mission.generateFileNameFromUrl(mission.url);
             }
 
             Log.d("mission.name", "mission.name555=" + mission.name);

@@ -1,6 +1,7 @@
 package com.zpj.downloader.impl;
 
 import com.zpj.downloader.BaseMission;
+import com.zpj.downloader.ProgressUpdater;
 import com.zpj.downloader.constant.Error;
 
 public class EmptyMissionListener implements BaseMission.MissionListener {
@@ -30,7 +31,7 @@ public class EmptyMissionListener implements BaseMission.MissionListener {
     }
 
     @Override
-    public void onProgress(BaseMission.ProgressUpdater update) {
+    public void onProgress(ProgressUpdater update) {
 
     }
 
