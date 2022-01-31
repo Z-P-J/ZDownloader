@@ -2,11 +2,16 @@ package com.zpj.downloader;
 
 import android.content.Context;
 
+import com.zpj.downloader.core.Downloader;
+import com.zpj.downloader.core.Mission;
+import com.zpj.downloader.core.Notifier;
 import com.zpj.downloader.impl.DownloadMission;
 
 import java.lang.reflect.Constructor;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 /**
@@ -16,6 +21,59 @@ import java.util.UUID;
 public class ZDownloader {
 
     private static boolean waitingForInternet = false;
+
+    private static final Map<Class<? extends Mission>, Downloader<? extends Mission>> DOWNLOADER_MAP = new HashMap<>();
+
+
+    public <T extends Mission> ZDownloader register(Class<T> clazz, Downloader<T> downloader) {
+        DOWNLOADER_MAP.put(clazz, downloader);
+        return this;
+    }
+
+
+    public static  <T extends Mission> Downloader<T> get(Class<T> clazz) {
+        return (Downloader<T>) DOWNLOADER_MAP.get(clazz);
+    }
+
+    public static  <T extends Mission> void enqueue(Class<T> clazz, Mission mission) {
+        get(clazz).enqueue((T) mission);
+    }
+
+    public static  <T extends Mission> void pause(Class<T> clazz, Mission mission) {
+        get(clazz).pause((T) mission);
+    }
+
+    public static  <T extends Mission> void delete(Class<T> clazz, Mission mission) {
+        get(clazz).delete((T) mission);
+    }
+
+    public static <T extends Mission> void notifyStatus(Class<T> clazz, final T mission, final int status) {
+        get(clazz).notifyStatus(mission, status);
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     private ZDownloader() {
         throw new RuntimeException("Wrong operation!");
@@ -352,7 +410,7 @@ public class ZDownloader {
                 mission.setEnableNotification(value);
             }
             if (!value) {
-                INotificationInterceptor interceptor = config.getNotificationInterceptor();
+                Notifier interceptor = config.getNotificationInterceptor();
                 if (interceptor != null) {
                     interceptor.onCancelAll(DownloadManagerImpl.getInstance().getContext());
                 }

@@ -7,6 +7,7 @@ import android.os.Bundle;
 import android.text.TextUtils;
 
 import com.zpj.downloader.constant.DefaultConstant;
+import com.zpj.downloader.core.Serializer;
 import com.zpj.downloader.impl.DefaultMissionSerializer;
 import com.zpj.downloader.impl.DownloadMission;
 
@@ -24,7 +25,7 @@ public class DownloaderConfig extends BaseConfig<DownloaderConfig> {
 
     private transient String taskPath;
 
-    private transient MissionSerializer mSerializer;
+    private transient Serializer mSerializer;
 
     private int concurrentMissionCount = DefaultConstant.CONCURRENT_MISSION_COUNT;
 
@@ -42,12 +43,12 @@ public class DownloaderConfig extends BaseConfig<DownloaderConfig> {
         return options;
     }
 
-    public DownloaderConfig setMissionSerializer(MissionSerializer mSerializer) {
+    public DownloaderConfig setMissionSerializer(Serializer mSerializer) {
         this.mSerializer = mSerializer;
         return this;
     }
 
-    public MissionSerializer getMissionSerializer() {
+    public Serializer getMissionSerializer() {
         return mSerializer;
     }
 

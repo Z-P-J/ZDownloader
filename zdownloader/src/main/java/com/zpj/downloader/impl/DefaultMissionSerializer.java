@@ -1,7 +1,7 @@
 package com.zpj.downloader.impl;
 
 import com.zpj.downloader.BaseMission;
-import com.zpj.downloader.MissionSerializer;
+import com.zpj.downloader.core.Serializer;
 import com.zpj.downloader.utils.io.UnsafeObjectInputStream;
 import com.zpj.utils.FileUtils;
 
@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 
-public class DefaultMissionSerializer implements MissionSerializer {
+public class DefaultMissionSerializer implements Serializer {
 
 
     @Override
