@@ -1,23 +1,19 @@
 package com.zpj.downloader.core.impl;
 
-import com.zpj.downloader.core.HttpEngine;
 import com.zpj.downloader.core.HttpFactory;
-import com.zpj.downloader.core.Request;
-import com.zpj.downloader.core.Response;
+import com.zpj.http.ZHttp;
+import com.zpj.http.core.IHttp;
+
+import java.io.IOException;
+import java.util.Map;
 
 public class HttpFactoryImpl implements HttpFactory {
-    @Override
-    public Request createRequest() {
-        return null;
-    }
 
     @Override
-    public Response createResponse(Request request) {
-        return null;
+    public IHttp.Response request(String url, Map<String, String> headers) throws IOException {
+        return ZHttp.get(url).headers(headers)
+                .maxRedirectCount(10)
+                .execute();
     }
 
-    @Override
-    public HttpEngine createHttpEngine() {
-        return null;
-    }
 }

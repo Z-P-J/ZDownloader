@@ -2,8 +2,17 @@ package com.zpj.downloader.core;
 
 import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.core.impl.Config;
+import com.zpj.downloader.core.impl.DownloaderConfig;
 
 public interface Downloader<T extends Mission> {
+
+    interface DownloaderObserver<T extends Mission> {
+        void onMissionAdd(T mission);
+
+        void onMissionDelete(T mission);
+
+        void onMissionFinished(T mission);
+    }
 
     T download(String url);
 
@@ -11,14 +20,27 @@ public interface Downloader<T extends Mission> {
 
     Config config();
 
+    T create(String url, String name, Config config);
+
+    DownloaderConfig getConfig();
+
+
+    void loadMissions(MissionLoader<T> loader);
+
+    void addObserver(DownloaderObserver<T> observer);
+
+    void removeObserver(DownloaderObserver<T> observer);
 
 
 
 
+    void setMissionFactory(MissionFactory<T> missionFactory);
 
+    MissionFactory<T> getMissionFactory();
 
+    void setBlockDivider(BlockDivider<T> divider);
 
-
+    BlockDivider<T> getBlockDivider();
 
     void setDispatcher(Dispatcher<T> dispatcher);
 
@@ -36,22 +58,23 @@ public interface Downloader<T extends Mission> {
 
     Notifier<T> getNotifier();
 
-    void setSerializer(Serializer<T> serializer);
+//    void setSerializer(Serializer<T> serializer);
+//
+//    Serializer<T> getSerializer();
 
-    Serializer<T> getSerializer();
+    void setTransfer(Transfer<T> transfer);
 
-    void setTransfer(Transfer transfer);
+    Transfer<T> getTransfer();
 
-    Transfer getTransfer();
+    void setExecutorFactory(ExecutorFactory<T> executorFactory);
 
-    void setThreadPool(ThreadPool threadPool);
-
-    ThreadPool getThreadPool();
+    ExecutorFactory<T> getExecutorFactory();
 
     void setUpdater(Updater updater);
 
     Updater getUpdater();
 
+    Dao<T> getDao();
 
 
 
@@ -60,13 +83,6 @@ public interface Downloader<T extends Mission> {
 
 
 
-    void enqueue(T mission);
-
-    void pause(T mission);
-
-    void delete(T mission);
-
-    void notifyError(T mission, final Error e);
 
     void notifyStatus(final T mission, final int status);
 

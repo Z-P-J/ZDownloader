@@ -2,12 +2,14 @@ package com.zpj.downloader.core.impl;
 
 import android.text.TextUtils;
 import android.util.Log;
+import android.webkit.URLUtil;
 
 import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.constant.ErrorCode;
 import com.zpj.downloader.core.Downloader;
 import com.zpj.downloader.core.Initializer;
 import com.zpj.downloader.core.Mission;
+import com.zpj.downloader.core.Result;
 import com.zpj.http.ZHttp;
 import com.zpj.http.core.HttpHeader;
 import com.zpj.http.core.IHttp;
@@ -32,14 +34,26 @@ public class MissionInitializer<T extends AbsMission> implements Initializer<T> 
     private static final String TAG = "MissionInitializer";
 
     @Override
-    public void initMission(Downloader<T> downloader, T mission) {
+    public Result initMission(Downloader<T> downloader, T mission) {
         IHttp.Response response = null;
         try {
 
             response = ZHttp.get(mission.getUrl())
                     .range(0)
                     .execute();
-            mission.setName(getFileNameFromResponse(response));
+
+            String contentType = response.contentType();
+            String contentDisposition = response.header("Content-Disposition");
+            String mimeType = null;
+            int i = contentType.indexOf(";");
+            if (i > 0) {
+                mimeType = contentType.substring(0, i).trim();
+            }
+            String name = URLUtil.guessFileName(mission.getUrl(), contentDisposition, mimeType);
+            mission.setName(name);
+
+//            mission.setName(getFileNameFromResponse(response));
+
             Log.d("mission.name", "mission.name=" + mission.getName());
             int statusCode = response.statusCode();
             int code = statusCode / 100;
@@ -49,84 +63,41 @@ public class MissionInitializer<T extends AbsMission> implements Initializer<T> 
                 Log.d(TAG, "redirectUrl=" + redirectUrl);
                 if (TextUtils.isEmpty(redirectUrl)) {
                     // 重定向链接为空，出错了
-                    mission.setErrCode(statusCode);
-                    downloader.getDispatcher().notifyError(mission, new Error(response.statusMessage()));
-                    return;
+                    return Result.error(statusCode, response.statusMessage());
                 } else {
                     // 重定向，更新链接，重新发起请求
                     mission.setUrl(redirectUrl);
-                    initMission(downloader, mission);
-                    return;
+                    return initMission(downloader, mission);
                 }
             } else if (code == 2) {
                 // 成功响应码2xx
-                String contentLength = response.header(HttpHeader.CONTENT_LENGTH);
-                if (contentLength != null) {
-                    mission.setLength(Long.parseLong(contentLength));
-                }
+                mission.setLength(response.contentLength());
                 Log.d("mission.length", "mission.length=" + mission.getLength());
                 if (mission.getLength() <= 0) {
-                    mission.setErrCode(ErrorCode.ERROR_SERVER_UNSUPPORTED);
-                    downloader.getDispatcher().notifyError(mission, Error.SERVER_UNSUPPORTED);
-                    return;
+                    return Result.error(ErrorCode.ERROR_SERVER_UNSUPPORTED, Error.SERVER_UNSUPPORTED.getErrorMsg());
                 } else if (mission.getLength() >= FileUtils.getAvailableSize()) {
-                    mission.setErrCode(ErrorCode.ERROR_NO_ENOUGH_SPACE);
-                    downloader.getDispatcher().notifyError(mission, Error.NO_ENOUGH_SPACE);
-                    return;
+                    return Result.error(ErrorCode.ERROR_NO_ENOUGH_SPACE, Error.NO_ENOUGH_SPACE.getErrorMsg());
                 }
             } else {
                 // 请求错误响应码4xx和5xx，请求码1xx出现的情况太少，暂时视为错误码。
-                mission.setErrCode(statusCode);
-                downloader.getDispatcher().notifyError(mission, new Error(response.statusMessage()));
-                return;
+                return Result.error(statusCode, response.statusMessage());
             }
 
             mission.setSupportSlice(statusCode == HttpURLConnection.HTTP_PARTIAL);
 
-            Log.d("mission.name", "mission.name444=" + mission.getName());
-            if (TextUtils.isEmpty(mission.getName())) {
-                Log.d("Initializer", "getMissionNameFromUrl--url=" + mission.getUrl());
-                mission.setName(generateFileNameFromUrl(mission, mission.getUrl()));
-            }
+//            Log.d("mission.name", "mission.name444=" + mission.getName());
+//            if (TextUtils.isEmpty(mission.getName())) {
+//                Log.d("Initializer", "getMissionNameFromUrl--url=" + mission.getUrl());
+//                mission.setName(generateFileNameFromUrl(mission, mission.getUrl()));
+//            }
 
             Log.d("mission.name", "mission.name555=" + mission.getName());
-
-            Config config = mission.getConfig();
-            if (mission.isBlockDownload()) {
-                long blocks = mission.getLength() / config.getBlockSize();
-                if (blocks * config.getBlockSize() < mission.getLength()) {
-                    blocks += 1;
-                }
-                mission.blocks = blocks;
-            } else {
-                mission.blocks = 1;
-            }
-            Log.d(TAG, "blocks=" + mission.blocks);
-
-            mission.queue.clear();
-            for (long position = 0; position < mission.blocks; position++) {
-                Log.d(TAG, "initQueue add position=" + position);
-                mission.queue.add(position);
-            }
-
-            File loacation = new File(config.getDownloadPath());
-            if (!loacation.exists()) {
-                loacation.mkdirs();
-            }
-            File file = new File(mission.getFilePath());
-            if (!file.exists()) {
-                file.createNewFile();
-            }
-
             Log.d(TAG, "storage=" + FileUtils.getAvailableSize());
-            mission.hasPrepared = true;
 
-
-            downloader.getSerializer().writeMission(mission);
-            mission.start();
+            return Result.ok();
         } catch (Exception e) {
             e.printStackTrace();
-            downloader.getDispatcher().notifyError(mission, new Error(e.getMessage()));
+            return Result.error(-1, e.getMessage());
         } finally {
             if (response != null) {
                 response.close();

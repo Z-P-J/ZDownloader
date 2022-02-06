@@ -7,6 +7,6 @@ import com.zpj.downloader.core.impl.Config;
 public interface Initializer<T extends Mission> {
 
     @WorkerThread
-    void initMission(Downloader<T> downloader, T mission);
+    Result initMission(Downloader<T> downloader, T mission);
 
 }

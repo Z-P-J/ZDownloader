@@ -3,16 +3,29 @@ package com.zpj.downloader.core;
 import com.zpj.downloader.BaseMission;
 import com.zpj.downloader.constant.Error;
 
+import java.util.List;
+import java.util.concurrent.Executor;
+
 public interface Dispatcher<T extends Mission> {
 
-    void enqueue(T mission);
+    Executor createExecutor(T mission);
 
-    void pause(T mission);
+    boolean isDownloading(T mission);
 
-    void delete(T mission);
+    boolean isPreparing(T mission);
 
-    void notifyError(T mission, final Error e);
+    boolean isWaiting(T mission);
 
-    void notifyStatus(final T mission, final int status);
+    boolean remove(T mission);
+
+    boolean wait(T mission);
+
+    boolean prepare(T mission);
+
+    boolean enqueue(T mission);
+
+    boolean canRetry(T mission, int code, String msg);
+
+    boolean onError(T mission, int code, String msg);
 
 }

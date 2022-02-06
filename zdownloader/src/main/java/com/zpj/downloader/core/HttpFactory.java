@@ -1,11 +1,12 @@
 package com.zpj.downloader.core;
 
-public interface HttpFactory<REQ extends Request, RESP extends Response> {
+import com.zpj.http.core.IHttp;
 
-    REQ createRequest();
+import java.io.IOException;
+import java.util.Map;
 
-    RESP createResponse(REQ request);
+public interface HttpFactory {
 
-    HttpEngine<REQ, RESP> createHttpEngine();
+    IHttp.Response request(String url, Map<String, String> headers) throws IOException;
 
 }

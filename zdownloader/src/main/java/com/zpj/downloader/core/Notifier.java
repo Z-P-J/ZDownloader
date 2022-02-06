@@ -10,14 +10,14 @@ import com.zpj.downloader.BaseMission;
  */
 public interface Notifier<T> {
 
-    void onProgress(Context context, T mission, float progress, boolean isPause);
+    void onProgress(Context applicationContext, T mission, float progress, boolean isPause);
 
-    void onFinished(Context context, T mission);
+    void onFinished(Context applicationContext, T mission);
 
-    void onError(Context context, T mission, int errCode);
+    void onError(Context applicationContext, T mission, int errCode);
 
-    void onCancel(Context context, T mission);
+    void onCancel(Context applicationContext, T mission);
 
-    void onCancelAll(Context context);
+    void onCancelAll(Context applicationContext);
 
 }

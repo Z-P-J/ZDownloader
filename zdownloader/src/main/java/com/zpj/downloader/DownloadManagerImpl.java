@@ -8,8 +8,8 @@ import android.text.TextUtils;
 import com.zpj.downloader.core.Notifier;
 import com.zpj.downloader.core.Serializer;
 import com.zpj.downloader.impl.DownloadMission;
-import com.zpj.downloader.utils.ExecutorUtils;
 import com.zpj.downloader.utils.NetworkChangeReceiver;
+import com.zpj.downloader.utils.ThreadPool;
 
 import java.io.File;
 import java.lang.ref.WeakReference;
@@ -155,7 +155,7 @@ public class DownloadManagerImpl implements DownloadManager, Serializer {
         isLoaded = false;
         isLoading = true;
 
-        ExecutorUtils.submitIO(new Runnable() {
+        ThreadPool.execute(new Runnable() {
             @Override
             public void run() {
                 ALL_MISSIONS.clear();

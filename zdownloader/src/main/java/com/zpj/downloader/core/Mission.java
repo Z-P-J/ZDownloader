@@ -14,6 +14,7 @@ import java.io.File;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
 
 public interface Mission {
@@ -30,7 +31,7 @@ public interface Mission {
 
         void onRetrying();
 
-        void onProgress(ProgressUpdater update);
+        void onProgress(Mission mission);
 
         void onFinished();
 
@@ -52,6 +53,9 @@ public interface Mission {
         int ERROR = 6;
         int RETRYING = 7;
         int FINISHED = 8;
+
+        int DELETE = 9;
+        int CLEAR = 10;
     }
 
     interface Lifecycle {
@@ -77,6 +81,8 @@ public interface Mission {
 
     void start();
 
+    void prepare();
+
     void pause();
 
     void waiting();
@@ -95,8 +101,10 @@ public interface Mission {
 
     public void removeAllObserver();
 
+    List<Observer> getObservers();
+
     //-------------------------下载任务状态-----------------------------------
-    boolean isPrepare();
+    boolean isPrepared();
 
     boolean isRunning();
 
@@ -139,7 +147,9 @@ public interface Mission {
 
     int getStatus();
 
-    int getErrCode();
+    int getErrorCode();
+
+    String getErrorMessage();
 
     boolean isBlockDownload();
 
@@ -173,7 +183,7 @@ public interface Mission {
 
 
     //-----------------------------------------------------setter-----------------------------------------------------------------
-
+    void setStatus(int status);
 
     void setName(String name);
 
@@ -183,7 +193,9 @@ public interface Mission {
 
     void setLength(long length);
 
-    void setErrCode(int errCode);
+    void setErrorCode(int errCode);
+
+    void setErrorMessage(String msg);
 
     void setSupportSlice(boolean support);
 

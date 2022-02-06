@@ -5,6 +5,7 @@ import android.support.annotation.Keep;
 import android.text.TextUtils;
 
 import com.zpj.downloader.ConflictPolicy;
+import com.zpj.downloader.ZDownloader;
 import com.zpj.downloader.constant.DefaultConstant;
 import com.zpj.downloader.core.Notifier;
 import com.zpj.downloader.impl.DefaultConflictPolicy;
@@ -21,18 +22,6 @@ import java.util.Map;
  * */
 @Keep
 public class Config<T extends Config<T>> implements Serializable {
-
-    /**
-     * context
-     * */
-    private transient Context context;
-
-    /**
-     * 通知拦截器
-     */
-    transient Notifier notifier;
-
-    private transient ConflictPolicy policy;
 
     /*
     * 下载线程数
@@ -105,8 +94,6 @@ public class Config<T extends Config<T>> implements Serializable {
     }
     
     public Config(Config config) {
-        this.setContext(config.getContext());
-        this.setNotifier(config.getNotifier());
         this.setThreadCount(config.getThreadCount());
         this.setAllowAllSSL(config.isAllowAllSSL());
         this.setBlockSize(config.getBlockSize());
@@ -116,7 +103,6 @@ public class Config<T extends Config<T>> implements Serializable {
         this.setDownloadPath(config.getDownloadPath());
         this.setEnableNotification(config.getEnableNotification());
         this.setHeaders(config.getHeaders());
-        this.setConflictPolicy(config.getConflictPolicy());
         this.setProgressInterval(config.getProgressInterval());
         this.setProxy(config.getProxy());
         this.setReadOutTime(config.getReadOutTime());
@@ -125,23 +111,26 @@ public class Config<T extends Config<T>> implements Serializable {
         this.setUserAgent(config.getUserAgent());
     }
 
+    public Config(ZDownloader.Builder builder) {
+        this.setThreadCount(builder.getThreadCount());
+        this.setAllowAllSSL(builder.isAllowAllSSL());
+        this.setBlockSize(builder.getBlockSize());
+        this.setBufferSize(builder.getBufferSize());
+        this.setConnectOutTime(builder.getConnectOutTime());
+        this.setCookie(builder.getCookie());
+        this.setDownloadPath(builder.getDownloadPath());
+        this.setEnableNotification(builder.getEnableNotification());
+        this.setHeaders(builder.getHeaders());
+        this.setProgressInterval(builder.getProgressInterval());
+        this.setProxy(builder.getProxy());
+        this.setReadOutTime(builder.getReadOutTime());
+        this.setRetryCount(builder.getRetryCount());
+        this.setRetryDelayMillis(builder.getRetryDelayMillis());
+        this.setUserAgent(builder.getUserAgent());
+    }
+
 
     //-----------------------------------------------------------getter-------------------------------------------------------------
-
-    public Context getContext() {
-        return context;
-    }
-
-    public Notifier getNotifier() {
-        return notifier;
-    }
-
-    public ConflictPolicy getConflictPolicy() {
-        if (policy == null) {
-            policy = new DefaultConflictPolicy();
-        }
-        return policy;
-    }
 
     public int getThreadCount() {
         if (threadCount < 1) {
@@ -217,20 +206,6 @@ public class Config<T extends Config<T>> implements Serializable {
 
     //-----------------------------------------------------------------setter------------------------------------------------------
 
-    void setContext(Context context) {
-        this.context = context;
-    }
-
-    public T setNotifier(Notifier interceptor) {
-        this.enableNotification = interceptor != null;
-        this.notifier = interceptor;
-        return (T) this;
-    }
-
-    public T setConflictPolicy(ConflictPolicy policy) {
-        this.policy = policy;
-        return (T) this;
-    }
 
     public T setDownloadPath(String downloadPath) {
         this.downloadPath = downloadPath;

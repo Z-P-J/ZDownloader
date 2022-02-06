@@ -1,29 +1,24 @@
 package com.zpj.downloader.core.impl;
 
-import android.os.Handler;
 import android.webkit.MimeTypeMap;
 
 import com.zpj.downloader.ZDownloader;
 import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.core.Mission;
-import com.zpj.downloader.core.Updater;
 import com.zpj.utils.FormatUtils;
 
 import java.io.File;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Locale;
-import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class AbsMission implements Mission {
 
-    protected final ConcurrentLinkedQueue<Long> queue = new ConcurrentLinkedQueue<>();
-    protected final ConcurrentLinkedQueue<Long> finished = new ConcurrentLinkedQueue<>();
-    protected final ArrayList<Long> speedHistoryList = new ArrayList<>();
     protected final AtomicLong done = new AtomicLong(0);
 
     protected final Config config;
@@ -38,14 +33,10 @@ public class AbsMission implements Mission {
     protected volatile long length = 0;
     protected volatile int missionStatus = Status.NEW;
     protected volatile boolean isBlockDownload = false;
-    protected volatile int errCode = -1;
-    protected volatile boolean hasPrepared = false;
+    protected volatile int errorCode = -1;
+    protected volatile String errorMessage;
 
     //-----------------------------------------------------transient---------------------------------------------------------------
-
-    protected transient volatile Updater mUpdater;
-
-    protected transient volatile AtomicInteger errorCount;
 
     protected transient AtomicInteger finishCount;
     protected transient AtomicInteger aliveThreadCount;
@@ -53,11 +44,6 @@ public class AbsMission implements Mission {
     protected transient ArrayList<WeakReference<Observer>> mObservers;
 
     protected transient volatile float speed = 0f;
-
-    protected transient volatile Handler handler;
-    protected transient volatile boolean isCreate = false;
-    protected transient ThreadPoolExecutor threadPoolExecutor;
-    protected transient Error error;
 
     public AbsMission(Config config) {
         this.config = config;
@@ -67,18 +53,25 @@ public class AbsMission implements Mission {
         ZDownloader.get(clazz).notifyStatus((T) mission, status);
     }
 
-    protected  <T extends Mission> void notifyStatus(final int status) {
-        missionStatus = status;
+    protected void notifyStatus(final int status) {
         notifyStatus(getClass(), this, status);
     }
 
     @Override
     public void start() {
         if (missionStatus == Status.NEW) {
-            notifyStatus(Status.PREPARING);
+            notifyStatus(Status.NEW);
+        } if (missionStatus == Status.PREPARING) {
+            // TODO 需要判断是否正在准备中
+            prepare();
         } else if (canStart()) {
             notifyStatus(Status.PROGRESSING);
         }
+    }
+
+    @Override
+    public void prepare() {
+        notifyStatus(Status.PREPARING);
     }
 
     @Override
@@ -93,7 +86,8 @@ public class AbsMission implements Mission {
 
     @Override
     public void restart() {
-        notifyStatus(Status.START);
+        setStatus(Status.NEW);
+        start();
     }
 
     @Override
@@ -145,6 +139,24 @@ public class AbsMission implements Mission {
     }
 
     @Override
+    public List<Observer> getObservers() {
+        if (mObservers == null) {
+            return Collections.emptyList();
+        }
+        List<Observer> list = new ArrayList<>();
+        for (Iterator<WeakReference<Observer>> iterator = mObservers.iterator();
+             iterator.hasNext(); ) {
+            Observer observer = iterator.next().get();
+            if (observer == null) {
+                iterator.remove();
+            } else {
+                list.add(observer);
+            }
+        }
+        return list;
+    }
+
+    @Override
     public synchronized void removeAllObserver() {
         if (mObservers == null) {
             return;
@@ -153,7 +165,7 @@ public class AbsMission implements Mission {
     }
 
     @Override
-    public boolean isPrepare() {
+    public boolean isPrepared() {
         return missionStatus == Status.PREPARING;
     }
 
@@ -184,7 +196,7 @@ public class AbsMission implements Mission {
 
     @Override
     public boolean canPause() {
-        return isRunning() || isWaiting() || isPrepare();
+        return isRunning() || isWaiting() || isPrepared();
     }
 
     @Override
@@ -253,8 +265,13 @@ public class AbsMission implements Mission {
     }
 
     @Override
-    public int getErrCode() {
-        return errCode;
+    public int getErrorCode() {
+        return errorCode;
+    }
+
+    @Override
+    public String getErrorMessage() {
+        return errorMessage;
     }
 
     @Override
@@ -347,6 +364,11 @@ public class AbsMission implements Mission {
     }
 
     @Override
+    public void setStatus(int status) {
+        this.missionStatus = status;
+    }
+
+    @Override
     public void setName(String name) {
         this.name = name;
     }
@@ -367,8 +389,13 @@ public class AbsMission implements Mission {
     }
 
     @Override
-    public void setErrCode(int errCode) {
-        this.errCode = errCode;
+    public void setErrorCode(int errCode) {
+        this.errorCode = errCode;
+    }
+
+    @Override
+    public void setErrorMessage(String msg) {
+        this.errorMessage = msg;
     }
 
     @Override

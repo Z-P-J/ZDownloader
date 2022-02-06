@@ -12,7 +12,7 @@ import com.zpj.notification.ZNotify;
 /**
  * 实现INotificationInterceptor接口，在onProgress、onFinished、onError方法中更新通知
  */
-public class DownloadNotificationInterceptor implements Notifier {
+public class DownloadNotificationInterceptor implements Notifier<BaseMission<?>> {
 
     @Override
     public void onProgress(Context context, BaseMission<?> mission, float progress, boolean isPause) {
