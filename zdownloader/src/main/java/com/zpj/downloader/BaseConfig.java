@@ -5,6 +5,7 @@ import android.support.annotation.Keep;
 import android.text.TextUtils;
 
 import com.zpj.downloader.constant.DefaultConstant;
+import com.zpj.downloader.core.Notifier;
 import com.zpj.downloader.impl.DefaultConflictPolicy;
 import com.zpj.downloader.utils.SerializableProxy;
 
@@ -28,7 +29,7 @@ abstract class BaseConfig<T extends BaseConfig<T>> implements Serializable {
     /**
      * 通知拦截器
      */
-    transient INotificationInterceptor notificationInterceptor;
+    transient Notifier notificationInterceptor;
 
     private transient ConflictPolicy policy;
 
@@ -105,7 +106,7 @@ abstract class BaseConfig<T extends BaseConfig<T>> implements Serializable {
         return context;
     }
 
-    public INotificationInterceptor getNotificationInterceptor() {
+    public Notifier getNotificationInterceptor() {
         return notificationInterceptor;
     }
 
@@ -194,7 +195,7 @@ abstract class BaseConfig<T extends BaseConfig<T>> implements Serializable {
         this.context = context;
     }
 
-    public T setNotificationInterceptor(INotificationInterceptor interceptor) {
+    public T setNotificationInterceptor(Notifier interceptor) {
         this.enableNotification = interceptor != null;
         this.notificationInterceptor = interceptor;
         return (T) this;

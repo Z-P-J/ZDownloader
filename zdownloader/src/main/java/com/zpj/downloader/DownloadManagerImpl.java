@@ -5,9 +5,11 @@ import android.content.Context;
 import android.content.IntentFilter;
 import android.text.TextUtils;
 
+import com.zpj.downloader.core.Notifier;
+import com.zpj.downloader.core.Serializer;
 import com.zpj.downloader.impl.DownloadMission;
-import com.zpj.downloader.utils.ExecutorUtils;
 import com.zpj.downloader.utils.NetworkChangeReceiver;
+import com.zpj.downloader.utils.ThreadPool;
 
 import java.io.File;
 import java.lang.ref.WeakReference;
@@ -16,13 +18,12 @@ import java.util.Collections;
 import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author Z-P-J
  */
-public class DownloadManagerImpl implements DownloadManager, MissionSerializer {
+public class DownloadManagerImpl implements DownloadManager, Serializer {
 
     private static final String TAG = DownloadManagerImpl.class.getSimpleName();
 
@@ -89,7 +90,7 @@ public class DownloadManagerImpl implements DownloadManager, MissionSerializer {
         this.onLoadMissionListeners.clear();
         pauseAllMissions();
         getContext().unregisterReceiver(NetworkChangeReceiver.getInstance());
-        INotificationInterceptor interceptor = getDownloaderConfig().getNotificationInterceptor();
+        Notifier interceptor = getDownloaderConfig().getNotificationInterceptor();
         if (interceptor != null) {
             interceptor.onCancelAll(getContext());
         }
@@ -154,7 +155,7 @@ public class DownloadManagerImpl implements DownloadManager, MissionSerializer {
         isLoaded = false;
         isLoading = true;
 
-        ExecutorUtils.submitIO(new Runnable() {
+        ThreadPool.execute(new Runnable() {
             @Override
             public void run() {
                 ALL_MISSIONS.clear();

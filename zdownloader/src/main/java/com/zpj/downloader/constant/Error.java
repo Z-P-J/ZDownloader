@@ -2,6 +2,8 @@ package com.zpj.downloader.constant;
 
 import android.support.annotation.NonNull;
 
+import com.zpj.downloader.core.Result;
+
 public class  Error {
     
     public static final Error FILE_NOT_FOUND = new Error("文件不存在");

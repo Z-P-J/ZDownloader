@@ -14,7 +14,8 @@ import android.util.Log;
 import android.webkit.MimeTypeMap;
 
 import com.zpj.downloader.constant.Error;
-import com.zpj.downloader.utils.ExecutorUtils;
+import com.zpj.downloader.core.Notifier;
+import com.zpj.downloader.utils.ThreadPool;
 import com.zpj.utils.FileUtils;
 import com.zpj.utils.FormatUtils;
 
@@ -176,7 +177,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
         Log.d(TAG, "start hasInit=false initMission");
         notifyStatus(MissionStatus.PREPARING);
 
-        ExecutorUtils.submitIO(new MissionInitializer(this));
+        ThreadPool.execute(new MissionInitializer(this));
     }
 
     protected BaseMission() {
@@ -416,7 +417,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
 
     public void delete() {
         reset();
-        ExecutorUtils.submitIO(new Runnable() {
+        ThreadPool.execute(new Runnable() {
             @Override
             public void run() {
                 File file = getFile();
@@ -543,7 +544,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
                 }
 
                 if (getEnableNotification() && getNotificationInterceptor() != null) {
-                    INotificationInterceptor notificationInterceptor = getNotificationInterceptor();
+                    Notifier notificationInterceptor = getNotificationInterceptor();
                     if (status == MissionStatus.RUNNING) {
                         notificationInterceptor.onProgress(getContext(), BaseMission.this, getProgress(), false);
                     } else if (status == MissionStatus.PAUSED) {
@@ -628,7 +629,7 @@ public class BaseMission<T extends BaseMission<T>> extends BaseConfig<T> impleme
     }
 
     protected void writeMissionInfo() {
-        ExecutorUtils.submitIO(new Runnable() {
+        ThreadPool.execute(new Runnable() {
             @Override
             public void run() {
                 DownloadManagerImpl.getInstance().writeMission(BaseMission.this);
