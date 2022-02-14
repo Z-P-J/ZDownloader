@@ -1,8 +1,10 @@
 package com.zpj.downloader.core.impl;
 
+import com.zpj.downloader.constant.DefaultConstant;
 import com.zpj.downloader.core.Block;
 import com.zpj.downloader.core.BlockDivider;
 import com.zpj.downloader.core.Mission;
+import com.zpj.http.constant.Defaults;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -14,7 +16,7 @@ public class BaseBlockDivider<T extends Mission> implements BlockDivider<T> {
         long start = 0;
         long end;
 
-        long blockSize = mission.getConfig().getBlockSize();
+        long blockSize = DefaultConstant.BLOCK_SIZE;
         long count = mission.getLength() / blockSize;
         List<Block> blocks = new ArrayList<>();
         for (long i = 1; i <= count; i++) {

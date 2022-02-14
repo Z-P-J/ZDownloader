@@ -1,21 +1,11 @@
 package com.zpj.downloader.core;
 
-import android.content.Context;
-import android.text.TextUtils;
-import android.webkit.MimeTypeMap;
-
-import com.zpj.downloader.BaseMission;
-import com.zpj.downloader.DownloadManagerImpl;
-import com.zpj.downloader.ProgressUpdater;
 import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.core.impl.Config;
+import com.zpj.downloader.core.impl.MissionInfo;
 
 import java.io.File;
-import java.lang.ref.WeakReference;
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
-import java.util.Locale;
 
 public interface Mission {
 
@@ -31,7 +21,7 @@ public interface Mission {
 
         void onRetrying();
 
-        void onProgress(Mission mission);
+        void onProgress(Mission mission, float speed);
 
         void onFinished();
 
@@ -135,15 +125,11 @@ public interface Mission {
 
     long getFinishTime();
 
-    int getAliveThreadCount();
-
-    long getBlocks();
-
     int getFinishCount();
 
     long getLength();
 
-    long getDone();
+    long getDownloaded();
 
     int getStatus();
 
@@ -180,6 +166,8 @@ public interface Mission {
     boolean isSupportSlice();
 
     Config getConfig();
+
+    MissionInfo getMissionInfo();
 
 
     //-----------------------------------------------------setter-----------------------------------------------------------------

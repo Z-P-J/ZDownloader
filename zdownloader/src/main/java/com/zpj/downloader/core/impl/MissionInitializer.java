@@ -16,7 +16,6 @@ import com.zpj.http.core.IHttp;
 import com.zpj.http.utils.CharsetUtil;
 import com.zpj.utils.FileUtils;
 
-import java.io.File;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -29,7 +28,7 @@ import java.util.regex.Pattern;
  * 下载任务初始化
  * @author Z-P-J
  */
-public class MissionInitializer<T extends AbsMission> implements Initializer<T> {
+public class MissionInitializer<T extends DownloadMission> implements Initializer<T> {
 
     private static final String TAG = "MissionInitializer";
 

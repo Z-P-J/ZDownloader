@@ -20,6 +20,8 @@ public interface Dispatcher<T extends Mission> {
 
     boolean wait(T mission);
 
+    T nextMission();
+
     boolean prepare(T mission);
 
     boolean enqueue(T mission);

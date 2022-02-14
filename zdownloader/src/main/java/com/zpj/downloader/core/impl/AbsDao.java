@@ -43,7 +43,7 @@ public abstract class AbsDao<T extends Mission> implements Dao<T> {
     public abstract T readMission(File file);
 
     @Override
-    public boolean saveMission(T mission) {
+    public boolean saveMissionInfo(T mission) {
         return false;
     }
 

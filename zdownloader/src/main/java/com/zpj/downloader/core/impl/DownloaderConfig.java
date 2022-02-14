@@ -20,7 +20,7 @@ import java.io.File;
 /**
 * @author Z-P-J
 * */
-public class DownloaderConfig extends Config<DownloaderConfig> {
+public class DownloaderConfig extends Config {
 
     private static final String MISSIONS_PATH = "missions";
 
@@ -34,10 +34,6 @@ public class DownloaderConfig extends Config<DownloaderConfig> {
 
     public DownloaderConfig() {
         super();
-    }
-
-    public DownloaderConfig(Config config) {
-        super(config);
     }
 
     static DownloaderConfig with(Context context, Class<? extends BaseMission<?>> clazz) {

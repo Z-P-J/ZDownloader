@@ -34,12 +34,12 @@ public class AbsTransfer<T extends Mission> implements Transfer<T> {
         if (block == null) {
             start = end = 0;
         } else {
-            start = block.getStart();
+            start = block.getStart() + block.getDownloaded();
             end = block.getEnd();
         }
 
 
-        Map<String, String> headers = new HashMap<String, String>(mission.getConfig().getHeaders());
+        Map<String, String> headers = new HashMap<>(mission.getConfig().getHeaders());
         if (mission.isBlockDownload()) {
             headers.put(HttpHeader.RANGE, String.format(Locale.ENGLISH, "bytes=%d-%d", start, end));
         } else {
@@ -62,6 +62,7 @@ public class AbsTransfer<T extends Mission> implements Transfer<T> {
                     while ((len = is.read(buf, 0, buf.length)) != -1) {
                         f.write(buf, 0, len);
                         downloaded += len;
+                        block.setDownloaded(downloaded);
                         downloader.getDao().updateBlockDownloaded(block, downloaded);
                     }
 
