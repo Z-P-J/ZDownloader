@@ -1,116 +1,100 @@
-//package com.zpj.downloader.core.impl;
-//
-//import android.os.Handler;
-//import android.os.HandlerThread;
-//import android.os.Message;
-//import android.util.Log;
-//
-//import com.zpj.downloader.BaseMission;
-//import com.zpj.downloader.DownloadManagerImpl;
-//import com.zpj.downloader.core.Updater;
-//
-///**
-// * 下载任务进度更新
-// */
-//public class ProgressUpdater implements Updater {
-//
-//    private static final String TAG = "ProgressUpdater";
-//
-//    private final BaseMission<?> mission;
-//    private HandlerThread handlerThread;
-//    private Handler handler;
-//    private long lastDone;
-//
-//    ProgressUpdater(final BaseMission<?> mission) {
-//        this.mission = mission;
-//    }
-//
-//    @Override
-//    public long getSize() {
-//        return mission.getLength();
-//    }
-//
-//    @Override
-//    public long getDone() {
-//        return mission.getDone();
-//    }
-//
-//    @Override
-//    public float getProgress() {
-//        return mission.getProgress();
-//    }
-//
-//    @Override
-//    public float getSpeed() {
-//        return mission.getSpeed();
-//    }
-//
-//    @Override
-//    public String getFileSizeStr() {
-//        return mission.getFileSizeStr();
-//    }
-//
-//    @Override
-//    public String getDownloadedSizeStr() {
-//        return mission.getDownloadedSizeStr();
-//    }
-//
-//    @Override
-//    public String getProgressStr() {
-//        return mission.getProgressStr();
-//    }
-//
-//    @Override
-//    public String getSpeedStr() {
-//        return mission.getSpeedStr();
-//    }
-//
-//    @Override
-//    public void start() {
-//        stop();
-//        lastDone = mission.done.get();
-//        handlerThread = new HandlerThread(TAG);
-//        handlerThread.start();
-//        handler = new Handler(handlerThread.getLooper()) {
-//            @Override
-//            public void handleMessage(Message msg) {
-//                if (msg.what == 0) {
-//                    Log.d(TAG, "progressRunnable--start isRunning=" + mission.isRunning()
-//                            + " missionStatus=" + mission.missionStatus
-//                            + " aliveThreadCount=" + mission.aliveThreadCount.get());
-//                    if (mission.isFinished() || mission.errCode != -1 || mission.aliveThreadCount.get() < 1 || !mission.isRunning()) {
-//                        mission.notifyStatus(mission.missionStatus);
-//                        stop();
-//                        return;
-//                    }
-//                    sendEmptyMessageDelayed(0, mission.getProgressInterval());
-//                    long downloaded = mission.done.get();
-//                    long delta = downloaded - lastDone;
-//                    Log.d(TAG, "progressRunnable--delta=" + delta);
-//                    mission.speedHistoryList.add(delta);
-//                    if (delta > 0) {
-//                        lastDone = downloaded;
-//                        mission.speed = delta * (mission.getProgressInterval() / 1000f);
-//                    }
-////                    mission.writeMissionInfo();
-//                    DownloadManagerImpl.getInstance().writeMission(mission);
-//                    mission.notifyStatus(BaseMission.MissionStatus.RUNNING);
-//                }
-//            }
-//        };
-//        handler.sendEmptyMessage(0);
-//    }
-//
-//    public void stop() {
-//        if (handler != null) {
-//            handler.removeMessages(0);
-//            handler = null;
-//        }
-//        if (handlerThread != null) {
-//            handlerThread.quit();
-//            handlerThread = null;
-//        }
-//        lastDone = -1;
-//    }
-//
-//}
+package com.zpj.downloader.core.impl;
+
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.Message;
+import android.os.SystemClock;
+import android.util.Log;
+
+import com.zpj.downloader.ZDownloader;
+import com.zpj.downloader.core.Block;
+import com.zpj.downloader.core.Mission;
+import com.zpj.downloader.core.Updater;
+import com.zpj.downloader.utils.ThreadPool;
+
+import java.util.List;
+
+/**
+ * 下载任务进度更新
+ */
+public class ProgressUpdater<T extends Mission> implements Updater {
+
+    private static final String TAG = "ProgressUpdater";
+
+    private static final int MSG_PROGRESS = 100;
+
+    private final T mission;
+    private HandlerThread handlerThread;
+    private Handler handler;
+    private volatile long lastDownloaded;
+    private volatile long lastTime;
+
+    public ProgressUpdater(final T mission) {
+        this.mission = mission;
+    }
+
+    @Override
+    public void start() {
+        stop();
+        handlerThread = new HandlerThread(TAG);
+        handlerThread.start();
+        handler = new Handler(handlerThread.getLooper()) {
+            @Override
+            public void handleMessage(Message msg) {
+                if (msg.what == MSG_PROGRESS) {
+                    if (mission.isFinished() || mission.getErrorCode() != -1 || !mission.isRunning()) {
+                        stop();
+                        return;
+                    }
+                    long progressInterval = mission.getConfig().getProgressInterval();
+                    sendEmptyMessageDelayed(MSG_PROGRESS, progressInterval);
+
+                    long currentTime = SystemClock.elapsedRealtime();
+
+                    long downloaded = 0;
+
+                    List<Block> blocks = ZDownloader.get((Class<T>) mission.getClass()).getDao().queryBlocks(mission);
+                    for (Block block : blocks) {
+                        downloaded += block.getDownloaded();
+                    }
+
+                    long delta = downloaded - lastDownloaded;
+                    Log.d(TAG, "progressRunnable--delta=" + delta);
+
+                    if (delta > 0) {
+                        lastDownloaded = downloaded;
+                        final float speed = delta * ((currentTime - lastTime) / 1000f);
+
+                        ThreadPool.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                List<Mission.Observer> observers = mission.getObservers();
+                                for (Mission.Observer observer : observers) {
+                                    observer.onProgress(mission, speed);
+                                }
+                            }
+                        });
+                    }
+                    lastTime = currentTime;
+                }
+            }
+        };
+
+        lastDownloaded = mission.getDownloaded();
+        lastTime = SystemClock.elapsedRealtime();
+        handler.sendEmptyMessage(MSG_PROGRESS);
+    }
+
+    public void stop() {
+        if (handler != null) {
+            handler.removeMessages(MSG_PROGRESS);
+            handler = null;
+        }
+        if (handlerThread != null) {
+            handlerThread.quit();
+            handlerThread = null;
+        }
+        lastDownloaded = -1;
+    }
+
+}

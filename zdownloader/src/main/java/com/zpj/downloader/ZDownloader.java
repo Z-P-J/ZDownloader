@@ -8,7 +8,9 @@ import com.zpj.downloader.core.Downloader;
 import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.Notifier;
 import com.zpj.downloader.core.impl.Config;
+import com.zpj.downloader.core.impl.MissionInfo;
 import com.zpj.downloader.impl.DownloadMission;
+import com.zpj.downloader.utils.MissionIdGenerator;
 import com.zpj.downloader.utils.SerializableProxy;
 
 import java.lang.reflect.Constructor;
@@ -48,11 +50,11 @@ public class ZDownloader {
     }
 
 
-    public static  <T extends Mission> Downloader<T> get(Class<T> clazz) {
+    public static <T extends Mission> Downloader<T> get(Class<T> clazz) {
         return (Downloader<T>) DOWNLOADER_MAP.get(clazz);
     }
 
-    public static  <T extends Mission> Downloader<T> get(T mission) {
+    public static <T extends Mission> Downloader<T> get(T mission) {
         return (Downloader<T>) DOWNLOADER_MAP.get(mission.getClass());
     }
 
@@ -689,7 +691,10 @@ public class ZDownloader {
         }
 
         public <T extends Mission> T build(Class<T> clazz) {
-            return ZDownloader.get(clazz).create(url, name, new Config(this));
+            // TODO UUID.randomUUID();
+            String missionId = String.valueOf(MissionIdGenerator.getInstance().generateValidId());
+            MissionInfo info = new MissionInfo(missionId, url, name);
+            return ZDownloader.get(clazz).create(info, new Config(missionId, this));
         }
 
     }

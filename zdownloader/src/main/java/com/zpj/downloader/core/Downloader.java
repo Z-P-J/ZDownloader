@@ -1,8 +1,11 @@
 package com.zpj.downloader.core;
 
+import android.support.annotation.NonNull;
+
 import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.core.impl.Config;
 import com.zpj.downloader.core.impl.DownloaderConfig;
+import com.zpj.downloader.core.impl.MissionInfo;
 
 public interface Downloader<T extends Mission> {
 
@@ -22,7 +25,16 @@ public interface Downloader<T extends Mission> {
 
     T create(String url, String name, Config config);
 
+    T create(MissionInfo info, Config config);
+
     DownloaderConfig getConfig();
+
+    /**
+     * 一个唯一的key代表该Downloader
+     * @return key
+     */
+    @NonNull
+    String getKey();
 
 
     void loadMissions(MissionLoader<T> loader);

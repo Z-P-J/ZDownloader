@@ -3,7 +3,6 @@ package com.zpj.downloader.core.impl;
 import android.webkit.MimeTypeMap;
 
 import com.zpj.downloader.ZDownloader;
-import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.core.Mission;
 import com.zpj.utils.FormatUtils;
 
@@ -17,36 +16,32 @@ import java.util.Locale;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
-public class AbsMission implements Mission {
+public class DownloadMission implements Mission {
 
     protected final AtomicLong done = new AtomicLong(0);
 
     protected final Config config;
 
-    protected volatile String uuid = "";
-    protected volatile String name = "";
-    protected volatile String url = "";
-    protected volatile String originUrl = "";
-    protected volatile long createTime = 0;
-    protected volatile long finishTime = 0;
-    protected volatile long blocks = 1;
-    protected volatile long length = 0;
-    protected volatile int missionStatus = Status.NEW;
-    protected volatile boolean isBlockDownload = false;
-    protected volatile int errorCode = -1;
-    protected volatile String errorMessage;
+    protected final MissionInfo info;
 
     //-----------------------------------------------------transient---------------------------------------------------------------
 
     protected transient AtomicInteger finishCount;
-    protected transient AtomicInteger aliveThreadCount;
 
     protected transient ArrayList<WeakReference<Observer>> mObservers;
 
     protected transient volatile float speed = 0f;
 
-    public AbsMission(Config config) {
+
+
+//    public DownloadMission(Config config) {
+//        this.config = config;
+//        this.info = new MissionInfo(config.getMissionId());
+//    }
+
+    public DownloadMission(Config config, MissionInfo info) {
         this.config = config;
+        this.info = info;
     }
 
     private static <T extends Mission> void notifyStatus(Class<T> clazz, Mission mission, final int status) {
@@ -59,6 +54,7 @@ public class AbsMission implements Mission {
 
     @Override
     public void start() {
+        int missionStatus = getStatus();
         if (missionStatus == Status.NEW) {
             notifyStatus(Status.NEW);
         } if (missionStatus == Status.PREPARING) {
@@ -139,7 +135,7 @@ public class AbsMission implements Mission {
     }
 
     @Override
-    public List<Observer> getObservers() {
+    public synchronized List<Observer> getObservers() {
         if (mObservers == null) {
             return Collections.emptyList();
         }
@@ -166,32 +162,32 @@ public class AbsMission implements Mission {
 
     @Override
     public boolean isPrepared() {
-        return missionStatus == Status.PREPARING;
+        return getStatus() == Status.PREPARING;
     }
 
     @Override
     public boolean isRunning() {
-        return missionStatus == Status.PROGRESSING;
+        return getStatus() == Status.PROGRESSING;
     }
 
     @Override
     public boolean isWaiting() {
-        return missionStatus == Status.WAITING;
+        return getStatus() == Status.WAITING;
     }
 
     @Override
     public boolean isPause() {
-        return missionStatus == Status.PAUSED;
+        return getStatus() == Status.PAUSED;
     }
 
     @Override
     public boolean isFinished() {
-        return missionStatus == Status.FINISHED;
+        return getStatus() == Status.FINISHED;
     }
 
     @Override
     public boolean isError() {
-        return missionStatus == Status.ERROR;
+        return getStatus() == Status.ERROR;
     }
 
     @Override
@@ -201,47 +197,37 @@ public class AbsMission implements Mission {
 
     @Override
     public boolean canStart() {
-        return isPause() || isError() || missionStatus == Status.NEW;
+        return isPause() || isError() || getStatus() == Status.NEW;
     }
 
     @Override
     public String getUuid() {
-        return uuid;
+        return info.missionId;
     }
 
     @Override
     public String getName() {
-        return name;
+        return info.name;
     }
 
     @Override
     public String getUrl() {
-        return url;
+        return info.url;
     }
 
     @Override
     public String getOriginUrl() {
-        return originUrl;
+        return info.originUrl;
     }
 
     @Override
     public long getCreateTime() {
-        return createTime;
+        return info.createTime;
     }
 
     @Override
     public long getFinishTime() {
-        return finishTime;
-    }
-
-    @Override
-    public int getAliveThreadCount() {
-        return aliveThreadCount.get();
-    }
-
-    @Override
-    public long getBlocks() {
-        return blocks;
+        return info.finishTime;
     }
 
     @Override
@@ -251,46 +237,46 @@ public class AbsMission implements Mission {
 
     @Override
     public long getLength() {
-        return length;
+        return info.length;
     }
 
     @Override
-    public long getDone() {
+    public long getDownloaded() {
         return done.get();
     }
 
     @Override
     public int getStatus() {
-        return missionStatus;
+        return info.missionStatus;
     }
 
     @Override
     public int getErrorCode() {
-        return errorCode;
+        return info.errorCode;
     }
 
     @Override
     public String getErrorMessage() {
-        return errorMessage;
+        return info.errorMessage;
     }
 
     @Override
     public boolean isBlockDownload() {
-        return isBlockDownload;
+        return info.isBlockDownload;
     }
 
     @Override
     public boolean hasInit() {
-        return missionStatus > Status.PREPARING;
+        return getStatus() > Status.PREPARING;
     }
 
     @Override
     public String getFilePath() {
         String path = config.getDownloadPath();
         if (path.endsWith(File.separator)) {
-            return path + name;
+            return path + info.name;
         }
-        return path + File.separator + name;
+        return path + File.separator + info.name;
     }
 
     @Override
@@ -305,11 +291,11 @@ public class AbsMission implements Mission {
 
     @Override
     public float getProgress() {
-        return getProgress(getDone(), length);
+        return getProgress(getDownloaded(), info.length);
     }
 
     private float getProgress(long done, long length) {
-        if (missionStatus == Status.FINISHED) {
+        if (getStatus() == Status.FINISHED) {
             return 100f;
         } else if (length <= 0) {
             return 0f;
@@ -325,7 +311,7 @@ public class AbsMission implements Mission {
 
     @Override
     public String getFileSizeStr() {
-        return FormatUtils.formatSize(length);
+        return FormatUtils.formatSize(info.length);
     }
 
     @Override
@@ -355,7 +341,7 @@ public class AbsMission implements Mission {
 
     @Override
     public boolean isSupportSlice() {
-        return isBlockDownload;
+        return isBlockDownload();
     }
 
     @Override
@@ -364,42 +350,47 @@ public class AbsMission implements Mission {
     }
 
     @Override
+    public MissionInfo getMissionInfo() {
+        return info;
+    }
+
+    @Override
     public void setStatus(int status) {
-        this.missionStatus = status;
+        info.missionStatus = status;
     }
 
     @Override
     public void setName(String name) {
-        this.name = name;
+        info.name = name;
     }
 
     @Override
     public void setUrl(String url) {
-        this.url = url;
+        info.url = url;
     }
 
     @Override
     public void setOriginUrl(String originUrl) {
-        this.originUrl = originUrl;
+        info.originUrl = originUrl;
     }
 
     @Override
     public void setLength(long length) {
-        this.length = length;
+        info.length = length;
     }
 
     @Override
     public void setErrorCode(int errCode) {
-        this.errorCode = errCode;
+        info.errorCode = errCode;
     }
 
     @Override
     public void setErrorMessage(String msg) {
-        this.errorMessage = msg;
+        info.errorMessage = msg;
     }
 
     @Override
     public void setSupportSlice(boolean support) {
-        isBlockDownload = support;
+        info.isBlockDownload = support;
     }
 }

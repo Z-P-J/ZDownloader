@@ -13,7 +13,7 @@ import android.widget.Toast;
 
 import com.zpj.downloader.BaseMission;
 import com.zpj.downloader.core.Mission;
-import com.zpj.downloader.core.impl.AbsMission;
+import com.zpj.downloader.core.impl.DownloadMission;
 import com.zpj.downloader.impl.DefaultConflictPolicy;
 import com.zpj.downloader.ZDownloader;
 import com.zpj.fragmentation.dialog.IDialog;
@@ -149,7 +149,7 @@ public class AddTaskFragment extends BottomDragDialogFragment<AddTaskFragment> i
 
 
             Mission mission = new ZDownloader.Builder(url, name.getText().toString())
-                    .build(AbsMission.class);
+                    .build(DownloadMission.class);
             mission.start();
 
 
