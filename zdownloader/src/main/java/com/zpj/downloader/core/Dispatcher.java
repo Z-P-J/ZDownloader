@@ -18,7 +18,7 @@ public interface Dispatcher<T extends Mission> {
 
     boolean remove(T mission);
 
-    boolean wait(T mission);
+    boolean waiting(T mission);
 
     T nextMission();
 

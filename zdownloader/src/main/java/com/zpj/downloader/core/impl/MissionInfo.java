@@ -27,6 +27,7 @@ public class MissionInfo {
     protected volatile long length = 0;
     protected volatile long downloaded = 0;
     @ColumnInfo(name = "status")
+    @Mission.Status
     protected volatile int missionStatus = Mission.Status.NEW;
     @ColumnInfo(name = "block_download")
     protected volatile boolean isBlockDownload = false;
@@ -79,6 +80,7 @@ public class MissionInfo {
         return downloaded;
     }
 
+    @Mission.Status
     public int getMissionStatus() {
         return missionStatus;
     }

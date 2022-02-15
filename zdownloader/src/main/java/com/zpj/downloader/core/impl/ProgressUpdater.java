@@ -42,7 +42,7 @@ public class ProgressUpdater<T extends Mission> implements Updater {
             @Override
             public void handleMessage(Message msg) {
                 if (msg.what == MSG_PROGRESS) {
-                    if (mission.isFinished() || mission.getErrorCode() != -1 || !mission.isRunning()) {
+                    if (mission.isComplete() || mission.getErrorCode() != -1 || !mission.isDownloading()) {
                         stop();
                         return;
                     }

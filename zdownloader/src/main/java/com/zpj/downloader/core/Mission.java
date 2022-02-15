@@ -1,10 +1,14 @@
 package com.zpj.downloader.core;
 
+import android.support.annotation.IntDef;
+
 import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.core.impl.Config;
 import com.zpj.downloader.core.impl.MissionInfo;
 
 import java.io.File;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.util.List;
 
 public interface Mission {
@@ -32,17 +36,18 @@ public interface Mission {
         void onClear();
     }
 
-    // TODO
-    interface Status {
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef({Status.NEW, Status.PREPARING, Status.WAITING,  Status.DOWNLOADING,
+            Status.PAUSED, Status.ERROR, Status.RETRYING, Status.COMPLETE})
+    @interface Status {
         int NEW = 0;
         int PREPARING = 1;
         int WAITING = 2;
-        int START = 3;
-        int PROGRESSING = 4;
+        int DOWNLOADING = 4;
         int PAUSED = 5;
         int ERROR = 6;
         int RETRYING = 7;
-        int FINISHED = 8;
+        int COMPLETE = 8;
 
         int DELETE = 9;
         int CLEAR = 10;
@@ -94,15 +99,17 @@ public interface Mission {
     List<Observer> getObservers();
 
     //-------------------------下载任务状态-----------------------------------
-    boolean isPrepared();
+    boolean isPreparing();
 
-    boolean isRunning();
+    boolean isDownloading();
 
     boolean isWaiting();
 
-    boolean isPause();
+    boolean isPaused();
 
-    boolean isFinished();
+    boolean isRetrying();
+
+    boolean isComplete();
 
     boolean isError();
 
@@ -131,6 +138,7 @@ public interface Mission {
 
     long getDownloaded();
 
+    @Status
     int getStatus();
 
     int getErrorCode();

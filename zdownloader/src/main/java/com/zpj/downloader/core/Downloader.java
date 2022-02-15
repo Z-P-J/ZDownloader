@@ -96,6 +96,6 @@ public interface Downloader<T extends Mission> {
 
 
 
-    void notifyStatus(final T mission, final int status);
+    void notifyStatus(final T mission, @Mission.Status final int status);
 
 }
