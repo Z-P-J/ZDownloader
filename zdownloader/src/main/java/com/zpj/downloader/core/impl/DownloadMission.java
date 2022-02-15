@@ -44,24 +44,25 @@ public class DownloadMission implements Mission {
         this.info = info;
     }
 
-    private static <T extends Mission> void notifyStatus(Class<T> clazz, Mission mission, final int status) {
+    private static <T extends Mission> void notifyStatus(Class<T> clazz, Mission mission, @Status final int status) {
         ZDownloader.get(clazz).notifyStatus((T) mission, status);
     }
 
-    protected void notifyStatus(final int status) {
+    protected void notifyStatus(@Status final int status) {
         notifyStatus(getClass(), this, status);
     }
 
     @Override
     public void start() {
         int missionStatus = getStatus();
-        if (missionStatus == Status.NEW) {
-            notifyStatus(Status.NEW);
-        } if (missionStatus == Status.PREPARING) {
-            // TODO 需要判断是否正在准备中
-            prepare();
-        } else if (canStart()) {
-            notifyStatus(Status.PROGRESSING);
+        if (canStart()) {
+            if (missionStatus == Status.NEW) {
+                notifyStatus(Status.NEW);
+            } else if (getMissionInfo().isPrepared()) {
+                notifyStatus(Status.DOWNLOADING);
+            } else {
+                prepare();
+            }
         }
     }
 
@@ -161,13 +162,13 @@ public class DownloadMission implements Mission {
     }
 
     @Override
-    public boolean isPrepared() {
+    public boolean isPreparing() {
         return getStatus() == Status.PREPARING;
     }
 
     @Override
-    public boolean isRunning() {
-        return getStatus() == Status.PROGRESSING;
+    public boolean isDownloading() {
+        return getStatus() == Status.DOWNLOADING;
     }
 
     @Override
@@ -176,13 +177,18 @@ public class DownloadMission implements Mission {
     }
 
     @Override
-    public boolean isPause() {
+    public boolean isPaused() {
         return getStatus() == Status.PAUSED;
     }
 
     @Override
-    public boolean isFinished() {
-        return getStatus() == Status.FINISHED;
+    public boolean isRetrying() {
+        return getStatus() == Status.RETRYING;
+    }
+
+    @Override
+    public boolean isComplete() {
+        return getStatus() == Status.COMPLETE;
     }
 
     @Override
@@ -192,12 +198,12 @@ public class DownloadMission implements Mission {
 
     @Override
     public boolean canPause() {
-        return isRunning() || isWaiting() || isPrepared();
+        return isDownloading() || isWaiting() || isPreparing() || getStatus() == Status.RETRYING;
     }
 
     @Override
     public boolean canStart() {
-        return isPause() || isError() || getStatus() == Status.NEW;
+        return isPaused() || isError() || getStatus() == Status.NEW;
     }
 
     @Override
@@ -295,7 +301,7 @@ public class DownloadMission implements Mission {
     }
 
     private float getProgress(long done, long length) {
-        if (getStatus() == Status.FINISHED) {
+        if (getStatus() == Status.COMPLETE) {
             return 100f;
         } else if (length <= 0) {
             return 0f;

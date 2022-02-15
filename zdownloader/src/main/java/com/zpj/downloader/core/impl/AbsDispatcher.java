@@ -81,7 +81,7 @@ public class AbsDispatcher<T extends Mission> implements Dispatcher<T> {
     }
 
     @Override
-    public boolean wait(T mission) {
+    public boolean waiting(T mission) {
         if (mission == null) {
             return false;
         }
