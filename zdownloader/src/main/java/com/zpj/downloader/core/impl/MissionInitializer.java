@@ -21,6 +21,8 @@ import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -28,7 +30,7 @@ import java.util.regex.Pattern;
  * 下载任务初始化
  * @author Z-P-J
  */
-public class MissionInitializer<T extends DownloadMission> implements Initializer<T> {
+public class MissionInitializer<T extends Mission> implements Initializer<T> {
 
     private static final String TAG = "MissionInitializer";
 
@@ -37,9 +39,9 @@ public class MissionInitializer<T extends DownloadMission> implements Initialize
         IHttp.Response response = null;
         try {
 
-            response = ZHttp.get(mission.getUrl())
-                    .range(0)
-                    .execute();
+            Map<String, String> headers = new HashMap<>(mission.getConfig().getHeaders());
+            headers.put(HttpHeader.RANGE, "bytes=0-");
+            response = downloader.getHttpFactory().request(mission.getUrl(), headers);
 
             String contentType = response.contentType();
             String contentDisposition = response.header("Content-Disposition");

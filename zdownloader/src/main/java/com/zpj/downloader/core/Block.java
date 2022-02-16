@@ -3,6 +3,7 @@ package com.zpj.downloader.core;
 import android.arch.persistence.room.ColumnInfo;
 import android.arch.persistence.room.Entity;
 import android.arch.persistence.room.ForeignKey;
+import android.arch.persistence.room.Index;
 import android.arch.persistence.room.PrimaryKey;
 import android.support.annotation.Keep;
 
@@ -11,7 +12,8 @@ import com.zpj.downloader.core.impl.MissionInfo;
 @Keep
 @Entity(
         tableName = "mission_blocks",
-        foreignKeys = @ForeignKey(entity = MissionInfo.class, parentColumns = {"mission_id"}, childColumns = {"mission_id"})
+        foreignKeys = @ForeignKey(entity = MissionInfo.class, parentColumns = {"mission_id"}, childColumns = {"mission_id"}),
+        indices = {@Index(value = "mission_id")}
 )
 public class Block {
 
@@ -34,6 +36,22 @@ public class Block {
         this.end = end;
     }
 
+    public long getId() {
+        return id;
+    }
+
+    public void setId(long id) {
+        this.id = id;
+    }
+
+    public String getMissionId() {
+        return missionId;
+    }
+
+    public void setMissionId(String missionId) {
+        this.missionId = missionId;
+    }
+
     public long getStart() {
         return start;
     }
@@ -48,6 +66,14 @@ public class Block {
 
     public void setDownloaded(long downloaded) {
         this.downloaded = downloaded;
+    }
+
+    public int getStatus() {
+        return status;
+    }
+
+    public void setStatus(int status) {
+        this.status = status;
     }
 
     public interface BlockObserver {

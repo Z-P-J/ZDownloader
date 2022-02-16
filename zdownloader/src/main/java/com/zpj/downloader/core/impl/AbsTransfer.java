@@ -55,7 +55,7 @@ public class AbsTransfer<T extends Mission> implements Transfer<T> {
                      BufferedRandomAccessFile f = new BufferedRandomAccessFile(mission.getFilePath(), "rw")) {
                     f.seek(start);
 
-                    int bufferSize = mission.getConfig().bufferSize;
+                    int bufferSize = mission.getConfig().getBufferSize();
                     byte[] buf = new byte[bufferSize];
                     int len;
                     int downloaded = 0;

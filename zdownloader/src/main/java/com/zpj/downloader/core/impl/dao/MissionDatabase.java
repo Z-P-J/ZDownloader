@@ -4,10 +4,12 @@ import android.arch.persistence.room.Database;
 import android.arch.persistence.room.Room;
 import android.arch.persistence.room.RoomDatabase;
 
+import com.zpj.downloader.core.Block;
 import com.zpj.downloader.core.impl.Config;
+import com.zpj.downloader.core.impl.MissionInfo;
 import com.zpj.utils.ContextUtils;
 
-@Database(entities = {Config.class}, version = 1)
+@Database(entities = {Config.class, MissionInfo.class, Block.class}, version = 1, exportSchema = false)
 public abstract class MissionDatabase extends RoomDatabase {
 
     private static MissionDatabase INSTANCE;
