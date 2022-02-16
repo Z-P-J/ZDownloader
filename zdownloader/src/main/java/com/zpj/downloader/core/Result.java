@@ -36,4 +36,12 @@ public class Result {
         return new Result(false, code, message);
     }
 
+    @Override
+    public String toString() {
+        return "Result{" +
+                "isOk=" + isOk +
+                ", code=" + code +
+                ", message='" + message + '\'' +
+                '}';
+    }
 }

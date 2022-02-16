@@ -17,22 +17,23 @@ import com.zpj.fragmentation.dialog.ZDialog;
 import com.zpj.mydownloader.ui.fragment.MainFragment;
 import com.zpj.mydownloader.R;
 import com.zpj.mydownloader.ui.fragment.AddTaskFragment;
+import com.zpj.mydownloader.ui.fragment.MainFragment2;
 
 /**
  * @author Z-P-J
  */
 public class MainActivity extends SupportActivity {
 
-    private MainFragment fragment;
+    private MainFragment2 fragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        fragment = findFragment(MainFragment.class);
+        fragment = findFragment(MainFragment2.class);
         if (fragment == null) {
-            fragment = new MainFragment();
+            fragment = new MainFragment2();
             loadRootFragment(R.id._fl_container, fragment);
         }
 

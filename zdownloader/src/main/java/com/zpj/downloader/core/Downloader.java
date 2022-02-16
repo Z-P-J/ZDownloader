@@ -17,13 +17,7 @@ public interface Downloader<T extends Mission> {
         void onMissionFinished(T mission);
     }
 
-    T download(String url);
-
-    T download(String url, String name);
-
     Config config();
-
-    T create(String url, String name, Config config);
 
     T create(MissionInfo info, Config config);
 

@@ -1,5 +1,7 @@
 package com.zpj.downloader.core.impl;
 
+import android.util.Log;
+
 import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.core.Block;
 import com.zpj.downloader.core.BlockDivider;
@@ -16,6 +18,8 @@ import com.zpj.downloader.core.Result;
 import com.zpj.downloader.core.ExecutorFactory;
 import com.zpj.downloader.core.Transfer;
 import com.zpj.downloader.core.Updater;
+import com.zpj.downloader.core.impl.dao.MissionDatabase;
+import com.zpj.downloader.core.impl.dao.RoomDao;
 import com.zpj.downloader.utils.ThreadPool;
 import com.zpj.utils.ContextUtils;
 
@@ -30,6 +34,8 @@ import java.util.concurrent.ExecutorService;
 
 public abstract class AbsDownloader<T extends Mission> implements Downloader<T> {
 
+    private static final String TAG = "AbsDownloader";
+
 //    private static final class InstanceHolder {
 //        private static final AbsDownloader INSTANCE = new AbsDownloader();
 //    }
@@ -40,18 +46,22 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
 
     private final ArrayList<WeakReference<DownloaderObserver<T>>> mObservers = new ArrayList<>();
 
-    private final HashMap<Mission, Executor> mExecutors = new HashMap<>();
+    private final HashMap<T, Executor> mExecutors = new HashMap<>();
 
-    private Dispatcher<T> mDispatcher;
-    private Initializer<T> mInitializer;
+    private Dispatcher<T> mDispatcher = new AbsDispatcher<>();
+    private Initializer<T> mInitializer = new MissionInitializer<>();
 //    private Serializer<T> mSerializer;
     private Notifier<T> mNotifier;
-    private Transfer<T> mTransfer;
-    private MissionFactory<T> mMissionFactory;
+    private Transfer<T> mTransfer = new AbsTransfer<>();
+//    private MissionFactory<T> mMissionFactory;
     private Dao<T> mDao;
 
     private static class MissionObservers {
         protected ArrayList<WeakReference<Mission.Observer>> mObservers = new ArrayList<>();
+    }
+
+    public AbsDownloader() {
+        mDao = new RoomDao<>(MissionDatabase.getInstance(getKey()));
     }
 
     @Override
@@ -115,7 +125,7 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
 
     @Override
     public BlockDivider<T> getBlockDivider() {
-        return null;
+        return new BaseBlockDivider<>();
     }
 
     @Override
@@ -185,7 +195,7 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
 
     @Override
     public ExecutorFactory<T> getExecutorFactory() {
-        return null;
+        return new AbsExecutorFactory<>();
     }
 
     @Override
@@ -237,10 +247,12 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
     }
 
     private void enqueue(final T mission) {
+        Log.d(TAG, "enqueue mission=" + mission);
         if (mDispatcher.enqueue(mission) && mDispatcher.isDownloading(mission)) {
             onMissionStart(mission);
             if (mission.getStatus() == Mission.Status.NEW
-                    || mission.getStatus() == Mission.Status.PREPARING) {
+                    || mission.getStatus() == Mission.Status.PREPARING
+                    || !mission.getMissionInfo().isPrepared()) {
                 mission.prepare();
                 return;
             }
@@ -261,16 +273,22 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
 
     @Override
     public void notifyStatus(final T mission, @Mission.Status final int status) {
-        if (mission.getStatus() == status) {
+        if (mission == null) {
             return;
         }
-        mission.setStatus(status);
-        ThreadPool.execute(new Runnable() {
-            @Override
-            public void run() {
-                mDao.updateStatus(mission, status);
+        Log.d(TAG, "status=" + status);
+        if (status != Mission.Status.NEW) {
+            if (mission.getStatus() == status) {
+                return;
             }
-        });
+            mission.setStatus(status);
+            ThreadPool.execute(new Runnable() {
+                @Override
+                public void run() {
+                    mDao.updateStatus(mission, status);
+                }
+            });
+        }
         switch (status) {
             case Mission.Status.NEW:
                 if (mDispatcher.isDownloading(mission) || mDispatcher.isWaiting(mission)) {
@@ -282,10 +300,13 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
                     public void run() {
                         // TODO 将任务保存至本地，需要判断本地是否存在该任务
 
-                        mDao.saveConfig(mission.getConfig());
-                        mDao.saveMissionInfo(mission);
+                        if (!mDao.hasMission(mission)) {
+                            mDao.saveMissionInfo(mission);
+                            mDao.saveConfig(mission.getConfig());
 
-                        onMissionAdd(mission);
+
+                            onMissionAdd(mission);
+                        }
 
                         // 任务排队等待开始下载
                         enqueue(mission);
@@ -303,7 +324,7 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
                         @Override
                         public void run() {
                             Result result = mInitializer.initMission(AbsDownloader.this, mission);
-
+                            Log.d(TAG, "result=" + result);
                             if (result.isOk()) {
                                 File location = new File(mission.getConfig().getDownloadPath());
                                 if (!location.exists()) {
@@ -353,6 +374,7 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
                 break;
             case Mission.Status.ERROR:
                 boolean isDownloading = mDispatcher.isDownloading(mission);
+                Log.d(TAG, "onError isDownloading=" + isDownloading);
                 if (mDispatcher.remove(mission)) {
                     onMissionError(mission);
                     if (isDownloading) {
@@ -438,16 +460,21 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
         });
     }
 
-    private void onMissionAdd(T mission) {
-        Iterator<WeakReference<DownloaderObserver<T>>> iterator = mObservers.iterator();
-        while (iterator.hasNext()) {
-            DownloaderObserver<T> observer = iterator.next().get();
-            if (observer == null) {
-                iterator.remove();
-            } else {
-                observer.onMissionAdd(mission);
+    private void onMissionAdd(final T mission) {
+        ThreadPool.post(new Runnable() {
+            @Override
+            public void run() {
+                Iterator<WeakReference<DownloaderObserver<T>>> iterator = mObservers.iterator();
+                while (iterator.hasNext()) {
+                    DownloaderObserver<T> observer = iterator.next().get();
+                    if (observer == null) {
+                        iterator.remove();
+                    } else {
+                        observer.onMissionAdd(mission);
+                    }
+                }
             }
-        }
+        });
     }
 
     private void onMissionStart(final T mission) {
@@ -480,6 +507,7 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
     }
 
     private void onMissionError(final T mission) {
+        Log.d(TAG, "onMissionError mission=" + mission.getUrl());
         ThreadPool.post(new Runnable() {
             @Override
             public void run() {
@@ -513,17 +541,22 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
         // TODO 移除本地记录
     }
 
-    private void onMissionDelete(T mission) {
-        onMissionClear(mission);
-        Iterator<WeakReference<DownloaderObserver<T>>> iterator = mObservers.iterator();
-        while (iterator.hasNext()) {
-            DownloaderObserver<T> observer = iterator.next().get();
-            if (observer == null) {
-                iterator.remove();
-            } else {
-                observer.onMissionDelete(mission);
+    private void onMissionDelete(final T mission) {
+        ThreadPool.post(new Runnable() {
+            @Override
+            public void run() {
+                onMissionClear(mission);
+                Iterator<WeakReference<DownloaderObserver<T>>> iterator = mObservers.iterator();
+                while (iterator.hasNext()) {
+                    DownloaderObserver<T> observer = iterator.next().get();
+                    if (observer == null) {
+                        iterator.remove();
+                    } else {
+                        observer.onMissionDelete(mission);
+                    }
+                }
             }
-        }
+        });
     }
 
     private void onMissionFinished(final T mission) {

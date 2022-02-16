@@ -34,27 +34,37 @@ public class RoomDao<T extends Mission> implements Dao<T> {
 
     @Override
     public boolean saveConfig(Config config) {
-        return database.configDao().insert(config);
+        database.configDao().insert(config);
+        return true;
     }
 
     @Override
     public boolean saveMissionInfo(T mission) {
-        return database.missionDao().insert(mission.getMissionInfo());
+        database.missionDao().insert(mission.getMissionInfo());
+        return true;
+    }
+
+    @Override
+    public boolean hasMission(T mission) {
+        return database.missionDao().queryInfo(mission.getMissionInfo().getMissionId()) != null;
     }
 
     @Override
     public boolean updateMissionInfo(T mission) {
-        return database.missionDao().update(mission.getMissionInfo());
+        database.missionDao().update(mission.getMissionInfo());
+        return true;
     }
 
     @Override
     public boolean saveBlocks(List<Block> blocks) {
-        return database.blockDao().insert(blocks);
+        database.blockDao().insert(blocks);
+        return true;
     }
 
     @Override
     public boolean updateBlock(Block block) {
-        return database.blockDao().update(block);
+        database.blockDao().update(block);
+        return true;
     }
 
     @Override
@@ -69,24 +79,26 @@ public class RoomDao<T extends Mission> implements Dao<T> {
 
     @Override
     public boolean updateBlockDownloaded(Block block, long downloaded) {
-        return database.blockDao().update(block);
+        database.blockDao().update(block);
+        return true;
     }
 
     @Override
     public boolean updateProgress(T mission, long done) {
-        return database.missionDao().update(mission.getMissionInfo());
+        database.missionDao().update(mission.getMissionInfo());
+        return true;
     }
 
     @Override
     public boolean updateStatus(T mission, int status) {
-        return database.missionDao().update(mission.getMissionInfo());
+        database.missionDao().update(mission.getMissionInfo());
+        return true;
     }
 
     @Override
     public boolean deleteMission(T mission) {
-        boolean result = true;
-        result |= database.missionDao().delete(mission.getMissionInfo());
+        database.missionDao().delete(mission.getMissionInfo());
 //        result |= database.configDao().delete(mission.getConfig());
-        return result;
+        return true;
     }
 }

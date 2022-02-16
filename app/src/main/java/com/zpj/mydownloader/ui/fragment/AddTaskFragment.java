@@ -122,33 +122,33 @@ public class AddTaskFragment extends BottomDragDialogFragment<AddTaskFragment> i
                 buffer = 1024;
             }
 
-            ZDownloader.download(url, name.getText().toString())
-                    .setBufferSize(buffer)
-                    .setConflictPolicy(new DefaultConflictPolicy() {
-                        @Override
-                        public void onConflict(BaseMission<?> mission, Callback callback) {
-                            ZDialog.alert()
-                                    .setTitle("任务已存在")
-                                    .setContent("下载任务已存在，是否继续下载？")
-                                    .setPositiveButton(new IDialog.OnButtonClickListener<ZDialog.AlertDialogImpl>() {
-                                        @Override
-                                        public void onClick(ZDialog.AlertDialogImpl fragment, int which) {
-                                            callback.onResult(true);
-                                        }
-                                    })
-                                    .setNegativeButton(new IDialog.OnButtonClickListener<ZDialog.AlertDialogImpl>() {
-                                        @Override
-                                        public void onClick(ZDialog.AlertDialogImpl fragment, int which) {
-                                            callback.onResult(false);
-                                        }
-                                    })
-                                    .show(context);
-                        }
-                    })
-                    .start();
+//            ZDownloader.download(url, name.getText().toString())
+//                    .setBufferSize(buffer)
+//                    .setConflictPolicy(new DefaultConflictPolicy() {
+//                        @Override
+//                        public void onConflict(BaseMission<?> mission, Callback callback) {
+//                            ZDialog.alert()
+//                                    .setTitle("任务已存在")
+//                                    .setContent("下载任务已存在，是否继续下载？")
+//                                    .setPositiveButton(new IDialog.OnButtonClickListener<ZDialog.AlertDialogImpl>() {
+//                                        @Override
+//                                        public void onClick(ZDialog.AlertDialogImpl fragment, int which) {
+//                                            callback.onResult(true);
+//                                        }
+//                                    })
+//                                    .setNegativeButton(new IDialog.OnButtonClickListener<ZDialog.AlertDialogImpl>() {
+//                                        @Override
+//                                        public void onClick(ZDialog.AlertDialogImpl fragment, int which) {
+//                                            callback.onResult(false);
+//                                        }
+//                                    })
+//                                    .show(context);
+//                        }
+//                    })
+//                    .start();
 
 
-            Mission mission = new ZDownloader.Builder(url, name.getText().toString())
+            Mission mission = new Mission.Builder(url, name.getText().toString())
                     .build(DownloadMission.class);
             mission.start();
 

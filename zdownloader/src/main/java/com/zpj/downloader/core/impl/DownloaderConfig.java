@@ -33,7 +33,7 @@ public class DownloaderConfig extends Config {
     private int concurrentMissionCount = DefaultConstant.CONCURRENT_MISSION_COUNT;
 
     public DownloaderConfig() {
-        super();
+        super("");
     }
 
     static DownloaderConfig with(Context context, Class<? extends BaseMission<?>> clazz) {

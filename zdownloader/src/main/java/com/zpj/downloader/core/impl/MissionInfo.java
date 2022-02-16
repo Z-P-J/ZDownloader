@@ -4,6 +4,7 @@ import android.arch.persistence.room.ColumnInfo;
 import android.arch.persistence.room.Entity;
 import android.arch.persistence.room.PrimaryKey;
 import android.support.annotation.Keep;
+import android.support.annotation.NonNull;
 
 import com.zpj.downloader.core.Mission;
 
@@ -11,6 +12,7 @@ import com.zpj.downloader.core.Mission;
 @Entity(tableName = "mission_infos")
 public class MissionInfo {
 
+    @NonNull
     @PrimaryKey
     @ColumnInfo(name = "mission_id")
     protected String missionId;
@@ -38,7 +40,7 @@ public class MissionInfo {
     @ColumnInfo(name = "prepared")
     protected volatile boolean isPrepared;
 
-    public MissionInfo(String missionId, String url, String name) {
+    public MissionInfo(@NonNull String missionId, String url, String name) {
         this.missionId = missionId;
         this.url = url;
         this.name = name;
@@ -99,5 +101,61 @@ public class MissionInfo {
 
     public boolean isPrepared() {
         return isPrepared;
+    }
+
+    public void setMissionId(@NonNull String missionId) {
+        this.missionId = missionId;
+    }
+
+    public void setUuid(String uuid) {
+        this.uuid = uuid;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public void setUrl(String url) {
+        this.url = url;
+    }
+
+    public void setOriginUrl(String originUrl) {
+        this.originUrl = originUrl;
+    }
+
+    public void setCreateTime(long createTime) {
+        this.createTime = createTime;
+    }
+
+    public void setFinishTime(long finishTime) {
+        this.finishTime = finishTime;
+    }
+
+    public void setLength(long length) {
+        this.length = length;
+    }
+
+    public void setDownloaded(long downloaded) {
+        this.downloaded = downloaded;
+    }
+
+    public void setMissionStatus(int missionStatus) {
+        this.missionStatus = missionStatus;
+    }
+
+    public void setBlockDownload(boolean blockDownload) {
+        isBlockDownload = blockDownload;
+    }
+
+    public void setErrorCode(int errorCode) {
+        this.errorCode = errorCode;
+    }
+
+    public void setErrorMessage(String errorMessage) {
+        this.errorMessage = errorMessage;
+    }
+
+    public void setPrepared(boolean prepared) {
+        isPrepared = prepared;
     }
 }

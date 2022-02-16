@@ -13,15 +13,15 @@ import java.util.List;
 public interface BlockDao {
 
     @Insert
-    boolean insert(Block... blocks);
+    void insert(Block... blocks);
 
     @Insert
-    boolean insert(List<Block> blocks);
+    void insert(List<Block> blocks);
 
     @Update
-    boolean update(Block... blocks);
+    int update(Block... blocks);
 
-    @Query(value = "SELECT * from mission_blocks WHERE mission_id = :")
+    @Query(value = "SELECT * from mission_blocks WHERE mission_id = :missionId")
     List<Block> queryAll(String missionId);
 
     @Query(value = "SELECT * from mission_blocks WHERE mission_id = :missionId and status <> 0")

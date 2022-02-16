@@ -6,28 +6,20 @@ import android.arch.persistence.room.ForeignKey;
 import android.arch.persistence.room.PrimaryKey;
 import android.arch.persistence.room.TypeConverter;
 import android.arch.persistence.room.TypeConverters;
-import android.content.Context;
 import android.support.annotation.Keep;
+import android.support.annotation.NonNull;
 import android.text.TextUtils;
 
-import com.zpj.downloader.ConflictPolicy;
-import com.zpj.downloader.ZDownloader;
 import com.zpj.downloader.constant.DefaultConstant;
-import com.zpj.downloader.core.Notifier;
-import com.zpj.downloader.impl.DefaultConflictPolicy;
-import com.zpj.downloader.utils.MissionIdGenerator;
-import com.zpj.downloader.utils.SerializableProxy;
+import com.zpj.downloader.core.Mission;
 
-import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.Serializable;
-import java.net.InetSocketAddress;
-import java.net.Proxy;
-import java.nio.charset.StandardCharsets;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Map;
 
 /**
@@ -38,6 +30,7 @@ import java.util.Map;
         tableName = "mission_configs",
         foreignKeys = @ForeignKey(entity = MissionInfo.class, parentColumns = {"mission_id"}, childColumns = {"mission_id"})
 )
+@TypeConverters(Config.MapConverter.class)
 public class Config implements Serializable {
 
 //    public static class SerializableConverter {
@@ -78,72 +71,112 @@ public class Config implements Serializable {
 //
 //    }
 
+    public static class MapConverter {
+
+        @TypeConverter
+        public String objToStr(Map<String, String> headers){
+            try {
+                JSONObject object = new JSONObject();
+                for (Map.Entry<String, String> entry : headers.entrySet()) {
+                    object.put(entry.getKey(), entry.getValue());
+                }
+                return object.toString();
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            return "{}";
+        }
+
+        @TypeConverter
+        public Map<String, String> strToObj(String str) {
+            Map<String, String> headers = new HashMap<>();
+            if (TextUtils.isEmpty(str) || "NULL".equalsIgnoreCase(str)) {
+                return headers;
+            }
+
+            try {
+                JSONObject jsonObject = new JSONObject(str);
+                Iterator<String> it = jsonObject.keys();
+                while (it.hasNext()) {
+                    String key = it.next();
+                    headers.put(key, jsonObject.getString(key));
+                }
+                return headers;
+            } catch (JSONException e) {
+                e.printStackTrace();
+            }
+            return headers;
+        }
+
+    }
+
+    @NonNull
     @PrimaryKey
     @ColumnInfo(name = "mission_id")
-    String missionId;
+    private String missionId;
 
     /*
     * 下载线程数
     * */
     @ColumnInfo(name = "thread_count")
-    int threadCount = DefaultConstant.THREAD_COUNT;
+    private int threadCount = DefaultConstant.THREAD_COUNT;
 
     /**
      * 下载路径
      * */
     @ColumnInfo(name = "download_path")
-    String downloadPath = DefaultConstant.DOWNLOAD_PATH;
+    private String downloadPath = DefaultConstant.DOWNLOAD_PATH;
 
     /**
      * 下载缓冲大小
      * */
-    @ColumnInfo(name = "thread_count")
-    int bufferSize = DefaultConstant.BUFFER_SIZE;
+    @ColumnInfo(name = "buffer_size")
+    private int bufferSize = DefaultConstant.BUFFER_SIZE;
 
     /**
      * 进度更新频率，默认1000ms更新一次（单位ms）
      * */
     @ColumnInfo(name = "progress_interval")
-    long progressInterval = DefaultConstant.PROGRESS_INTERVAL;
+    private long progressInterval = DefaultConstant.PROGRESS_INTERVAL;
 
     /**
      * 下载出错重试次数
      * */
     @ColumnInfo(name = "retry_count")
-    int retryCount = DefaultConstant.RETRY_COUNT;
+    private int retryCount = DefaultConstant.RETRY_COUNT;
 
     /**
      * 下载出错重试延迟时间（单位ms）
      * */
     @ColumnInfo(name = "retry_delay_millis")
-    int retryDelayMillis = DefaultConstant.RETRY_DELAY_MILLIS;
+    private int retryDelayMillis = DefaultConstant.RETRY_DELAY_MILLIS;
 
     /**
      * 下载连接超时
      * */
     @ColumnInfo(name = "connect_out_time")
-    int connectOutTime = DefaultConstant.CONNECT_OUT_TIME;
+    private int connectOutTime = DefaultConstant.CONNECT_OUT_TIME;
 
     /**
      * 下载链接读取超时
      * */
     @ColumnInfo(name = "read_out_time")
-    int readOutTime = DefaultConstant.READ_OUT_TIME;
+    private int readOutTime = DefaultConstant.READ_OUT_TIME;
 
     /**
      * 是否允许在通知栏显示任务下载进度
      * */
     @ColumnInfo(name = "enable_notification")
-    boolean enableNotification = true;
+    private boolean enableNotification = true;
 
-    final HashMap<String, String> headers = new HashMap<>();
+    private Map<String, String> headers = new HashMap<>();
 
-    public Config() {
-
+    public Config(@NonNull String missionId) {
+        this.missionId = missionId;
     }
 
-    public Config(String missionId, ZDownloader.Builder builder) {
-        this.missionId = missionId;
+    public Config(@NonNull String missionId, Mission.Builder builder) {
+        this(missionId);
         this.setThreadCount(builder.getThreadCount());
         this.setBufferSize(builder.getBufferSize());
         this.setConnectOutTime(builder.getConnectOutTime());
@@ -202,12 +235,13 @@ public class Config implements Serializable {
         return readOutTime;
     }
 
+//    public Map<String, String> getHeaders() {
+//        return headers;
+//    }
+
+
     public Map<String, String> getHeaders() {
         return headers;
-    }
-
-    public boolean getEnableNotification() {
-        return enableNotification;
     }
 
 
@@ -216,59 +250,57 @@ public class Config implements Serializable {
     //-----------------------------------------------------------------setter------------------------------------------------------
 
 
-    public Config setDownloadPath(String downloadPath) {
+    public void setDownloadPath(String downloadPath) {
         this.downloadPath = downloadPath;
-        return this;
     }
 
-    public Config setThreadCount(int threadCount) {
+    public void setThreadCount(int threadCount) {
         this.threadCount = threadCount;
-        return this;
     }
 
-    public Config setBufferSize(int bufferSize) {
+    public void setBufferSize(int bufferSize) {
         this.bufferSize = bufferSize;
-        return this;
     }
 
-    public Config setProgressInterval(long progressInterval) {
+    public void setProgressInterval(long progressInterval) {
         this.progressInterval = progressInterval;
-        return this;
     }
 
-    public Config setRetryCount(int retryCount) {
+    public void setRetryCount(int retryCount) {
         this.retryCount = retryCount;
-        return this;
     }
 
-    public Config setRetryDelayMillis(int retryDelayMillis) {
+    public void setRetryDelayMillis(int retryDelayMillis) {
         this.retryDelayMillis = retryDelayMillis;
-        return this;
     }
 
-    public Config setConnectOutTime(int connectOutTime) {
+    public void setConnectOutTime(int connectOutTime) {
         this.connectOutTime = connectOutTime;
-        return this;
     }
 
-    public Config setReadOutTime(int readOutTime) {
+    public void setReadOutTime(int readOutTime) {
         this.readOutTime = readOutTime;
-        return this;
     }
 
-    public Config setHeaders(Map<String, String> headers) {
+    public void setHeaders(Map<String, String> headers) {
         this.headers.clear();
         this.headers.putAll(headers);
-        return this;
     }
 
-    public Config addHeader(String key, String value) {
+    public void addHeader(String key, String value) {
         this.headers.put(key, value);
-        return this;
     }
 
-    public Config setEnableNotification(boolean enableNotification) {
+    public void setEnableNotification(boolean enableNotification) {
         this.enableNotification = enableNotification;
-        return this;
+    }
+
+
+    public void setMissionId(@NonNull String missionId) {
+        this.missionId = missionId;
+    }
+
+    public boolean isEnableNotification() {
+        return enableNotification;
     }
 }

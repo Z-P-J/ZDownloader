@@ -1,5 +1,6 @@
 package com.zpj.downloader.core.impl;
 
+import android.util.Log;
 import android.webkit.MimeTypeMap;
 
 import com.zpj.downloader.ZDownloader;
@@ -17,6 +18,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class DownloadMission implements Mission {
+
+    private static final String TAG = "DownloadMission";
 
     protected final AtomicLong done = new AtomicLong(0);
 
@@ -55,14 +58,18 @@ public class DownloadMission implements Mission {
     @Override
     public void start() {
         int missionStatus = getStatus();
+        Log.d(TAG, "start missionStatus=" + missionStatus);
         if (canStart()) {
-            if (missionStatus == Status.NEW) {
-                notifyStatus(Status.NEW);
-            } else if (getMissionInfo().isPrepared()) {
-                notifyStatus(Status.DOWNLOADING);
-            } else {
-                prepare();
-            }
+
+            notifyStatus(Status.NEW);
+
+//            if (missionStatus == Status.NEW) {
+//                notifyStatus(Status.NEW);
+//            } else if (getMissionInfo().isPrepared()) {
+//                notifyStatus(Status.DOWNLOADING);
+//            } else {
+//                prepare();
+//            }
         }
     }
 
