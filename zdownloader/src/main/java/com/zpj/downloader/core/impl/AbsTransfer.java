@@ -4,14 +4,15 @@ import android.support.annotation.WorkerThread;
 
 import com.zpj.downloader.ZDownloader;
 import com.zpj.downloader.constant.Error;
+import com.zpj.downloader.constant.HttpHeader;
 import com.zpj.downloader.core.Block;
 import com.zpj.downloader.core.Downloader;
 import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.Result;
 import com.zpj.downloader.core.Transfer;
+import com.zpj.downloader.core.http.Response;
+import com.zpj.downloader.utils.Logger;
 import com.zpj.downloader.utils.io.BufferedRandomAccessFile;
-import com.zpj.http.core.HttpHeader;
-import com.zpj.http.core.IHttp;
 
 import java.io.BufferedInputStream;
 import java.io.FileNotFoundException;
@@ -31,25 +32,25 @@ public class AbsTransfer<T extends Mission> implements Transfer<T> {
 
         long start;
         long end;
-        if (block == null) {
-            start = end = 0;
-        } else {
-            start = block.getStart() + block.getDownloaded();
-            end = block.getEnd();
-        }
-
 
         Map<String, String> headers = new HashMap<>(mission.getConfig().getHeaders());
         if (mission.isBlockDownload()) {
+            start = block.getStart() + block.getDownloaded();
+            end = block.getEnd();
             headers.put(HttpHeader.RANGE, String.format(Locale.ENGLISH, "bytes=%d-%d", start, end));
         } else {
+            start = end = 0;
             headers.put(HttpHeader.RANGE, "bytes=0-");
         }
+        Logger.d(TAG, "start=" + start + " end=" + end);
 
-        IHttp.Response response = null;
+        Logger.d(TAG, "headers=" + headers);
+
+        Response response = null;
         try {
-            response = downloader.getHttpFactory().request(mission.getUrl(), headers);
+            response = downloader.getHttpFactory().request(mission, headers);
             int code = response.statusCode();
+            Logger.d(TAG, "code=" + code);
             if (code / 100 == 2) {
                 try (BufferedInputStream is = new BufferedInputStream(response.bodyStream());
                      BufferedRandomAccessFile f = new BufferedRandomAccessFile(mission.getFilePath(), "rw")) {
@@ -62,9 +63,14 @@ public class AbsTransfer<T extends Mission> implements Transfer<T> {
                     while ((len = is.read(buf, 0, buf.length)) != -1) {
                         f.write(buf, 0, len);
                         downloaded += len;
-                        block.setDownloaded(downloaded);
-                        downloader.getDao().updateBlockDownloaded(block, downloaded);
+                        Logger.d(TAG, "downloaded=" + downloaded);
+                        if (block != null) {
+                            block.setDownloaded(downloaded);
+                            downloader.getDao().updateBlockDownloaded(block, downloaded);
+                        }
                     }
+
+                    Logger.d(TAG, "total downloaded=" + downloaded);
 
                     f.flush();
                 }

@@ -8,6 +8,7 @@ import com.zpj.downloader.constant.DefaultConstant;
 import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.core.impl.Config;
 import com.zpj.downloader.core.impl.MissionInfo;
+import com.zpj.downloader.utils.Logger;
 import com.zpj.downloader.utils.MissionIdGenerator;
 import com.zpj.downloader.utils.SerializableProxy;
 
@@ -208,6 +209,8 @@ public interface Mission {
 
 
     public static class Builder {
+
+        private static final String TAG = "Mission.Builder";
 
         private String url;
         private String name;
@@ -460,6 +463,7 @@ public interface Mission {
         public <T extends Mission> T build(Class<T> clazz) {
             // TODO UUID.randomUUID();
             String missionId = String.valueOf(MissionIdGenerator.getInstance().generateValidId());
+            Logger.d(TAG, "missionId=" + missionId);
             MissionInfo info = new MissionInfo(missionId, url, name);
             return ZDownloader.get(clazz).create(info, new Config(missionId, this));
         }

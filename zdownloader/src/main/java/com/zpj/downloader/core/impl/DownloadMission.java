@@ -1,10 +1,10 @@
 package com.zpj.downloader.core.impl;
 
-import android.util.Log;
 import android.webkit.MimeTypeMap;
 
 import com.zpj.downloader.ZDownloader;
 import com.zpj.downloader.core.Mission;
+import com.zpj.downloader.utils.Logger;
 import com.zpj.utils.FormatUtils;
 
 import java.io.File;
@@ -58,7 +58,7 @@ public class DownloadMission implements Mission {
     @Override
     public void start() {
         int missionStatus = getStatus();
-        Log.d(TAG, "start missionStatus=" + missionStatus);
+        Logger.d(TAG, "start missionStatus=" + missionStatus);
         if (canStart()) {
 
             notifyStatus(Status.NEW);
@@ -75,6 +75,7 @@ public class DownloadMission implements Mission {
 
     @Override
     public void prepare() {
+        Logger.d(TAG, "prepare");
         notifyStatus(Status.PREPARING);
     }
 
@@ -405,5 +406,17 @@ public class DownloadMission implements Mission {
     @Override
     public void setSupportSlice(boolean support) {
         info.isBlockDownload = support;
+    }
+
+    @Override
+    public String toString() {
+        return "DownloadMission{" +
+                "done=" + done +
+                ", config=" + config +
+                ", info=" + info +
+                ", finishCount=" + finishCount +
+                ", mObservers=" + mObservers +
+                ", speed=" + speed +
+                '}';
     }
 }

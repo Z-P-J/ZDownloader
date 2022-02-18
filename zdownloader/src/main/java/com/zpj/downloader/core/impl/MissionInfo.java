@@ -15,7 +15,7 @@ public class MissionInfo {
     @NonNull
     @PrimaryKey
     @ColumnInfo(name = "mission_id")
-    protected String missionId;
+    protected volatile String missionId;
 
     protected volatile String uuid = "";
     protected volatile String name = "";
@@ -157,5 +157,25 @@ public class MissionInfo {
 
     public void setPrepared(boolean prepared) {
         isPrepared = prepared;
+    }
+
+    @Override
+    public String toString() {
+        return "MissionInfo{" +
+                "missionId='" + missionId + '\'' +
+                ", uuid='" + uuid + '\'' +
+                ", name='" + name + '\'' +
+                ", url='" + url + '\'' +
+                ", originUrl='" + originUrl + '\'' +
+                ", createTime=" + createTime +
+                ", finishTime=" + finishTime +
+                ", length=" + length +
+                ", downloaded=" + downloaded +
+                ", missionStatus=" + missionStatus +
+                ", isBlockDownload=" + isBlockDownload +
+                ", errorCode=" + errorCode +
+                ", errorMessage='" + errorMessage + '\'' +
+                ", isPrepared=" + isPrepared +
+                '}';
     }
 }

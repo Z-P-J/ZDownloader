@@ -10,6 +10,7 @@ import com.zpj.downloader.core.impl.Config;
 import com.zpj.downloader.core.impl.MissionInfo;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class RoomDao<T extends Mission> implements Dao<T> {
@@ -59,6 +60,11 @@ public class RoomDao<T extends Mission> implements Dao<T> {
     public boolean saveBlocks(List<Block> blocks) {
         database.blockDao().insert(blocks);
         return true;
+    }
+
+    @Override
+    public boolean saveBlocks(Block... blocks) {
+        return saveBlocks(Arrays.asList(blocks));
     }
 
     @Override

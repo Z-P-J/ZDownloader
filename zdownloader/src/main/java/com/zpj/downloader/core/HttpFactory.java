@@ -1,12 +1,12 @@
 package com.zpj.downloader.core;
 
-import com.zpj.http.core.IHttp;
+import com.zpj.downloader.core.http.Response;
 
 import java.io.IOException;
 import java.util.Map;
 
 public interface HttpFactory {
 
-    IHttp.Response request(String url, Map<String, String> headers) throws IOException;
+    Response request(Mission mission, Map<String, String> headers) throws IOException;
 
 }
