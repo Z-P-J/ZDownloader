@@ -47,10 +47,10 @@ public interface Mission {
     }
 
     @Retention(RetentionPolicy.SOURCE)
-    @IntDef({Status.NEW, Status.PREPARING, Status.WAITING,  Status.DOWNLOADING,
+    @IntDef({Status.CREATED, Status.PREPARING, Status.WAITING,  Status.DOWNLOADING,
             Status.PAUSED, Status.ERROR, Status.RETRYING, Status.COMPLETE})
     @interface Status {
-        int NEW = 0;
+        int CREATED = 0;
         int PREPARING = 1;
         int WAITING = 2;
         int DOWNLOADING = 4;

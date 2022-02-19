@@ -1,7 +1,6 @@
 package com.zpj.downloader.core.impl;
 
 import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 
 import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.core.Block;
@@ -54,7 +53,7 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
     private Initializer<T> mInitializer = new MissionInitializer<>();
 //    private Serializer<T> mSerializer;
     private Notifier<T> mNotifier;
-    private Transfer<T> mTransfer = new AbsTransfer<>();
+    private Transfer<T> mTransfer = new FileTransfer<>();
 //    private MissionFactory<T> mMissionFactory;
     private Dao<T> mDao;
 
@@ -253,7 +252,7 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
         Logger.d(TAG, "enqueue mission=" + mission);
         if (mDispatcher.enqueue(mission) && mDispatcher.isDownloading(mission)) {
             onMissionStart(mission);
-            if (mission.getStatus() == Mission.Status.NEW
+            if (mission.getStatus() == Mission.Status.CREATED
                     || mission.getStatus() == Mission.Status.PREPARING
                     || !mission.getMissionInfo().isPrepared()) {
                 mission.prepare();
@@ -269,7 +268,7 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
             return;
         }
         Logger.d(TAG, "status=" + status + " getStatus=" + mission.getStatus());
-        if (status != Mission.Status.NEW) {
+        if (status != Mission.Status.CREATED) {
             if (mission.getStatus() == status) {
                 return;
             }
@@ -282,7 +281,7 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
             });
         }
         switch (status) {
-            case Mission.Status.NEW:
+            case Mission.Status.CREATED:
                 if (mDispatcher.isDownloading(mission) || mDispatcher.isWaiting(mission)) {
                     // 防止多次调用
                     Logger.d(TAG, "mission has in the queue!");
@@ -377,14 +376,16 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
                 ThreadPool.execute(new Runnable() {
                     @Override
                     public void run() {
-                        List<Block> blocks = getDao().queryBlocks(mission);
+                        List<Block> blocks = getDao().queryUnfinishedBlocks(mission);
                         Logger.d(TAG, "blocks=" + blocks);
                         if (blocks == null || blocks.isEmpty()) {
                             Logger.e(TAG, "blocks is empty!");
-                            mission.setErrorCode(-1);
-                            mission.setErrorMessage("blocks is empty!");
-                            notifyStatus(mission, Mission.Status.ERROR);
-//                            notifyStatus(mission, Mission.Status.NEW);
+//                            mission.setErrorCode(-1);
+//                            mission.setErrorMessage("blocks is empty!");
+//                            notifyStatus(mission, Mission.Status.ERROR);
+
+                            notifyStatus(mission, Mission.Status.COMPLETE);
+
                         } else {
                             for (final Block block : blocks) {
                                 execute(mission, new BlockTask<>(AbsDownloader.this, mission, block));
@@ -644,9 +645,15 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
 //                downloader.getDao().updateBlockDownloaded(block, block.)
                 block.setStatus(1);
                 downloader.getDao().updateBlock(block);
-                if (mission.isBlockDownload()) {
-                    // TODO
-                } else {
+//                if (mission.isBlockDownload()) {
+//                    // TODO
+//
+//                } else {
+//                    downloader.notifyStatus(mission, Mission.Status.COMPLETE);
+//                }
+                List<Block> blocks = downloader.getDao().queryUnfinishedBlocks(mission);
+                Logger.d(TAG, "unfinishedBlocks=" + blocks);
+                if (blocks.isEmpty()) {
                     downloader.notifyStatus(mission, Mission.Status.COMPLETE);
                 }
             } else {

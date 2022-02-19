@@ -12,6 +12,7 @@ import com.zpj.downloader.core.Initializer;
 import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.Result;
 import com.zpj.downloader.core.http.Response;
+import com.zpj.downloader.utils.Logger;
 import com.zpj.utils.FileUtils;
 
 import java.net.HttpURLConnection;
@@ -47,13 +48,13 @@ public class MissionInitializer<T extends Mission> implements Initializer<T> {
 
 //            mission.setName(getFileNameFromResponse(response));
 
-            Log.d("mission.name", "mission.name=" + mission.getName());
+            Logger.d("mission.name", "mission.name=" + mission.getName());
             int statusCode = response.statusCode();
             int code = statusCode / 100;
             if (code == 3) {
                 // 重定向响应码3xx
                 String redirectUrl = response.header(HttpHeader.LOCATION);
-                Log.d(TAG, "redirectUrl=" + redirectUrl);
+                Logger.d(TAG, "redirectUrl=" + redirectUrl);
                 if (TextUtils.isEmpty(redirectUrl)) {
                     // 重定向链接为空，出错了
                     return Result.error(statusCode, response.statusMessage());
@@ -65,7 +66,7 @@ public class MissionInitializer<T extends Mission> implements Initializer<T> {
             } else if (code == 2) {
                 // 成功响应码2xx
                 mission.setLength(response.contentLength());
-                Log.d("mission.length", "mission.length=" + mission.getLength());
+                Logger.d("mission.length", "mission.length=" + mission.getLength());
                 if (mission.getLength() <= 0) {
                     return Result.error(ErrorCode.ERROR_SERVER_UNSUPPORTED, Error.SERVER_UNSUPPORTED.getErrorMsg());
                 } else if (mission.getLength() >= FileUtils.getAvailableSize()) {
@@ -85,8 +86,8 @@ public class MissionInitializer<T extends Mission> implements Initializer<T> {
 //                mission.setName(generateFileNameFromUrl(mission, mission.getUrl()));
 //            }
 
-            Log.d("mission.name", "mission.name555=" + mission.getName());
-            Log.d(TAG, "storage=" + FileUtils.getAvailableSize());
+            Logger.d("mission.name", "mission.name555=" + mission.getName());
+            Logger.d(TAG, "storage=" + FileUtils.getAvailableSize());
 
             return Result.ok();
         } catch (Exception e) {

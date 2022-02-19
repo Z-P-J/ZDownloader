@@ -61,7 +61,7 @@ public class DownloadMission implements Mission {
         Logger.d(TAG, "start missionStatus=" + missionStatus);
         if (canStart()) {
 
-            notifyStatus(Status.NEW);
+            notifyStatus(Status.CREATED);
 
 //            if (missionStatus == Status.NEW) {
 //                notifyStatus(Status.NEW);
@@ -91,7 +91,7 @@ public class DownloadMission implements Mission {
 
     @Override
     public void restart() {
-        setStatus(Status.NEW);
+        setStatus(Status.CREATED);
         start();
     }
 
@@ -211,7 +211,7 @@ public class DownloadMission implements Mission {
 
     @Override
     public boolean canStart() {
-        return isPaused() || isError() || getStatus() == Status.NEW;
+        return isPaused() || isError() || getStatus() == Status.CREATED;
     }
 
     @Override

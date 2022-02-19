@@ -2,6 +2,8 @@ package com.zpj.downloader.core.http;
 
 import android.support.annotation.NonNull;
 
+import com.zpj.downloader.utils.Logger;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;
@@ -12,6 +14,8 @@ import java.util.zip.Inflater;
 import java.util.zip.InflaterInputStream;
 
 public class UrlConnectionResponse implements Response {
+
+    private static final String TAG = "UrlConnectionResponse";
 
     public static final String CONTENT_LENGTH = "Content-Length";
 
@@ -29,15 +33,26 @@ public class UrlConnectionResponse implements Response {
 
         statusCode = conn.getResponseCode();
         statusMessage = conn.getResponseMessage();
+        contentType = conn.getContentType();
 
+        Logger.d(TAG, "statusCode=" + statusCode + " statusMessage=" + statusMessage + " contentType=" + contentType);
+
+        String len = conn.getHeaderField("content-length");
         try {
             contentLength = Long.parseLong(conn.getHeaderField(CONTENT_LENGTH));
+
+            Logger.d(TAG, "contentLength=" + contentLength + " len=" + len + " getContentLength=" + conn.getContentLength());
+            if (contentLength < 0) {
+                contentLength = conn.getContentLength();
+            }
         } catch (Exception ignore) {
             contentLength = conn.getContentLength();
         }
+        Logger.d(TAG, "contentLength=" + contentLength + " len=" + len + " getContentLength=" + conn.getContentLength());
 
-        contentType = conn.getContentType();
+
         headers = getHeaderMap(conn);
+        Logger.d(TAG, "headers=" + headers);
 
     }
 

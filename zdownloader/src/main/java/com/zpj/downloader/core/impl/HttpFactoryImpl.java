@@ -5,6 +5,7 @@ import com.zpj.downloader.core.HttpFactory;
 import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.http.Response;
 import com.zpj.downloader.core.http.UrlConnectionResponse;
+import com.zpj.downloader.utils.Logger;
 
 import java.io.IOException;
 import java.net.HttpURLConnection;
@@ -13,28 +14,32 @@ import java.util.Map;
 
 public class HttpFactoryImpl implements HttpFactory {
 
+    private static final String TAG = "HttpFactoryImpl";
+
     @Override
     public Response request(Mission mission, Map<String, String> headers) throws IOException {
-        HttpURLConnection conn = openConnection(mission);
+        URL url = new URL(mission.getUrl());
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        wrapConnection(conn, mission, headers);
+
+        Logger.d(TAG, "getRequestProperties=" + conn.getRequestProperties());
 
         conn.connect();
 
         return new UrlConnectionResponse(conn);
     }
 
-    protected HttpURLConnection openConnection(Mission mission) throws IOException {
-        URL url = new URL(mission.getUrl());
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-        wrapConnection(conn, mission);
-        return conn;
-    }
-
-    protected void wrapConnection(HttpURLConnection conn, Mission mission) {
+    protected void wrapConnection(HttpURLConnection conn, Mission mission, Map<String, String> headers) {
         Config config = mission.getConfig();
         conn.setConnectTimeout(config.getConnectOutTime());
         conn.setReadTimeout(config.getReadOutTime());
         conn.setRequestProperty("Referer", mission.getUrl());
-        Map<String, String> headers = config.getHeaders();
+        conn.setRequestProperty("User-Agent", System.getProperty("http.agent"));
+        conn.setRequestProperty(HttpHeader.ACCEPT_ENCODING, "identity");
+        conn.setRequestProperty(HttpHeader.PRAGMA, "no-cache");
+        conn.setRequestProperty(HttpHeader.CACHE_CONTROL, "no-cache");
+//        Map<String, String> headers = config.getHeaders();
+        Logger.d(TAG, "wrapConnection headers=" + headers);
         if (headers != null) {
             for (String key : headers.keySet()) {
                 conn.setRequestProperty(key, headers.get(key));

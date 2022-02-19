@@ -30,11 +30,11 @@ public class MissionInfo {
     protected volatile long downloaded = 0;
     @ColumnInfo(name = "status")
     @Mission.Status
-    protected volatile int missionStatus = Mission.Status.NEW;
+    protected volatile int missionStatus = Mission.Status.CREATED;
     @ColumnInfo(name = "block_download")
     protected volatile boolean isBlockDownload = false;
     @ColumnInfo(name = "error_code")
-    protected volatile int errorCode = -1;
+    protected volatile int errorCode = 0;
     @ColumnInfo(name = "error_message")
     protected volatile String errorMessage;
     @ColumnInfo(name = "prepared")
@@ -42,8 +42,10 @@ public class MissionInfo {
 
     public MissionInfo(@NonNull String missionId, String url, String name) {
         this.missionId = missionId;
+        this.originUrl = url;
         this.url = url;
         this.name = name;
+        this.createTime = System.currentTimeMillis();
     }
 
     public String getMissionId() {

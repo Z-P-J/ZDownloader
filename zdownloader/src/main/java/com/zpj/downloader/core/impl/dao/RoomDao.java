@@ -80,7 +80,7 @@ public class RoomDao<T extends Mission> implements Dao<T> {
 
     @Override
     public List<Block> queryUnfinishedBlocks(T mission) {
-        return database.blockDao().queryUnfinishedBlocks(mission.getMissionInfo().getMissionId());
+        return database.blockDao().queryDownloadableBlocks(mission.getMissionInfo().getMissionId());
     }
 
     @Override

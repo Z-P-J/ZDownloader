@@ -24,7 +24,7 @@ public interface MissionInfoDao {
     @Update
     void update(MissionInfo... infos);
 
-    @Query("SELECT * FROM mission_infos")
+    @Query("SELECT * FROM mission_infos ORDER BY create_time ASC")
     List<MissionInfo> queryInfos();
 
     @Query("SELECT * FROM mission_infos WHERE mission_id = :missionId")

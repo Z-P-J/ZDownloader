@@ -25,6 +25,6 @@ public interface BlockDao {
     List<Block> queryAll(String missionId);
 
     @Query(value = "SELECT * from mission_blocks WHERE mission_id = :missionId and status = 0")
-    List<Block> queryUnfinishedBlocks(String missionId);
+    List<Block> queryDownloadableBlocks(String missionId);
 
 }

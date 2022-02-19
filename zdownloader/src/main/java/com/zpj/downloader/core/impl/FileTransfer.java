@@ -17,11 +17,12 @@ import com.zpj.downloader.utils.io.BufferedRandomAccessFile;
 import java.io.BufferedInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.nio.channels.WritableByteChannel;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
-public class AbsTransfer<T extends Mission> implements Transfer<T> {
+public class FileTransfer<T extends Mission> implements Transfer<T> {
 
     public static final String TAG = "AbsTransfer";
 
@@ -56,7 +57,7 @@ public class AbsTransfer<T extends Mission> implements Transfer<T> {
                      BufferedRandomAccessFile f = new BufferedRandomAccessFile(mission.getFilePath(), "rw")) {
                     f.seek(start);
 
-                    int bufferSize = mission.getConfig().getBufferSize();
+                    int bufferSize = 512 * 1024; // mission.getConfig().getBufferSize()
                     byte[] buf = new byte[bufferSize];
                     int len;
                     int downloaded = 0;
@@ -69,6 +70,7 @@ public class AbsTransfer<T extends Mission> implements Transfer<T> {
                             downloader.getDao().updateBlockDownloaded(block, downloaded);
                         }
                     }
+
 
                     Logger.d(TAG, "total downloaded=" + downloaded);
 

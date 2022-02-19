@@ -20,6 +20,7 @@ import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.impl.DownloadMission;
 import com.zpj.mydownloader.R;
 import com.zpj.mydownloader.ui.fragment.ActionBottomFragment;
+import com.zpj.mydownloader.ui.fragment.ActionBottomFragment2;
 import com.zpj.mydownloader.ui.widget.ArrowDownloadButton;
 import com.zpj.mydownloader.utils.Utils;
 
@@ -109,9 +110,9 @@ public class MissionAdapter2 extends RecyclerView.Adapter<MissionAdapter2.ViewHo
 			});
 
 			itemView.setOnLongClickListener(v -> {
-//				new ActionBottomFragment()
-//						.setMission(mission)
-//						.show(context);
+				new ActionBottomFragment2()
+						.setMission(mission)
+						.show(context);
 				return true;
 			});
 
