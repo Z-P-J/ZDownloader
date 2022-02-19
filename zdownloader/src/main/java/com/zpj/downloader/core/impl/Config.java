@@ -303,4 +303,21 @@ public class Config implements Serializable {
     public boolean isEnableNotification() {
         return enableNotification;
     }
+
+    @Override
+    public String toString() {
+        return "Config{" +
+                "missionId='" + missionId + '\'' +
+                ", threadCount=" + threadCount +
+                ", downloadPath='" + downloadPath + '\'' +
+                ", bufferSize=" + bufferSize +
+                ", progressInterval=" + progressInterval +
+                ", retryCount=" + retryCount +
+                ", retryDelayMillis=" + retryDelayMillis +
+                ", connectOutTime=" + connectOutTime +
+                ", readOutTime=" + readOutTime +
+                ", enableNotification=" + enableNotification +
+                ", headers=" + headers +
+                '}';
+    }
 }

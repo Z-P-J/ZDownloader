@@ -31,9 +31,11 @@ public class Block {
 
     private int status;
 
-    public Block(long start, long end) {
+    public Block(String missionId, long start, long end) {
+        this.missionId = missionId;
         this.start = start;
         this.end = end;
+        this.downloaded = 0;
     }
 
     public long getId() {
@@ -84,4 +86,15 @@ public class Block {
 
     }
 
+    @Override
+    public String toString() {
+        return "Block{" +
+                "id=" + id +
+                ", missionId='" + missionId + '\'' +
+                ", start=" + start +
+                ", end=" + end +
+                ", downloaded=" + downloaded +
+                ", status=" + status +
+                '}';
+    }
 }

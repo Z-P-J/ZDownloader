@@ -4,12 +4,12 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Message;
 import android.os.SystemClock;
-import android.util.Log;
 
 import com.zpj.downloader.ZDownloader;
 import com.zpj.downloader.core.Block;
 import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.Updater;
+import com.zpj.downloader.utils.Logger;
 import com.zpj.downloader.utils.ThreadPool;
 
 import java.util.List;
@@ -59,7 +59,7 @@ public class ProgressUpdater<T extends Mission> implements Updater {
                     }
 
                     long delta = downloaded - lastDownloaded;
-                    Log.d(TAG, "progressRunnable--delta=" + delta);
+                    Logger.d(TAG, "progressRunnable--delta=" + delta);
 
                     if (delta > 0) {
                         lastDownloaded = downloaded;

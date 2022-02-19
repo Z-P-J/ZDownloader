@@ -22,6 +22,8 @@ public interface Dao<T extends Mission> {
 
     boolean saveBlocks(List<Block> blocks);
 
+    boolean saveBlocks(Block... blocks);
+
     boolean updateBlock(Block block);
 
     List<Block> queryBlocks(T mission);

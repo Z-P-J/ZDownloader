@@ -15,6 +15,7 @@ public interface HttpHeader {
     String IF_MODIFIED_SINCE = "If-Modified-Since";
     String PRAGMA = "Pragma";
     String RANGE = "Range";
+    String CACHE_CONTROL = "Cache-Control";
     String PROXY_AUTHORIZATION = "Proxy-Authorization";
     String AUTHORIZATION = "Authorization";
     String X_REQUESTED_WITH = "X-Requested-With";

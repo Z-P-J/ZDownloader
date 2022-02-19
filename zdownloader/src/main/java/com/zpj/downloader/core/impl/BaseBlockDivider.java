@@ -4,7 +4,6 @@ import com.zpj.downloader.constant.DefaultConstant;
 import com.zpj.downloader.core.Block;
 import com.zpj.downloader.core.BlockDivider;
 import com.zpj.downloader.core.Mission;
-import com.zpj.http.constant.Defaults;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,6 +11,8 @@ import java.util.List;
 public class BaseBlockDivider<T extends Mission> implements BlockDivider<T> {
     @Override
     public List<Block> divide(T mission) {
+
+        String missionId = mission.getMissionInfo().getMissionId();
 
         long start = 0;
         long end;
@@ -21,12 +22,12 @@ public class BaseBlockDivider<T extends Mission> implements BlockDivider<T> {
         List<Block> blocks = new ArrayList<>();
         for (long i = 1; i <= count; i++) {
             end = i * blockSize;
-            blocks.add(new Block(start, end));
+            blocks.add(new Block(missionId, start, end));
             start = end;
         }
 
         if (start < mission.getLength()) {
-            blocks.add(new Block(start, mission.getLength()));
+            blocks.add(new Block(missionId, start, mission.getLength()));
         }
 
         return blocks;
