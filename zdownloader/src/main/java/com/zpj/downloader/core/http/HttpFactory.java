@@ -1,6 +1,6 @@
-package com.zpj.downloader.core;
+package com.zpj.downloader.core.http;
 
-import com.zpj.downloader.core.http.Response;
+import com.zpj.downloader.core.Mission;
 
 import java.io.IOException;
 import java.util.Map;

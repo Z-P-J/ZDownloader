@@ -2,7 +2,7 @@ package com.zpj.downloader.core;
 
 import android.support.annotation.NonNull;
 
-import com.zpj.downloader.constant.Error;
+import com.zpj.downloader.core.http.HttpFactory;
 import com.zpj.downloader.core.impl.Config;
 import com.zpj.downloader.core.impl.DownloaderConfig;
 import com.zpj.downloader.core.impl.MissionInfo;
@@ -38,11 +38,6 @@ public interface Downloader<T extends Mission> {
     void removeObserver(DownloaderObserver<T> observer);
 
 
-
-
-    void setMissionFactory(MissionFactory<T> missionFactory);
-
-    MissionFactory<T> getMissionFactory();
 
     void setBlockDivider(BlockDivider<T> divider);
 

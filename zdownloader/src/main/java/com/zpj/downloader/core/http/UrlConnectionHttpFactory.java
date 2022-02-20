@@ -1,10 +1,11 @@
-package com.zpj.downloader.core.impl;
+package com.zpj.downloader.core.http;
 
 import com.zpj.downloader.constant.HttpHeader;
-import com.zpj.downloader.core.HttpFactory;
+import com.zpj.downloader.core.http.HttpFactory;
 import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.http.Response;
 import com.zpj.downloader.core.http.UrlConnectionResponse;
+import com.zpj.downloader.core.impl.Config;
 import com.zpj.downloader.utils.Logger;
 
 import java.io.IOException;
@@ -12,7 +13,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Map;
 
-public class HttpFactoryImpl implements HttpFactory {
+public class UrlConnectionHttpFactory implements HttpFactory {
 
     private static final String TAG = "HttpFactoryImpl";
 

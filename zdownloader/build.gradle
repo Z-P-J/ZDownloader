@@ -30,5 +30,4 @@ dependencies {
     implementation "android.arch.persistence.room:runtime:1.1.1"
     annotationProcessor "android.arch.persistence.room:compiler:1.1.1"
     implementation 'com.github.Z-P-J:ZUtils:1.0.0'
-    implementation project(':zhttp-core')
 }
