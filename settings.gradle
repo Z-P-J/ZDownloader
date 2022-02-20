@@ -1,1 +1,1 @@
-include ':app', ':zdownloader', ':zhttp-core'
+include ':app', ':zdownloader'

@@ -8,16 +8,16 @@ import com.zpj.downloader.core.BlockDivider;
 import com.zpj.downloader.core.Dao;
 import com.zpj.downloader.core.Dispatcher;
 import com.zpj.downloader.core.Downloader;
-import com.zpj.downloader.core.HttpFactory;
+import com.zpj.downloader.core.http.HttpFactory;
 import com.zpj.downloader.core.Initializer;
 import com.zpj.downloader.core.Mission;
-import com.zpj.downloader.core.MissionFactory;
 import com.zpj.downloader.core.MissionLoader;
 import com.zpj.downloader.core.Notifier;
 import com.zpj.downloader.core.Result;
 import com.zpj.downloader.core.ExecutorFactory;
 import com.zpj.downloader.core.Transfer;
 import com.zpj.downloader.core.Updater;
+import com.zpj.downloader.core.http.UrlConnectionHttpFactory;
 import com.zpj.downloader.core.impl.dao.MissionDatabase;
 import com.zpj.downloader.core.impl.dao.RoomDao;
 import com.zpj.downloader.utils.Logger;
@@ -108,17 +108,6 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
 //        return mission;
 //    }
 
-
-    @Override
-    public void setMissionFactory(MissionFactory<T> missionFactory) {
-
-    }
-
-    @Override
-    public MissionFactory<T> getMissionFactory() {
-        return null;
-    }
-
     @Override
     public void setBlockDivider(BlockDivider<T> divider) {
 
@@ -146,7 +135,7 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
 
     @Override
     public HttpFactory getHttpFactory() {
-        return new HttpFactoryImpl();
+        return new UrlConnectionHttpFactory();
     }
 
     @Override
