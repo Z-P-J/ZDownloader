@@ -1,4 +1,4 @@
-package com.zpj.downloader.core.impl.dao;
+package com.zpj.downloader.core.db;
 
 import android.support.annotation.NonNull;
 
@@ -75,12 +75,17 @@ public class RoomDao<T extends Mission> implements Dao<T> {
 
     @Override
     public List<Block> queryBlocks(T mission) {
-        return database.blockDao().queryAll(mission.getMissionInfo().getMissionId());
+        return database.blockDao().queryAll(mission.getMissionId());
+    }
+
+    @Override
+    public long queryDownloaded(T mission) {
+        return database.blockDao().queryDownloaded(mission.getMissionId());
     }
 
     @Override
     public List<Block> queryUnfinishedBlocks(T mission) {
-        return database.blockDao().queryDownloadableBlocks(mission.getMissionInfo().getMissionId());
+        return database.blockDao().queryDownloadableBlocks(mission.getMissionId());
     }
 
     @Override

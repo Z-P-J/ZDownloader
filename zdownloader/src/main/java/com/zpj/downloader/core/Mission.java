@@ -130,7 +130,7 @@ public interface Mission {
 
     //--------------------------------------------------------------getter-----------------------------------------------
 
-    String getUuid();
+    String getMissionId();
 
     String getName();
 
@@ -141,8 +141,6 @@ public interface Mission {
     long getCreateTime();
 
     long getFinishTime();
-
-    int getFinishCount();
 
     long getLength();
 
@@ -173,7 +171,7 @@ public interface Mission {
 
     String getDownloadedSizeStr();
 
-    float getSpeed();
+    long getSpeed();
 
     String getSpeedStr();
 

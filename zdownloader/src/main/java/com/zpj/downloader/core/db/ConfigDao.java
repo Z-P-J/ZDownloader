@@ -1,4 +1,4 @@
-package com.zpj.downloader.core.impl.dao;
+package com.zpj.downloader.core.db;
 
 import android.arch.persistence.room.Dao;
 import android.arch.persistence.room.Delete;

@@ -21,19 +21,13 @@ public class DownloadMission implements Mission {
 
     private static final String TAG = "DownloadMission";
 
-    protected final AtomicLong done = new AtomicLong(0);
-
     protected final Config config;
 
     protected final MissionInfo info;
 
     //-----------------------------------------------------transient---------------------------------------------------------------
 
-    protected transient AtomicInteger finishCount;
-
     protected transient ArrayList<WeakReference<Observer>> mObservers;
-
-    protected transient volatile float speed = 0f;
 
 
 
@@ -81,7 +75,11 @@ public class DownloadMission implements Mission {
 
     @Override
     public void pause() {
-        notifyStatus(Status.PAUSED);
+        if (canPause()) {
+            // TODO 暂停任务
+            notifyStatus(Status.PAUSED);
+        }
+
     }
 
     @Override
@@ -201,7 +199,7 @@ public class DownloadMission implements Mission {
 
     @Override
     public boolean isError() {
-        return getStatus() == Status.ERROR;
+        return getStatus() == Status.ERROR || getErrorCode() != 0;
     }
 
     @Override
@@ -215,7 +213,7 @@ public class DownloadMission implements Mission {
     }
 
     @Override
-    public String getUuid() {
+    public String getMissionId() {
         return info.missionId;
     }
 
@@ -245,18 +243,13 @@ public class DownloadMission implements Mission {
     }
 
     @Override
-    public int getFinishCount() {
-        return finishCount.get();
-    }
-
-    @Override
     public long getLength() {
         return info.length;
     }
 
     @Override
     public long getDownloaded() {
-        return done.get();
+        return info.downloaded;
     }
 
     @Override
@@ -330,12 +323,12 @@ public class DownloadMission implements Mission {
 
     @Override
     public String getDownloadedSizeStr() {
-        return FormatUtils.formatSize(done.get());
+        return FormatUtils.formatSize(getDownloaded());
     }
 
     @Override
-    public float getSpeed() {
-        return speed;
+    public long getSpeed() {
+        return info.speed;
     }
 
     @Override
@@ -411,12 +404,9 @@ public class DownloadMission implements Mission {
     @Override
     public String toString() {
         return "DownloadMission{" +
-                "done=" + done +
                 ", config=" + config +
                 ", info=" + info +
-                ", finishCount=" + finishCount +
                 ", mObservers=" + mObservers +
-                ", speed=" + speed +
                 '}';
     }
 }

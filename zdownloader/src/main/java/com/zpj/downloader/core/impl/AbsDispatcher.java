@@ -2,8 +2,11 @@ package com.zpj.downloader.core.impl;
 
 import android.support.annotation.NonNull;
 
+import com.zpj.downloader.ZDownloader;
 import com.zpj.downloader.core.Dispatcher;
+import com.zpj.downloader.core.Downloader;
 import com.zpj.downloader.core.Mission;
+import com.zpj.downloader.utils.Logger;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentLinkedQueue;
@@ -18,13 +21,19 @@ public class AbsDispatcher<T extends Mission> implements Dispatcher<T> {
 
     private static final class MissionHandler<T extends Mission> {
 
+        private static final String TAG = "MissionHandler";
+
         private final AtomicBoolean isPreparing = new AtomicBoolean(false);
 
         @NonNull
         private final T mission;
+//        private final Downloader<T> downloader;
+        private final ProgressUpdater<T> updater;
 
         public MissionHandler(@NonNull T mission) {
             this.mission = mission;
+            updater = new ProgressUpdater<>(mission);
+//            downloader = ZDownloader.get(mission);
         }
 
         public boolean isPreparing() {
@@ -35,7 +44,15 @@ public class AbsDispatcher<T extends Mission> implements Dispatcher<T> {
             return isPreparing.compareAndSet(false, true);
         }
 
+        public void start() {
+            Logger.d(TAG, "start");
+            updater.start();
+        }
 
+        public void stop() {
+            Logger.d(TAG, "stop");
+            updater.stop();
+        }
 
     }
 
@@ -67,7 +84,10 @@ public class AbsDispatcher<T extends Mission> implements Dispatcher<T> {
             return false;
         }
         if (isDownloading(mission)) {
-            mDownloadingQueue.remove(mission.getMissionInfo().getMissionId());
+            MissionHandler<T> handler = mDownloadingQueue.remove(mission.getMissionInfo().getMissionId());
+            if (handler != null) {
+                handler.stop();
+            }
             // TODO pause
 
             // 从等待队列中的一个任务加入到下载队列
@@ -100,7 +120,7 @@ public class AbsDispatcher<T extends Mission> implements Dispatcher<T> {
             return false;
         }
         MissionHandler<T> delegate = mDownloadingQueue.get(mission.getMissionInfo().getMissionId());
-        if (delegate.isPreparing()) {
+        if (delegate == null || delegate.isPreparing()) {
             return false;
         }
         return delegate.onPreparing();
@@ -114,7 +134,12 @@ public class AbsDispatcher<T extends Mission> implements Dispatcher<T> {
         if (mDownloadingQueue.size() >= 3) {
             return mWaitingQueue.offer(mission);
         } else {
-            mDownloadingQueue.put(mission.getMissionInfo().getMissionId(), new MissionHandler<>(mission));
+            MissionHandler<T> handler = new MissionHandler<>(mission);
+            MissionHandler<T> oldHandler = mDownloadingQueue.put(mission.getMissionInfo().getMissionId(), handler);
+            if (oldHandler != null) {
+                oldHandler.stop();
+            }
+            handler.start();
             return true;
         }
     }
