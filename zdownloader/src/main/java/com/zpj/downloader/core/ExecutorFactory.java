@@ -1,9 +1,9 @@
 package com.zpj.downloader.core;
 
-import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 
 public interface ExecutorFactory<T extends Mission> {
 
-    Executor createExecutor(T mission);
+    ExecutorService createExecutor(T mission);
 
 }

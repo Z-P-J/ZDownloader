@@ -60,6 +60,12 @@ public class MissionAdapter2 extends RecyclerView.Adapter<MissionAdapter2.ViewHo
 	}
 
 	@Override
+	public void onViewDetachedFromWindow(@NonNull ViewHolder holder) {
+		holder.bindMission(null);
+		super.onViewDetachedFromWindow(holder);
+	}
+
+	@Override
 	public void onBindViewHolder(@NonNull MissionAdapter2.ViewHolder h, @SuppressLint("RecyclerView") int pos) {
 		DownloadMission mission = list.get(pos);
 
@@ -151,7 +157,14 @@ public class MissionAdapter2 extends RecyclerView.Adapter<MissionAdapter2.ViewHo
 			if (mission.isComplete()) {
 				status.setText("已完成");
 				menu.setVisibility(View.GONE);
+				menu.pause();
+			} else if (mission.isError()) {
+				size.setText("");
+				status.setText("出错了：" + mission.getErrorMessage());
+				menu.setVisibility(View.VISIBLE);
+				menu.pause();
 			} else {
+				menu.resume();
 				menu.setVisibility(View.VISIBLE);
 				if (mission.isDownloading()) {
 					status.setText(mission.getProgressStr());
@@ -185,11 +198,6 @@ public class MissionAdapter2 extends RecyclerView.Adapter<MissionAdapter2.ViewHo
 		}
 
 		@Override
-		public void onRetrying() {
-			status.setText("重试中...");
-		}
-
-		@Override
 		public void onProgress(Mission mission, float speed) {
 			if (TextUtils.equals(name.getText().toString(), STATUS_INIT) && !TextUtils.isEmpty(mission.getName())) {
 				name.setText(mission.getName());
@@ -208,6 +216,7 @@ public class MissionAdapter2 extends RecyclerView.Adapter<MissionAdapter2.ViewHo
 
 		@Override
 		public void onError(Error e) {
+			menu.pause();
 			size.setText("");
 			status.setText("出错了：" + e.getErrorMsg());
 		}

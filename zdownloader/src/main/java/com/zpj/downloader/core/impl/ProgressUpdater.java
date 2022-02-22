@@ -7,6 +7,7 @@ import android.os.SystemClock;
 
 import com.zpj.downloader.ZDownloader;
 import com.zpj.downloader.core.Block;
+import com.zpj.downloader.core.Downloader;
 import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.Updater;
 import com.zpj.downloader.utils.Logger;
@@ -24,6 +25,9 @@ public class ProgressUpdater<T extends Mission> implements Updater {
     private static final int MSG_PROGRESS = 100;
 
     private final T mission;
+    private final Downloader<T> downloader;
+
+
     private HandlerThread handlerThread;
     private Handler handler;
     private volatile long lastDownloaded;
@@ -31,6 +35,7 @@ public class ProgressUpdater<T extends Mission> implements Updater {
 
     public ProgressUpdater(final T mission) {
         this.mission = mission;
+        downloader = ZDownloader.get(mission);
     }
 
     @Override
@@ -42,28 +47,34 @@ public class ProgressUpdater<T extends Mission> implements Updater {
             @Override
             public void handleMessage(Message msg) {
                 if (msg.what == MSG_PROGRESS) {
-                    if (mission.isComplete() || mission.getErrorCode() != -1 || !mission.isDownloading()) {
-                        stop();
-                        return;
-                    }
+                    Logger.d(TAG, "handleMessage isComplete=" + mission.isComplete() + " errorCode=" + mission.getErrorCode() + " isDownloading=" + mission.isDownloading());
                     long progressInterval = mission.getConfig().getProgressInterval();
                     sendEmptyMessageDelayed(MSG_PROGRESS, progressInterval);
 
-                    long currentTime = SystemClock.elapsedRealtime();
 
-                    long downloaded = 0;
 
-                    List<Block> blocks = ZDownloader.get((Class<T>) mission.getClass()).getDao().queryBlocks(mission);
-                    for (Block block : blocks) {
-                        downloaded += block.getDownloaded();
-                    }
+                    long downloaded = downloader.getDao().queryDownloaded(mission);
 
                     long delta = downloaded - lastDownloaded;
-                    Logger.d(TAG, "progressRunnable--delta=" + delta);
+
+                    long currentTime = SystemClock.elapsedRealtime();
+
+                    Logger.d(TAG, "progressRunnable--downloaded=" + downloaded + " delta=" + delta);
 
                     if (delta > 0) {
+
+                        final long speed = (long) (delta * ((currentTime - lastTime) / 1000f));
+                        mission.getMissionInfo().downloaded = downloaded;
+                        mission.getMissionInfo().setSpeed(speed);
+
+                        downloader.getDao().saveMissionInfo(mission);
+
+                        if (mission.isComplete() || mission.isError()) {
+                            stop();
+                            return;
+                        }
+
                         lastDownloaded = downloaded;
-                        final float speed = delta * ((currentTime - lastTime) / 1000f);
 
                         ThreadPool.post(new Runnable() {
                             @Override

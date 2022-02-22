@@ -18,6 +18,7 @@ import com.zpj.mydownloader.ui.adapter.MissionAdapter;
 import com.zpj.mydownloader.ui.adapter.MissionAdapter2;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class MainFragment2 extends SimpleFragment implements Downloader.DownloaderObserver<DownloadMission> {
@@ -54,6 +55,7 @@ public class MainFragment2 extends SimpleFragment implements Downloader.Download
                     public void onLoad(List<DownloadMission> missions) {
                         mMissions.clear();
                         mMissions.addAll(missions);
+                        Collections.reverse(mMissions);
 
                         mMissionAdapter = new MissionAdapter2(context, mMissions);
                         mRecyclerView.setAdapter(mMissionAdapter);

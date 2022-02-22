@@ -3,6 +3,7 @@ package com.zpj.downloader.core.impl;
 import android.webkit.MimeTypeMap;
 
 import com.zpj.downloader.ZDownloader;
+import com.zpj.downloader.core.Downloader;
 import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.utils.Logger;
 import com.zpj.utils.FormatUtils;
@@ -21,19 +22,13 @@ public class DownloadMission implements Mission {
 
     private static final String TAG = "DownloadMission";
 
-    protected final AtomicLong done = new AtomicLong(0);
-
     protected final Config config;
 
     protected final MissionInfo info;
 
     //-----------------------------------------------------transient---------------------------------------------------------------
 
-    protected transient AtomicInteger finishCount;
-
     protected transient ArrayList<WeakReference<Observer>> mObservers;
-
-    protected transient volatile float speed = 0f;
 
 
 
@@ -81,7 +76,11 @@ public class DownloadMission implements Mission {
 
     @Override
     public void pause() {
-        notifyStatus(Status.PAUSED);
+        if (canPause()) {
+            // TODO 暂停任务
+            notifyStatus(Status.PAUSED);
+        }
+
     }
 
     @Override
@@ -171,27 +170,33 @@ public class DownloadMission implements Mission {
 
     @Override
     public boolean isPreparing() {
-        return getStatus() == Status.PREPARING;
+        Downloader<DownloadMission> downloader = ZDownloader.get(this);
+        return downloader.getDispatcher().isPreparing(this);
+//        return getStatus() == Status.PREPARING;
     }
 
     @Override
     public boolean isDownloading() {
-        return getStatus() == Status.DOWNLOADING;
+        Downloader<DownloadMission> downloader = ZDownloader.get(this);
+        return downloader.getDispatcher().isDownloading(this);
+//        return getStatus() == Status.DOWNLOADING;
     }
 
     @Override
     public boolean isWaiting() {
-        return getStatus() == Status.WAITING;
+        Downloader<DownloadMission> downloader = ZDownloader.get(this);
+        return downloader.getDispatcher().isWaiting(this);
+//        return getStatus() == Status.WAITING;
     }
 
     @Override
     public boolean isPaused() {
-        return getStatus() == Status.PAUSED;
-    }
+        if (getStatus() == Status.PAUSED) {
+            return true;
+        }
+        return !isComplete() && !isError() && !isDownloading() && !isWaiting();
 
-    @Override
-    public boolean isRetrying() {
-        return getStatus() == Status.RETRYING;
+//        return getStatus() == Status.PAUSED;
     }
 
     @Override
@@ -201,21 +206,24 @@ public class DownloadMission implements Mission {
 
     @Override
     public boolean isError() {
-        return getStatus() == Status.ERROR;
+        return getStatus() == Status.ERROR || getErrorCode() != 0;
     }
 
     @Override
     public boolean canPause() {
-        return isDownloading() || isWaiting() || isPreparing() || getStatus() == Status.RETRYING;
+        return isDownloading() || isWaiting() || isPreparing();
     }
 
     @Override
     public boolean canStart() {
+        if (isDownloading() || isWaiting()) {
+            return false;
+        }
         return isPaused() || isError() || getStatus() == Status.CREATED;
     }
 
     @Override
-    public String getUuid() {
+    public String getMissionId() {
         return info.missionId;
     }
 
@@ -245,18 +253,13 @@ public class DownloadMission implements Mission {
     }
 
     @Override
-    public int getFinishCount() {
-        return finishCount.get();
-    }
-
-    @Override
     public long getLength() {
         return info.length;
     }
 
     @Override
     public long getDownloaded() {
-        return done.get();
+        return info.downloaded;
     }
 
     @Override
@@ -330,12 +333,12 @@ public class DownloadMission implements Mission {
 
     @Override
     public String getDownloadedSizeStr() {
-        return FormatUtils.formatSize(done.get());
+        return FormatUtils.formatSize(getDownloaded());
     }
 
     @Override
-    public float getSpeed() {
-        return speed;
+    public long getSpeed() {
+        return info.speed;
     }
 
     @Override
@@ -411,12 +414,9 @@ public class DownloadMission implements Mission {
     @Override
     public String toString() {
         return "DownloadMission{" +
-                "done=" + done +
                 ", config=" + config +
                 ", info=" + info +
-                ", finishCount=" + finishCount +
                 ", mObservers=" + mObservers +
-                ", speed=" + speed +
                 '}';
     }
 }

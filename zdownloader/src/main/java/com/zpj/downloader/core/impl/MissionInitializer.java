@@ -37,7 +37,7 @@ public class MissionInitializer<T extends Mission> implements Initializer<T> {
             response = downloader.getHttpFactory().request(mission, headers);
 
             String contentType = response.contentType();
-            String contentDisposition = response.header("Content-Disposition");
+            String contentDisposition = response.header(HttpHeader.Content_Disposition);
             String mimeType = null;
             int i = contentType.indexOf(";");
             if (i > 0) {
@@ -46,9 +46,12 @@ public class MissionInitializer<T extends Mission> implements Initializer<T> {
             String name = URLUtil.guessFileName(mission.getUrl(), contentDisposition, mimeType);
             mission.setName(name);
 
-//            mission.setName(getFileNameFromResponse(response));
+            Logger.d(TAG, "mission.name=" + mission.getName());
 
-            Logger.d("mission.name", "mission.name=" + mission.getName());
+            if (!mission.isDownloading()) {
+                return Result.paused();
+            }
+
             int statusCode = response.statusCode();
             int code = statusCode / 100;
             if (code == 3) {
@@ -89,10 +92,10 @@ public class MissionInitializer<T extends Mission> implements Initializer<T> {
             Logger.d("mission.name", "mission.name555=" + mission.getName());
             Logger.d(TAG, "storage=" + FileUtils.getAvailableSize());
 
-            return Result.ok();
+            return Result.ok(statusCode, response.statusMessage());
         } catch (Exception e) {
             e.printStackTrace();
-            return Result.error(-1, e.getMessage());
+            return Result.error(e.getMessage());
         } finally {
             if (response != null) {
                 response.close();

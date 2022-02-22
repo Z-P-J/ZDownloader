@@ -57,16 +57,6 @@ public class UrlConnectionResponse implements Response {
     }
 
     @Override
-    public boolean hasHeader(String name) {
-        return headers().containsKey(name);
-    }
-
-    @Override
-    public boolean hasHeaderWithValue(String name, String value) {
-        return value.equalsIgnoreCase(header(name));
-    }
-
-    @Override
     public String header(String name) {
         return headers().get(name);
     }

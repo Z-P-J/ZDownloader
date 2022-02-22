@@ -39,6 +39,8 @@ public class MissionInfo {
     protected volatile String errorMessage;
     @ColumnInfo(name = "prepared")
     protected volatile boolean isPrepared;
+    @ColumnInfo(name = "speed")
+    protected volatile long speed = 0;
 
     public MissionInfo(@NonNull String missionId, String url, String name) {
         this.missionId = missionId;
@@ -105,6 +107,10 @@ public class MissionInfo {
         return isPrepared;
     }
 
+    public long getSpeed() {
+        return speed;
+    }
+
     public void setMissionId(@NonNull String missionId) {
         this.missionId = missionId;
     }
@@ -159,6 +165,10 @@ public class MissionInfo {
 
     public void setPrepared(boolean prepared) {
         isPrepared = prepared;
+    }
+
+    public void setSpeed(long speed) {
+        this.speed = speed;
     }
 
     @Override

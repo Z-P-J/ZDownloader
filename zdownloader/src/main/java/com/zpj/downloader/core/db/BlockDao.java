@@ -1,4 +1,4 @@
-package com.zpj.downloader.core.impl.dao;
+package com.zpj.downloader.core.db;
 
 import android.arch.persistence.room.Dao;
 import android.arch.persistence.room.Insert;
@@ -23,6 +23,9 @@ public interface BlockDao {
 
     @Query(value = "SELECT * from mission_blocks WHERE mission_id = :missionId")
     List<Block> queryAll(String missionId);
+
+    @Query(value = "SELECT SUM(downloaded) from mission_blocks WHERE mission_id = :missionId")
+    long queryDownloaded(String missionId);
 
     @Query(value = "SELECT * from mission_blocks WHERE mission_id = :missionId and status = 0")
     List<Block> queryDownloadableBlocks(String missionId);

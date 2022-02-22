@@ -33,8 +33,6 @@ public interface Mission {
 
         void onWaiting();
 
-        void onRetrying();
-
         void onProgress(Mission mission, float speed);
 
         void onFinished();
@@ -48,7 +46,7 @@ public interface Mission {
 
     @Retention(RetentionPolicy.SOURCE)
     @IntDef({Status.CREATED, Status.PREPARING, Status.WAITING,  Status.DOWNLOADING,
-            Status.PAUSED, Status.ERROR, Status.RETRYING, Status.COMPLETE})
+            Status.PAUSED, Status.ERROR, Status.COMPLETE})
     @interface Status {
         int CREATED = 0;
         int PREPARING = 1;
@@ -56,7 +54,6 @@ public interface Mission {
         int DOWNLOADING = 4;
         int PAUSED = 5;
         int ERROR = 6;
-        int RETRYING = 7;
         int COMPLETE = 8;
 
         int DELETE = 9;
@@ -71,8 +68,6 @@ public interface Mission {
         void onPaused();
 
         void onWaiting();
-
-        void onRetrying();
 
         void onFinished();
 
@@ -117,8 +112,6 @@ public interface Mission {
 
     boolean isPaused();
 
-    boolean isRetrying();
-
     boolean isComplete();
 
     boolean isError();
@@ -130,7 +123,7 @@ public interface Mission {
 
     //--------------------------------------------------------------getter-----------------------------------------------
 
-    String getUuid();
+    String getMissionId();
 
     String getName();
 
@@ -141,8 +134,6 @@ public interface Mission {
     long getCreateTime();
 
     long getFinishTime();
-
-    int getFinishCount();
 
     long getLength();
 
@@ -173,7 +164,7 @@ public interface Mission {
 
     String getDownloadedSizeStr();
 
-    float getSpeed();
+    long getSpeed();
 
     String getSpeedStr();
 

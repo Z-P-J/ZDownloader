@@ -1,5 +1,6 @@
 package com.zpj.downloader.core.impl;
 
+import android.support.annotation.NonNull;
 import android.support.annotation.WorkerThread;
 
 import com.zpj.downloader.ZDownloader;
@@ -17,18 +18,22 @@ import com.zpj.downloader.utils.io.BufferedRandomAccessFile;
 import java.io.BufferedInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
-import java.nio.channels.WritableByteChannel;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Map;
 
-public class FileTransfer<T extends Mission> implements Transfer<T> {
+/**
+ * 下载任务传输器
+ * @param <T> mission
+ * @author Z-P-J
+ */
+public class BlockTransfer<T extends Mission> implements Transfer<T> {
 
     public static final String TAG = "AbsTransfer";
 
     @WorkerThread
     @Override
-    public Result transfer(T mission, Block block) {
+    public Result transfer(T mission, @NonNull Block block) {
         Downloader<T> downloader = ZDownloader.get(mission);
 
         long start;
@@ -50,6 +55,9 @@ public class FileTransfer<T extends Mission> implements Transfer<T> {
         Response response = null;
         try {
             response = downloader.getHttpFactory().request(mission, headers);
+            if (!mission.isDownloading()) {
+                return Result.paused();
+            }
             int code = response.statusCode();
             Logger.d(TAG, "code=" + code);
             if (code / 100 == 2) {
@@ -65,9 +73,13 @@ public class FileTransfer<T extends Mission> implements Transfer<T> {
                         f.write(buf, 0, len);
                         downloaded += len;
                         Logger.d(TAG, "downloaded=" + downloaded);
-                        if (block != null) {
-                            block.setDownloaded(downloaded);
-                            downloader.getDao().updateBlockDownloaded(block, downloaded);
+                        block.setDownloaded(downloaded);
+                        downloader.getDao().updateBlockDownloaded(block, downloaded);
+
+                        if (!mission.isDownloading()) {
+                            f.flush();
+                            Logger.d(TAG, "return by not downloading!");
+                            return Result.paused();
                         }
                     }
 
@@ -76,21 +88,21 @@ public class FileTransfer<T extends Mission> implements Transfer<T> {
 
                     f.flush();
                 }
+                return Result.ok("block transfer success!");
             } else {
-                return Result.error(-1, Error.SERVER_UNSUPPORTED.getErrorMsg());
+                return Result.error(Error.SERVER_UNSUPPORTED.getErrorMsg());
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();
-            return Result.error(-1, Error.FILE_NOT_FOUND.getErrorMsg());
+            return Result.error(Error.FILE_NOT_FOUND.getErrorMsg());
         } catch (IOException e) {
             e.printStackTrace();
-            return Result.error(-1, e.getMessage());
+            return Result.error(e.getMessage());
         } finally {
             if (response != null) {
                 response.close();
             }
         }
-        return Result.ok(0, "block transfer success!");
     }
 
 }
