@@ -30,7 +30,7 @@ public interface Dao<T extends Mission> {
 
     long queryDownloaded(T mission);
 
-    List<Block> queryUnfinishedBlocks(T mission);
+    List<Block> queryShouldDownloadBlocks(T mission);
 
     boolean updateBlockDownloaded(Block block, long downloaded);
 

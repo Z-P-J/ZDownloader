@@ -3,6 +3,7 @@ package com.zpj.downloader.core.impl;
 import android.webkit.MimeTypeMap;
 
 import com.zpj.downloader.ZDownloader;
+import com.zpj.downloader.core.Downloader;
 import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.utils.Logger;
 import com.zpj.utils.FormatUtils;
@@ -169,27 +170,33 @@ public class DownloadMission implements Mission {
 
     @Override
     public boolean isPreparing() {
-        return getStatus() == Status.PREPARING;
+        Downloader<DownloadMission> downloader = ZDownloader.get(this);
+        return downloader.getDispatcher().isPreparing(this);
+//        return getStatus() == Status.PREPARING;
     }
 
     @Override
     public boolean isDownloading() {
-        return getStatus() == Status.DOWNLOADING;
+        Downloader<DownloadMission> downloader = ZDownloader.get(this);
+        return downloader.getDispatcher().isDownloading(this);
+//        return getStatus() == Status.DOWNLOADING;
     }
 
     @Override
     public boolean isWaiting() {
-        return getStatus() == Status.WAITING;
+        Downloader<DownloadMission> downloader = ZDownloader.get(this);
+        return downloader.getDispatcher().isWaiting(this);
+//        return getStatus() == Status.WAITING;
     }
 
     @Override
     public boolean isPaused() {
-        return getStatus() == Status.PAUSED;
-    }
+        if (getStatus() == Status.PAUSED) {
+            return true;
+        }
+        return !isComplete() && !isError() && !isDownloading() && !isWaiting();
 
-    @Override
-    public boolean isRetrying() {
-        return getStatus() == Status.RETRYING;
+//        return getStatus() == Status.PAUSED;
     }
 
     @Override
@@ -204,11 +211,14 @@ public class DownloadMission implements Mission {
 
     @Override
     public boolean canPause() {
-        return isDownloading() || isWaiting() || isPreparing() || getStatus() == Status.RETRYING;
+        return isDownloading() || isWaiting() || isPreparing();
     }
 
     @Override
     public boolean canStart() {
+        if (isDownloading() || isWaiting()) {
+            return false;
+        }
         return isPaused() || isError() || getStatus() == Status.CREATED;
     }
 

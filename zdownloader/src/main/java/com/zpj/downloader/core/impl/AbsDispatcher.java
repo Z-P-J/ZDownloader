@@ -64,12 +64,12 @@ public class AbsDispatcher<T extends Mission> implements Dispatcher<T> {
 
     @Override
     public boolean isDownloading(T mission) {
-        return mDownloadingQueue.containsKey(mission.getMissionInfo().getMissionId());
+        return mDownloadingQueue.containsKey(mission.getMissionId());
     }
 
     @Override
     public boolean isPreparing(T mission) {
-        MissionHandler<T> delegate = mDownloadingQueue.get(mission.getMissionInfo().getMissionId());
+        MissionHandler<T> delegate = mDownloadingQueue.get(mission.getMissionId());
         return delegate != null && delegate.isPreparing();
     }
 
@@ -84,7 +84,7 @@ public class AbsDispatcher<T extends Mission> implements Dispatcher<T> {
             return false;
         }
         if (isDownloading(mission)) {
-            MissionHandler<T> handler = mDownloadingQueue.remove(mission.getMissionInfo().getMissionId());
+            MissionHandler<T> handler = mDownloadingQueue.remove(mission.getMissionId());
             if (handler != null) {
                 handler.stop();
             }
@@ -105,7 +105,7 @@ public class AbsDispatcher<T extends Mission> implements Dispatcher<T> {
         if (mission == null) {
             return false;
         }
-        mDownloadingQueue.remove(mission.getMissionInfo().getMissionId());
+        mDownloadingQueue.remove(mission.getMissionId());
         return mWaitingQueue.add(mission);
     }
 
@@ -119,7 +119,7 @@ public class AbsDispatcher<T extends Mission> implements Dispatcher<T> {
         if (mission == null || !isDownloading(mission)) {
             return false;
         }
-        MissionHandler<T> delegate = mDownloadingQueue.get(mission.getMissionInfo().getMissionId());
+        MissionHandler<T> delegate = mDownloadingQueue.get(mission.getMissionId());
         if (delegate == null || delegate.isPreparing()) {
             return false;
         }
@@ -135,7 +135,7 @@ public class AbsDispatcher<T extends Mission> implements Dispatcher<T> {
             return mWaitingQueue.offer(mission);
         } else {
             MissionHandler<T> handler = new MissionHandler<>(mission);
-            MissionHandler<T> oldHandler = mDownloadingQueue.put(mission.getMissionInfo().getMissionId(), handler);
+            MissionHandler<T> oldHandler = mDownloadingQueue.put(mission.getMissionId(), handler);
             if (oldHandler != null) {
                 oldHandler.stop();
             }
@@ -146,6 +146,9 @@ public class AbsDispatcher<T extends Mission> implements Dispatcher<T> {
 
     @Override
     public boolean canRetry(T mission, int code, String msg) {
+        if (!mission.isDownloading()) {
+            return false;
+        }
         return false;
     }
 

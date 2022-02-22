@@ -6,6 +6,7 @@ public interface HttpHeader {
 
     String USER_AGENT = "User-Agent";
     String LOCATION = "Location";
+    String Content_Disposition = "Content-Disposition";
 
     String CHARSET = "Charset";
     String REFERER = "Referer";

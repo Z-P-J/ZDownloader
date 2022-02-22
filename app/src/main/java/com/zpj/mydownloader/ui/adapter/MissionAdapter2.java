@@ -198,11 +198,6 @@ public class MissionAdapter2 extends RecyclerView.Adapter<MissionAdapter2.ViewHo
 		}
 
 		@Override
-		public void onRetrying() {
-			status.setText("重试中...");
-		}
-
-		@Override
 		public void onProgress(Mission mission, float speed) {
 			if (TextUtils.equals(name.getText().toString(), STATUS_INIT) && !TextUtils.isEmpty(mission.getName())) {
 				name.setText(mission.getName());

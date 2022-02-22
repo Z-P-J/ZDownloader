@@ -47,7 +47,7 @@ public class RoomDao<T extends Mission> implements Dao<T> {
 
     @Override
     public boolean hasMission(T mission) {
-        return database.missionDao().queryInfo(mission.getMissionInfo().getMissionId()) != null;
+        return database.missionDao().queryInfo(mission.getMissionId()) != null;
     }
 
     @Override
@@ -84,7 +84,7 @@ public class RoomDao<T extends Mission> implements Dao<T> {
     }
 
     @Override
-    public List<Block> queryUnfinishedBlocks(T mission) {
+    public List<Block> queryShouldDownloadBlocks(T mission) {
         return database.blockDao().queryDownloadableBlocks(mission.getMissionId());
     }
 
