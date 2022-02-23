@@ -6,9 +6,9 @@ import java.io.File;
 import java.util.List;
 
 /**
- * dao
+ * 下载任务数据持久化接口
  */
-public interface Dao<T extends Mission> {
+public interface Repository<T extends Mission> {
 
     List<T> queryMissions(Downloader<T> downloader);
 

@@ -38,44 +38,21 @@ public interface Downloader<T extends Mission> {
     void removeObserver(DownloaderObserver<T> observer);
 
 
-
-    void setBlockDivider(BlockDivider<T> divider);
-
     BlockDivider<T> getBlockDivider();
-
-    void setDispatcher(Dispatcher<T> dispatcher);
 
     Dispatcher<T> getDispatcher();
 
-    void setHttpFactory(HttpFactory httpFactory);
-
     HttpFactory getHttpFactory();
-
-    void setInitializer(Initializer<T> initializer);
 
     Initializer<T> getInitializer();
 
-    void setNotifier(Notifier<T> notifier);
-
     Notifier<T> getNotifier();
-
-//    void setSerializer(Serializer<T> serializer);
-//
-//    Serializer<T> getSerializer();
-
-    void setTransfer(Transfer<T> transfer);
 
     Transfer<T> getTransfer();
 
-    void setExecutorFactory(ExecutorFactory<T> executorFactory);
-
     ExecutorFactory<T> getExecutorFactory();
 
-    void setUpdater(Updater updater);
-
-    Updater getUpdater();
-
-    Dao<T> getDao();
+    Repository<T> getRepository();
 
 
 

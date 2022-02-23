@@ -74,7 +74,7 @@ public class BlockTransfer<T extends Mission> implements Transfer<T> {
                         downloaded += len;
                         Logger.d(TAG, "downloaded=" + downloaded);
                         block.setDownloaded(downloaded);
-                        downloader.getDao().updateBlockDownloaded(block, downloaded);
+                        downloader.getRepository().updateBlockDownloaded(block, downloaded);
 
                         if (!mission.isDownloading()) {
                             f.flush();

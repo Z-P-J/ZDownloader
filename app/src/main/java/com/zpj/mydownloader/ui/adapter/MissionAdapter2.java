@@ -59,11 +59,17 @@ public class MissionAdapter2 extends RecyclerView.Adapter<MissionAdapter2.ViewHo
 		super.onViewRecycled(h);
 	}
 
-	@Override
-	public void onViewDetachedFromWindow(@NonNull ViewHolder holder) {
-		holder.bindMission(null);
-		super.onViewDetachedFromWindow(holder);
-	}
+//	@Override
+//	public void onViewDetachedFromWindow(@NonNull ViewHolder holder) {
+//		holder.unbindMission();
+//		super.onViewDetachedFromWindow(holder);
+//	}
+//
+//	@Override
+//	public void onViewAttachedToWindow(@NonNull ViewHolder holder) {
+//		holder.bindMission();
+//		super.onViewAttachedToWindow(holder);
+//	}
 
 	@Override
 	public void onBindViewHolder(@NonNull MissionAdapter2.ViewHolder h, @SuppressLint("RecyclerView") int pos) {
@@ -149,6 +155,18 @@ public class MissionAdapter2 extends RecyclerView.Adapter<MissionAdapter2.ViewHo
 			this.mission = mission;
 		}
 
+		public void bindMission() {
+			if (this.mission != null && !this.mission.hasObserver(this)) {
+				this.mission.addObserver(this);
+			}
+		}
+
+		public void unbindMission() {
+			if (this.mission != null) {
+				this.mission.removeObserver(this);
+			}
+		}
+
 		public void updateProgress() {
 			if (mission == null) {
 				return;
@@ -168,8 +186,12 @@ public class MissionAdapter2 extends RecyclerView.Adapter<MissionAdapter2.ViewHo
 				menu.setVisibility(View.VISIBLE);
 				if (mission.isDownloading()) {
 					status.setText(mission.getProgressStr());
-				} else {
-					status.setText("status: " + mission.getStatus());
+				} else if (mission.isWaiting()) {
+					status.setText("等待中...");
+				} else if (mission.isPaused()) {
+					status.setText("已暂停");
+				} else if (mission.isPreparing()){
+					status.setText("准备中...");
 				}
 				menu.setProgress(mission.getProgress());
 				size.setText(mission.getFileSizeStr() + File.separator + mission.getDownloadedSizeStr() + "  " + mission.getSpeedStr());
@@ -178,7 +200,7 @@ public class MissionAdapter2 extends RecyclerView.Adapter<MissionAdapter2.ViewHo
 
 		@Override
 		public void onPrepare() {
-			status.setText("初始化...");
+			status.setText("准备中...");
 		}
 
 		@Override

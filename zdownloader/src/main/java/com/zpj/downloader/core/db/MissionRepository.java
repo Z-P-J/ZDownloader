@@ -3,7 +3,7 @@ package com.zpj.downloader.core.db;
 import android.support.annotation.NonNull;
 
 import com.zpj.downloader.core.Block;
-import com.zpj.downloader.core.Dao;
+import com.zpj.downloader.core.Repository;
 import com.zpj.downloader.core.Downloader;
 import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.impl.Config;
@@ -13,12 +13,12 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class RoomDao<T extends Mission> implements Dao<T> {
+public class MissionRepository<T extends Mission> implements Repository<T> {
 
     @NonNull
     private final MissionDatabase database;
 
-    public RoomDao(@NonNull MissionDatabase database) {
+    public MissionRepository(@NonNull MissionDatabase database) {
         this.database = database;
     }
 
@@ -108,7 +108,10 @@ public class RoomDao<T extends Mission> implements Dao<T> {
 
     @Override
     public boolean deleteMission(T mission) {
+        database.configDao().delete(mission.getConfig());
+        database.blockDao().delete(mission.getMissionId());
         database.missionDao().delete(mission.getMissionInfo());
+
 //        result |= database.configDao().delete(mission.getConfig());
         return true;
     }
