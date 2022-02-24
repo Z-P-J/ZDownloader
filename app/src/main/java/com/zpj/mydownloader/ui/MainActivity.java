@@ -11,29 +11,27 @@ import android.view.MenuItem;
 
 import com.lxj.xpermission.PermissionConstants;
 import com.lxj.xpermission.XPermission;
-import com.zpj.downloader.ZDownloader;
 import com.zpj.fragmentation.SupportActivity;
 import com.zpj.fragmentation.dialog.ZDialog;
-import com.zpj.mydownloader.ui.fragment.MainFragment;
 import com.zpj.mydownloader.R;
 import com.zpj.mydownloader.ui.fragment.AddTaskFragment;
-import com.zpj.mydownloader.ui.fragment.MainFragment2;
+import com.zpj.mydownloader.ui.fragment.MainFragment;
 
 /**
  * @author Z-P-J
  */
 public class MainActivity extends SupportActivity {
 
-    private MainFragment2 fragment;
+    private MainFragment fragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        fragment = findFragment(MainFragment2.class);
+        fragment = findFragment(MainFragment.class);
         if (fragment == null) {
-            fragment = new MainFragment2();
+            fragment = new MainFragment();
             loadRootFragment(R.id._fl_container, fragment);
         }
 
@@ -57,7 +55,6 @@ public class MainActivity extends SupportActivity {
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        ZDownloader.onDestroy();
     }
 
     private void showRequestPermissionPopup() {

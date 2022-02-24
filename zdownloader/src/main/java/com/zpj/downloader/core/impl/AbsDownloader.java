@@ -5,7 +5,7 @@ import android.support.annotation.NonNull;
 import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.core.Block;
 import com.zpj.downloader.core.BlockDivider;
-import com.zpj.downloader.core.Dao;
+import com.zpj.downloader.core.Repository;
 import com.zpj.downloader.core.Dispatcher;
 import com.zpj.downloader.core.Downloader;
 import com.zpj.downloader.core.http.HttpFactory;
@@ -19,7 +19,7 @@ import com.zpj.downloader.core.Transfer;
 import com.zpj.downloader.core.Updater;
 import com.zpj.downloader.core.http.UrlConnectionHttpFactory;
 import com.zpj.downloader.core.db.MissionDatabase;
-import com.zpj.downloader.core.db.RoomDao;
+import com.zpj.downloader.core.db.MissionRepository;
 import com.zpj.downloader.utils.Logger;
 import com.zpj.downloader.utils.ThreadPool;
 import com.zpj.utils.ContextUtils;
@@ -55,14 +55,14 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
     private Notifier<T> mNotifier;
     private Transfer<T> mTransfer = new BlockTransfer<>();
 //    private MissionFactory<T> mMissionFactory;
-    private Dao<T> mDao;
+    private final Repository<T> mRepository;
 
     private static class MissionObservers {
         protected ArrayList<WeakReference<Mission.Observer>> mObservers = new ArrayList<>();
     }
 
     public AbsDownloader() {
-        mDao = new RoomDao<>(MissionDatabase.getInstance(getKey()));
+        mRepository = new MissionRepository<>(MissionDatabase.getInstance(getKey()));
     }
 
     @Override
@@ -90,37 +90,9 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
         return new DownloaderConfig();
     }
 
-//    @Override
-//    public T download(String url) {
-//        return download(url, null);
-//    }
-//
-//    @Override
-//    public T download(String url, String name) {
-//        Config config = new Config(config());
-//
-//        AbsMission mission = new AbsMission(config);
-//        mission.url = url;
-//        mission.originUrl = url;
-//        mission.name = name;
-//        mission.uuid = UUID.randomUUID().toString();
-//        mission.createTime = System.currentTimeMillis();
-//        return mission;
-//    }
-
-    @Override
-    public void setBlockDivider(BlockDivider<T> divider) {
-
-    }
-
     @Override
     public BlockDivider<T> getBlockDivider() {
         return new BaseBlockDivider<>();
-    }
-
-    @Override
-    public void setDispatcher(Dispatcher<T> dispatcher) {
-        this.mDispatcher = dispatcher;
     }
 
     @Override
@@ -129,18 +101,8 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
     }
 
     @Override
-    public void setHttpFactory(HttpFactory httpFactory) {
-
-    }
-
-    @Override
     public HttpFactory getHttpFactory() {
         return new UrlConnectionHttpFactory();
-    }
-
-    @Override
-    public void setInitializer(Initializer<T> initializer) {
-        this.mInitializer = initializer;
     }
 
     @Override
@@ -149,28 +111,8 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
     }
 
     @Override
-    public void setNotifier(Notifier<T> notifier) {
-        this.mNotifier = notifier;
-    }
-
-    @Override
     public Notifier<T> getNotifier() {
         return mNotifier;
-    }
-
-//    @Override
-//    public void setSerializer(Serializer<T> serializer) {
-//        this.mSerializer = serializer;
-//    }
-//
-//    @Override
-//    public Serializer<T> getSerializer() {
-//        return mSerializer;
-//    }
-
-    @Override
-    public void setTransfer(Transfer<T> transfer) {
-        this.mTransfer = transfer;
     }
 
     @Override
@@ -179,28 +121,13 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
     }
 
     @Override
-    public void setExecutorFactory(ExecutorFactory<T> executorFactory) {
-
-    }
-
-    @Override
     public ExecutorFactory<T> getExecutorFactory() {
         return new AbsExecutorFactory<>();
     }
 
     @Override
-    public void setUpdater(Updater updater) {
-
-    }
-
-    @Override
-    public Updater getUpdater() {
-        return null;
-    }
-
-    @Override
-    public Dao<T> getDao() {
-        return mDao;
+    public Repository<T> getRepository() {
+        return mRepository;
     }
 
     @Override
@@ -211,7 +138,7 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
         ThreadPool.execute(new Runnable() {
             @Override
             public void run() {
-                final List<T> missions = getDao().queryMissions(AbsDownloader.this);
+                final List<T> missions = getRepository().queryMissions(AbsDownloader.this);
                 Logger.d(TAG, "loadMissions missions=" + missions);
                 ThreadPool.post(new Runnable() {
                     @Override
@@ -240,6 +167,8 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
     private void enqueue(final T mission) {
         Logger.d(TAG, "enqueue mission=" + mission);
         if (mDispatcher.enqueue(mission) && mDispatcher.isDownloading(mission)) {
+            mission.setErrorCode(0);
+            mission.setErrorMessage(null);
             onMissionStart(mission);
             if (mission.getStatus() == Mission.Status.CREATED
                     || mission.getStatus() == Mission.Status.PREPARING
@@ -257,18 +186,6 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
             return;
         }
         Logger.d(TAG, "status=" + status + " getStatus=" + mission.getStatus());
-        if (status != Mission.Status.CREATED) {
-            if (mission.getStatus() == status) {
-                return;
-            }
-            mission.setStatus(status);
-            ThreadPool.execute(new Runnable() {
-                @Override
-                public void run() {
-                    mDao.updateStatus(mission, status);
-                }
-            });
-        }
         switch (status) {
             case Mission.Status.CREATED:
                 if (mDispatcher.isDownloading(mission) || mDispatcher.isWaiting(mission)) {
@@ -281,9 +198,9 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
                     public void run() {
                         // TODO 将任务保存至本地，需要判断本地是否存在该任务
 
-                        if (!mDao.hasMission(mission)) {
-                            mDao.saveMissionInfo(mission);
-                            mDao.saveConfig(mission.getConfig());
+                        if (!mRepository.hasMission(mission)) {
+                            mRepository.saveMissionInfo(mission);
+                            mRepository.saveConfig(mission.getConfig());
 
 
                             onMissionAdd(mission);
@@ -296,11 +213,13 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
                 break;
             case Mission.Status.WAITING:
                 if (mDispatcher.waiting(mission)) {
+                    setStatus(mission, Mission.Status.WAITING);
                     onMissionWaiting(mission);
                 }
                 break;
             case Mission.Status.PREPARING:
                 if (mDispatcher.prepare(mission)) {
+                    setStatus(mission, Mission.Status.PREPARING);
                     ThreadPool.execute(new Runnable() {
                         @Override
                         public void run() {
@@ -333,42 +252,36 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
                                         notifyStatus(mission, Mission.Status.ERROR);
                                         return;
                                     }
-                                    mDao.saveBlocks(blocks);
+                                    mRepository.saveBlocks(blocks);
                                 } else {
                                     Block block = new Block(mission.getMissionInfo().getMissionId(), 0, 0);
                                     Logger.d(TAG, "block=" + block);
-                                    mDao.saveBlocks(block);
+                                    mRepository.saveBlocks(block);
                                 }
                                 mission.getMissionInfo().isPrepared = true;
-                                mDao.saveMissionInfo(mission);
+                                mRepository.saveMissionInfo(mission);
                                 notifyStatus(mission, Mission.Status.DOWNLOADING);
                             } else {
                                 mission.setErrorCode(result.getCode());
                                 mission.setErrorMessage(result.getMessage());
                                 notifyStatus(mission, Mission.Status.ERROR);
-                                mDao.saveMissionInfo(mission);
+                                mRepository.saveMissionInfo(mission);
                             }
                         }
                     });
                 }
                 break;
             case Mission.Status.DOWNLOADING:
-//                if (mission.isBlockDownload()) {
-//                    ThreadPool.execute(new Runnable() {
-//                        @Override
-//                        public void run() {
-//                            for (final Block block : getDao().queryUnfinishedBlocks(mission)) {
-//                                execute(mission, new BlockTask<>(AbsDownloader.this, mission, block));
-//                            }
-//                        }
-//                    });
-//                } else {
-//                    execute(mission, new BlockTask<>(this, mission, null));
-//                }
                 ThreadPool.execute(new Runnable() {
                     @Override
                     public void run() {
-                        List<Block> blocks = getDao().queryShouldDownloadBlocks(mission);
+
+                        if (mission.getStatus() == Mission.Status.DOWNLOADING) {
+                            return;
+                        }
+                        setStatus(mission, Mission.Status.DOWNLOADING);
+
+                        List<Block> blocks = getRepository().queryShouldDownloadBlocks(mission);
                         Logger.d(TAG, "blocks=" + blocks);
                         if (blocks == null || blocks.isEmpty()) {
                             Logger.e(TAG, "blocks is empty!");
@@ -395,6 +308,7 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
             case Mission.Status.PAUSED:
                 boolean downloading = mDispatcher.isDownloading(mission);
                 if (mDispatcher.remove(mission)) {
+                    setStatus(mission, Mission.Status.PAUSED);
                     ExecutorService executor = mExecutors.remove(mission);
                     if (executor != null) {
                         executor.shutdown();
@@ -409,6 +323,7 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
                 boolean isDownloading = mDispatcher.isDownloading(mission);
                 Logger.d(TAG, "onError isDownloading=" + isDownloading);
                 if (mDispatcher.remove(mission)) {
+                    setStatus(mission, Mission.Status.ERROR);
                     ExecutorService executor = mExecutors.remove(mission);
                     if (executor != null) {
                         executor.shutdown();
@@ -429,19 +344,29 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
 //                }, mission.getConfig().getRetryDelayMillis());
 //                break;
             case Mission.Status.CLEAR:
-                onMissionClear(mission);
+                ThreadPool.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        getRepository().deleteMission(mission);
+                        mission.getFile().delete();
+                        onMissionClear(mission);
+                    }
+                });
                 break;
             case Mission.Status.DELETE:
 //                delete(mission);
-                onMissionDelete(mission);
+                ThreadPool.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        getRepository().deleteMission(mission);
+                        onMissionDelete(mission);
+                    }
+                });
                 break;
             case Mission.Status.COMPLETE:
                 // TODO notify
                 if (mDispatcher.remove(mission)) {
-                    ExecutorService executor = mExecutors.remove(mission);
-                    if (executor != null) {
-                        executor.shutdown();
-                    }
+                    setStatus(mission, Mission.Status.COMPLETE);
                     onMissionFinished(mission);
                     enqueue(mDispatcher.nextMission());
                 }
@@ -451,6 +376,16 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
         }
         notifyStatus(mission);
 
+    }
+
+    private void setStatus(final T mission, final @Mission.Status int status) {
+        mission.setStatus(status);
+        ThreadPool.execute(new Runnable() {
+            @Override
+            public void run() {
+                mRepository.updateStatus(mission, status);
+            }
+        });
     }
 
     protected void notifyStatus(final T mission) {
@@ -602,9 +537,9 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
 
     private void onMissionFinished(final T mission) {
         // 销毁线程池
-        Executor executor = mExecutors.remove(mission);
-        if (executor instanceof ExecutorService) {
-            ((ExecutorService) executor).shutdownNow();
+        ExecutorService executor = mExecutors.remove(mission);
+        if (executor != null) {
+            executor.shutdownNow();
         }
 
         ThreadPool.post(new Runnable() {
@@ -658,14 +593,14 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
                 // TODO 通知block下载完成
 //                downloader.getDao().updateBlockDownloaded(block, block.)
                 block.setStatus(1);
-                downloader.getDao().updateBlock(block);
+                downloader.getRepository().updateBlock(block);
 //                if (mission.isBlockDownload()) {
 //                    // TODO
 //
 //                } else {
 //                    downloader.notifyStatus(mission, Mission.Status.COMPLETE);
 //                }
-                List<Block> blocks = downloader.getDao().queryShouldDownloadBlocks(mission);
+                List<Block> blocks = downloader.getRepository().queryShouldDownloadBlocks(mission);
                 Logger.d(TAG, "unfinishedBlocks=" + blocks);
                 if (blocks.isEmpty()) {
                     downloader.notifyStatus(mission, Mission.Status.COMPLETE);
@@ -682,7 +617,8 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
                 } else {
                     mission.pause();
                     mission.setErrorCode(result.getCode());
-                    downloader.notifyStatus(mission, result.getCode());
+                    mission.setErrorMessage(result.getMessage());
+                    downloader.notifyStatus(mission, Mission.Status.ERROR);
                 }
             }
         }

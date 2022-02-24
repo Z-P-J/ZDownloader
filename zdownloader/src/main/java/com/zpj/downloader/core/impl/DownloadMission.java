@@ -1,5 +1,6 @@
 package com.zpj.downloader.core.impl;
 
+import android.text.TextUtils;
 import android.webkit.MimeTypeMap;
 
 import com.zpj.downloader.ZDownloader;
@@ -15,6 +16,7 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -90,18 +92,21 @@ public class DownloadMission implements Mission {
 
     @Override
     public void restart() {
+        pause();
         setStatus(Status.CREATED);
         start();
     }
 
     @Override
     public void delete() {
-
+        pause();
+        notifyStatus(Status.DELETE);
     }
 
     @Override
     public void clear() {
-
+        pause();
+        notifyStatus(Status.CLEAR);
     }
 
     @Override
@@ -418,5 +423,17 @@ public class DownloadMission implements Mission {
                 ", info=" + info +
                 ", mObservers=" + mObservers +
                 '}';
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (o == null || getClass() != o.getClass()) return false;
+        return TextUtils.equals(getMissionId(), ((DownloadMission) o).getMissionId());
+    }
+
+    @Override
+    public int hashCode() {
+        return getMissionId().hashCode();
     }
 }

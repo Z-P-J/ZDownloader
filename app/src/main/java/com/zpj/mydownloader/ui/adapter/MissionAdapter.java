@@ -13,14 +13,13 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.zpj.downloader.BaseMission;
-import com.zpj.downloader.ProgressUpdater;
 import com.zpj.downloader.constant.Error;
-import com.zpj.downloader.impl.DownloadMission;
+import com.zpj.downloader.core.Mission;
+import com.zpj.downloader.core.impl.DownloadMission;
 import com.zpj.mydownloader.R;
-import com.zpj.mydownloader.utils.Utils;
 import com.zpj.mydownloader.ui.fragment.ActionBottomFragment;
 import com.zpj.mydownloader.ui.widget.ArrowDownloadButton;
+import com.zpj.mydownloader.utils.Utils;
 
 import java.io.File;
 import java.util.List;
@@ -30,15 +29,15 @@ import java.util.List;
  * */
 public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHolder> {
 
-	private final List<BaseMission<?>> list;
+	private final List<DownloadMission> list;
 
 	private static final String STATUS_INIT = "初始化中...";
-	
+
 	private final Context mContext;
 
 	private final int mLayout;
-	
-	public MissionAdapter(Context context, List<BaseMission<?>> list) {
+
+	public MissionAdapter(Context context, List<DownloadMission> list) {
 		mContext = context;
 		this.list = list;
 		
@@ -57,9 +56,21 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		super.onViewRecycled(h);
 	}
 
+//	@Override
+//	public void onViewDetachedFromWindow(@NonNull ViewHolder holder) {
+//		holder.unbindMission();
+//		super.onViewDetachedFromWindow(holder);
+//	}
+//
+//	@Override
+//	public void onViewAttachedToWindow(@NonNull ViewHolder holder) {
+//		holder.bindMission();
+//		super.onViewAttachedToWindow(holder);
+//	}
+
 	@Override
 	public void onBindViewHolder(@NonNull MissionAdapter.ViewHolder h, @SuppressLint("RecyclerView") int pos) {
-		BaseMission<?> mission = list.get(pos);
+		DownloadMission mission = list.get(pos);
 
 		h.bindMission(mission);
 		
@@ -77,10 +88,10 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 	}
 
 
-	protected static class ViewHolder extends RecyclerView.ViewHolder implements DownloadMission.MissionListener {
+	protected static class ViewHolder extends RecyclerView.ViewHolder implements Mission.Observer {
 
 		private final Context context;
-		private BaseMission<?> mission;
+		private DownloadMission mission;
 
 		CardView cardView;
 		TextView status;
@@ -115,9 +126,9 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 			});
 
 			menu.setOnClickListener(v -> {
-				if (mission.isFinished()) {
-					Toast.makeText(context, "打开文件", Toast.LENGTH_SHORT).show();
-					mission.openFile();
+				if (mission.isComplete()) {
+					Toast.makeText(context, "TODO 打开文件", Toast.LENGTH_SHORT).show();
+//					mission.openFile();
 				} else if (mission.canPause()) {
 					Toast.makeText(context, "暂停下载", Toast.LENGTH_SHORT).show();
 					mission.pause();
@@ -128,12 +139,12 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 			});
 		}
 
-		public void bindMission(BaseMission<?> mission) {
+		public void bindMission(DownloadMission mission) {
 			if (this.mission != null) {
-				this.mission.removeListener(this);
+				this.mission.removeObserver(this);
 			}
 			if (mission != null) {
-				mission.addListener(this);
+				mission.addObserver(this);
 				icon.setImageResource(Utils.getFileTypeIconId(mission.getName()));
 				name.setText(mission.getName());
 				size.setText(mission.getFileSizeStr());
@@ -141,20 +152,43 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 			this.mission = mission;
 		}
 
+		public void bindMission() {
+			if (this.mission != null && !this.mission.hasObserver(this)) {
+				this.mission.addObserver(this);
+			}
+		}
+
+		public void unbindMission() {
+			if (this.mission != null) {
+				this.mission.removeObserver(this);
+			}
+		}
+
 		public void updateProgress() {
 			if (mission == null) {
 				return;
 			}
 
-			if (mission.isFinished()) {
+			if (mission.isComplete()) {
 				status.setText("已完成");
 				menu.setVisibility(View.GONE);
-			} else {
+				menu.pause();
+			} else if (mission.isError()) {
+				size.setText("");
+				status.setText("出错了：" + mission.getErrorMessage());
 				menu.setVisibility(View.VISIBLE);
-				if (mission.isRunning()) {
+				menu.pause();
+			} else {
+				menu.resume();
+				menu.setVisibility(View.VISIBLE);
+				if (mission.isDownloading()) {
 					status.setText(mission.getProgressStr());
-				} else {
-					status.setText(mission.getStatus().toString());
+				} else if (mission.isWaiting()) {
+					status.setText("等待中...");
+				} else if (mission.isPaused()) {
+					status.setText("已暂停");
+				} else if (mission.isPreparing()){
+					status.setText("准备中...");
 				}
 				menu.setProgress(mission.getProgress());
 				size.setText(mission.getFileSizeStr() + File.separator + mission.getDownloadedSizeStr() + "  " + mission.getSpeedStr());
@@ -163,7 +197,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 
 		@Override
 		public void onPrepare() {
-			status.setText("初始化...");
+			status.setText("准备中...");
 		}
 
 		@Override
@@ -183,12 +217,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		}
 
 		@Override
-		public void onRetrying() {
-			status.setText("重试中...");
-		}
-
-		@Override
-		public void onProgress(ProgressUpdater update) {
+		public void onProgress(Mission mission, float speed) {
 			if (TextUtils.equals(name.getText().toString(), STATUS_INIT) && !TextUtils.isEmpty(mission.getName())) {
 				name.setText(mission.getName());
 			}
@@ -206,6 +235,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 
 		@Override
 		public void onError(Error e) {
+			menu.pause();
 			size.setText("");
 			status.setText("出错了：" + e.getErrorMsg());
 		}

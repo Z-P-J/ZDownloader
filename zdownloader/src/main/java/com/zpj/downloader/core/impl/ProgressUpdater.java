@@ -6,7 +6,6 @@ import android.os.Message;
 import android.os.SystemClock;
 
 import com.zpj.downloader.ZDownloader;
-import com.zpj.downloader.core.Block;
 import com.zpj.downloader.core.Downloader;
 import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.Updater;
@@ -53,7 +52,7 @@ public class ProgressUpdater<T extends Mission> implements Updater {
 
 
 
-                    long downloaded = downloader.getDao().queryDownloaded(mission);
+                    long downloaded = downloader.getRepository().queryDownloaded(mission);
 
                     long delta = downloaded - lastDownloaded;
 
@@ -67,7 +66,7 @@ public class ProgressUpdater<T extends Mission> implements Updater {
                         mission.getMissionInfo().downloaded = downloaded;
                         mission.getMissionInfo().setSpeed(speed);
 
-                        downloader.getDao().saveMissionInfo(mission);
+                        downloader.getRepository().saveMissionInfo(mission);
 
                         if (mission.isComplete() || mission.isError()) {
                             stop();

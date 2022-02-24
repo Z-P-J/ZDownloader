@@ -6,19 +6,21 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 
-import com.zpj.downloader.BaseMission;
-import com.zpj.downloader.DownloadManager;
 import com.zpj.downloader.ZDownloader;
+import com.zpj.downloader.core.Downloader;
+import com.zpj.downloader.core.MissionLoader;
+import com.zpj.downloader.core.impl.DownloadMission;
 import com.zpj.fragmentation.SimpleFragment;
 import com.zpj.mydownloader.R;
 import com.zpj.mydownloader.ui.adapter.MissionAdapter;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
-public class MainFragment extends SimpleFragment implements DownloadManager.DownloadManagerListener {
+public class MainFragment extends SimpleFragment implements Downloader.DownloaderObserver<DownloadMission> {
 
-    private final List<BaseMission<?>> mMissions = new ArrayList<>();
+    private final List<DownloadMission> mMissions = new ArrayList<>();
 
     private RecyclerView mRecyclerView;
     private MissionAdapter mMissionAdapter;
@@ -36,7 +38,7 @@ public class MainFragment extends SimpleFragment implements DownloadManager.Down
 
     @Override
     public void onDestroy() {
-        ZDownloader.getDownloadManager().removeDownloadManagerListener(MainFragment.this);
+        ZDownloader.removeObserver(DownloadMission.class, MainFragment.this);
         super.onDestroy();
     }
 
@@ -44,37 +46,39 @@ public class MainFragment extends SimpleFragment implements DownloadManager.Down
         postOnEnterAnimationEnd(new Runnable() {
             @Override
             public void run() {
-                ZDownloader.getAllMissions(new DownloadManager.OnLoadMissionListener<BaseMission<?>>() {
+
+                ZDownloader.loadMissions(DownloadMission.class, new MissionLoader<DownloadMission>() {
                     @Override
-                    public void onLoaded(List<BaseMission<?>> missions) {
+                    public void onLoad(List<DownloadMission> missions) {
                         mMissions.clear();
                         mMissions.addAll(missions);
+                        Collections.reverse(mMissions);
 
                         mMissionAdapter = new MissionAdapter(context, mMissions);
                         mRecyclerView.setAdapter(mMissionAdapter);
 
-                        ZDownloader.getDownloadManager()
-                                .addDownloadManagerListener(MainFragment.this);
+                        ZDownloader.addObserver(DownloadMission.class, MainFragment.this);
                     }
                 });
+
             }
         });
     }
 
     @Override
-    public void onMissionAdd(BaseMission<?> mission) {
+    public void onMissionAdd(DownloadMission mission) {
         mMissions.add(0, mission);
         mMissionAdapter.notifyItemInserted(0);
     }
 
     @Override
-    public void onMissionDelete(BaseMission<?> mission) {
+    public void onMissionDelete(DownloadMission mission) {
         mMissions.remove(mission);
         mMissionAdapter.notifyDataSetChanged();
     }
 
     @Override
-    public void onMissionFinished(BaseMission<?> mission) {
+    public void onMissionFinished(DownloadMission mission) {
 
     }
 }
