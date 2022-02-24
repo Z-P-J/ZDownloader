@@ -1,4 +1,6 @@
-package com.zpj.downloader;
+package com.zpj.downloader.core;
+
+import com.zpj.downloader.core.Mission;
 
 public interface ConflictPolicy {
 
@@ -8,14 +10,14 @@ public interface ConflictPolicy {
      * @param conflictMission 已存在的冲突任务
      * @return
      */
-    boolean isConflict(BaseMission<?> mission, BaseMission<?> conflictMission);
+    boolean isConflict(Mission mission, Mission conflictMission);
 
     /**
      * 对冲突任务进行处理
      * @param mission 下载任务
      * @param callback 回调是否接受冲突该下载任务
      */
-    void onConflict(BaseMission<?> mission, Callback callback);
+    void onConflict(Mission mission, Callback callback);
 
     interface Callback {
         void onResult(boolean accept);

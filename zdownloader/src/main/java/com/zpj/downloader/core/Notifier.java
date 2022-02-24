@@ -2,8 +2,6 @@ package com.zpj.downloader.core;
 
 import android.content.Context;
 
-import com.zpj.downloader.BaseMission;
-
 /**
  * 通知拦截器接口
  * @author Z-P-J

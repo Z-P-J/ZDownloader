@@ -6,8 +6,6 @@ import android.content.Intent;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 
-import com.zpj.downloader.ZDownloader;
-
 /**
  * @author Z-P-J
  */
@@ -31,11 +29,9 @@ public class NetworkChangeReceiver extends BroadcastReceiver {
         ConnectivityManager connectivityManager = (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo networkInfo = connectivityManager.getActiveNetworkInfo();
         if (networkInfo != null && networkInfo.isConnected()) {
-            if (ZDownloader.isWaitingForInternet()) {
-                ZDownloader.resumeAll();
-            }
+            // TODO resumeAll
         } else {
-            ZDownloader.waitingForInternet();
+            // TODO waitingAll
         }
     }
 

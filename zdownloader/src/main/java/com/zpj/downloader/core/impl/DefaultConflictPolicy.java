@@ -1,20 +1,20 @@
-package com.zpj.downloader.impl;
+package com.zpj.downloader.core.impl;
 
 import android.text.TextUtils;
 
-import com.zpj.downloader.BaseMission;
-import com.zpj.downloader.ConflictPolicy;
+import com.zpj.downloader.core.ConflictPolicy;
+import com.zpj.downloader.core.Mission;
 
 public class DefaultConflictPolicy implements ConflictPolicy {
 
     @Override
-    public boolean isConflict(BaseMission<?> mission, BaseMission<?> conflictMission) {
+    public boolean isConflict(Mission mission, Mission conflictMission) {
         return TextUtils.equals(mission.getUrl(), conflictMission.getUrl())
                 || TextUtils.equals(mission.getUrl(), conflictMission.getOriginUrl());
     }
 
     @Override
-    public void onConflict(BaseMission<?> mission, Callback callback) {
+    public void onConflict(Mission mission, Callback callback) {
         callback.onResult(true);
     }
 }

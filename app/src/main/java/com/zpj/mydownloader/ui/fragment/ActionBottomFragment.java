@@ -8,15 +8,15 @@ import android.support.annotation.Nullable;
 import android.view.View;
 import android.widget.LinearLayout;
 
-import com.zpj.downloader.BaseMission;
+import com.zpj.downloader.core.Mission;
 import com.zpj.fragmentation.dialog.base.BottomDragDialogFragment;
 import com.zpj.mydownloader.R;
 
 public class ActionBottomFragment extends BottomDragDialogFragment<ActionBottomFragment> {
 
-    private BaseMission<?> mission;
+    private Mission mission;
 
-    public ActionBottomFragment setMission(BaseMission<?> mission) {
+    public ActionBottomFragment setMission(Mission mission) {
         this.mission = mission;
         return this;
     }
@@ -36,25 +36,25 @@ public class ActionBottomFragment extends BottomDragDialogFragment<ActionBottomF
         LinearLayout copyLink = findViewById(R.id.copy_link);
 
         openFile.setVisibility(View.GONE);
-        if (mission.isFinished()){
+        if (mission.isComplete()){
             openFile.setVisibility(View.VISIBLE);
             pauseDownload.setVisibility(View.GONE);
             resumeDownload.setVisibility(View.GONE);
-        } else if (mission.isRunning()) {
+        } else if (mission.isDownloading()) {
             resumeDownload.setVisibility(View.GONE);
         } else if (mission.isWaiting()) {
             resumeDownload.setVisibility(View.GONE);
         } else if (mission.isError()) {
             pauseDownload.setVisibility(View.GONE);
-        } else if (mission.isPrepare()) {
+        } else if (mission.isPreparing()) {
             pauseDownload.setVisibility(View.GONE);
             resumeDownload.setVisibility(View.GONE);
-        } else if (mission.isPause()) {
+        } else if (mission.isPaused()) {
             pauseDownload.setVisibility(View.GONE);
         }
 
         openFile.setOnClickListener(v -> {
-            mission.openFile();
+//            mission.openFile();
             dismiss();
         });
 

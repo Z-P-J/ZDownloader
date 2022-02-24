@@ -4,7 +4,7 @@ import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 
-import com.zpj.downloader.BaseMission;
+import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.Notifier;
 import com.zpj.mydownloader.ui.MainActivity;
 import com.zpj.notification.ZNotify;
@@ -12,10 +12,10 @@ import com.zpj.notification.ZNotify;
 /**
  * 实现INotificationInterceptor接口，在onProgress、onFinished、onError方法中更新通知
  */
-public class DownloadNotificationInterceptor implements Notifier<BaseMission<?>> {
+public class DownloadNotificationInterceptor implements Notifier<Mission> {
 
     @Override
-    public void onProgress(Context context, BaseMission<?> mission, float progress, boolean isPause) {
+    public void onProgress(Context context, Mission mission, float progress, boolean isPause) {
         Intent intent = new Intent(context, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         ZNotify.with(context)
@@ -28,7 +28,7 @@ public class DownloadNotificationInterceptor implements Notifier<BaseMission<?>>
     }
 
     @Override
-    public void onFinished(Context context, BaseMission<?> mission) {
+    public void onFinished(Context context, Mission mission) {
         Intent intent = new Intent(context, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         ZNotify.with(context)
@@ -41,7 +41,7 @@ public class DownloadNotificationInterceptor implements Notifier<BaseMission<?>>
     }
 
     @Override
-    public void onError(Context context, BaseMission<?> mission, int errCode) {
+    public void onError(Context context, Mission mission, int errCode) {
         Intent intent = new Intent(context, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         ZNotify.with(context)
@@ -53,7 +53,7 @@ public class DownloadNotificationInterceptor implements Notifier<BaseMission<?>>
     }
 
     @Override
-    public void onCancel(Context context, BaseMission<?> mission) {
+    public void onCancel(Context context, Mission mission) {
         ZNotify.cancel(mission.getNotifyId());
     }
 

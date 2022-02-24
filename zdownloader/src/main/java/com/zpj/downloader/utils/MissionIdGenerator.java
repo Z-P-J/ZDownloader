@@ -6,7 +6,6 @@ package com.zpj.downloader.utils;
 
 import com.zpj.utils.PrefsHelper;
 
-import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 

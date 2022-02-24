@@ -11,13 +11,8 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.zpj.downloader.BaseMission;
 import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.impl.DownloadMission;
-import com.zpj.downloader.impl.DefaultConflictPolicy;
-import com.zpj.downloader.ZDownloader;
-import com.zpj.fragmentation.dialog.IDialog;
-import com.zpj.fragmentation.dialog.ZDialog;
 import com.zpj.fragmentation.dialog.base.BottomDragDialogFragment;
 import com.zpj.mydownloader.R;
 
