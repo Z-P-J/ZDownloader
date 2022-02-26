@@ -61,7 +61,16 @@ public interface Downloader<T extends Mission> {
 
 
 
+    void startMission(T mission);
 
-    void notifyStatus(final T mission, @Mission.Status final int status);
+    void restartMission(T mission);
+
+    void waitingMission(T mission);
+
+    void pauseMission(T mission);
+
+    void deleteMission(T mission);
+
+    void clearMission(T mission);
 
 }

@@ -15,7 +15,7 @@ import java.util.Map;
 
 public class UrlConnectionHttpFactory implements HttpFactory {
 
-    private static final String TAG = "HttpFactoryImpl";
+    private static final String TAG = "UrlConnectionHttpFactory";
 
     @Override
     public Response request(Mission mission, Map<String, String> headers) throws IOException {
@@ -39,8 +39,6 @@ public class UrlConnectionHttpFactory implements HttpFactory {
         conn.setRequestProperty(HttpHeader.ACCEPT_ENCODING, "identity");
         conn.setRequestProperty(HttpHeader.PRAGMA, "no-cache");
         conn.setRequestProperty(HttpHeader.CACHE_CONTROL, "no-cache");
-//        Map<String, String> headers = config.getHeaders();
-        Logger.d(TAG, "wrapConnection headers=" + headers);
         if (headers != null) {
             for (String key : headers.keySet()) {
                 conn.setRequestProperty(key, headers.get(key));

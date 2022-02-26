@@ -1,49 +1,44 @@
 package com.zpj.downloader.core.impl;
 
+import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
 
 import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.core.Block;
 import com.zpj.downloader.core.BlockDivider;
-import com.zpj.downloader.core.Repository;
 import com.zpj.downloader.core.Dispatcher;
 import com.zpj.downloader.core.Downloader;
-import com.zpj.downloader.core.http.HttpFactory;
+import com.zpj.downloader.core.ExecutorFactory;
 import com.zpj.downloader.core.Initializer;
 import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.MissionLoader;
 import com.zpj.downloader.core.Notifier;
+import com.zpj.downloader.core.Repository;
 import com.zpj.downloader.core.Result;
-import com.zpj.downloader.core.ExecutorFactory;
 import com.zpj.downloader.core.Transfer;
-import com.zpj.downloader.core.Updater;
-import com.zpj.downloader.core.http.UrlConnectionHttpFactory;
 import com.zpj.downloader.core.db.MissionDatabase;
 import com.zpj.downloader.core.db.MissionRepository;
+import com.zpj.downloader.core.http.HttpFactory;
+import com.zpj.downloader.core.http.UrlConnectionHttpFactory;
 import com.zpj.downloader.utils.Logger;
 import com.zpj.downloader.utils.ThreadPool;
 import com.zpj.utils.ContextUtils;
 
 import java.io.File;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 
 public abstract class AbsDownloader<T extends Mission> implements Downloader<T> {
 
     private static final String TAG = "AbsDownloader";
-
-//    private static final class InstanceHolder {
-//        private static final AbsDownloader INSTANCE = new AbsDownloader();
-//    }
-//
-//    public static AbsDownloader getInstance() {
-//        return InstanceHolder.INSTANCE;
-//    }
 
     private final ArrayList<WeakReference<DownloaderObserver<T>>> mObservers = new ArrayList<>();
 
@@ -51,15 +46,16 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
 
     private Dispatcher<T> mDispatcher = new AbsDispatcher<>();
     private Initializer<T> mInitializer = new MissionInitializer<>();
-//    private Serializer<T> mSerializer;
     private Notifier<T> mNotifier;
     private Transfer<T> mTransfer = new BlockTransfer<>();
-//    private MissionFactory<T> mMissionFactory;
     private final Repository<T> mRepository;
 
-    private static class MissionObservers {
-        protected ArrayList<WeakReference<Mission.Observer>> mObservers = new ArrayList<>();
-    }
+    private final ExecutorService mScheduler = Executors.newSingleThreadExecutor(new ThreadFactory() {
+        @Override
+        public Thread newThread(Runnable r) {
+            return new Thread(r, getKey() + "_EventScheduler");
+        }
+    });
 
     public AbsDownloader() {
         mRepository = new MissionRepository<>(MissionDatabase.getInstance(getKey()));
@@ -173,51 +169,50 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
             if (mission.getStatus() == Mission.Status.CREATED
                     || mission.getStatus() == Mission.Status.PREPARING
                     || !mission.getMissionInfo().isPrepared()) {
-                mission.prepare();
+                sendEvent(mission, Event.PREPARE);
                 return;
             }
-            notifyStatus(mission, Mission.Status.DOWNLOADING);
+            sendEvent(mission, Event.DOWNLOAD);
         }
     }
 
-    @Override
-    public void notifyStatus(final T mission, @Mission.Status final int status) {
+    private void sendEvent(final T mission, @Event final int event) {
+        Logger.d(TAG, "sendEvent name=" + mission.getName() + " event=" + event);
+        mScheduler.execute(new Runnable() {
+            @Override
+            public void run() {
+                handleEvent(mission, event);
+            }
+        });
+    }
+
+    private void handleEvent(final T mission, @Event int event) {
         if (mission == null) {
+            Logger.d(TAG, "handleEvent mission is null!");
             return;
         }
-        Logger.d(TAG, "status=" + status + " getStatus=" + mission.getStatus());
-        switch (status) {
-            case Mission.Status.CREATED:
+        Logger.d(TAG, "handleEvent name=" + mission.getName() + " event=" + event);
+        switch (event) {
+            case Event.CREATE:
                 if (mDispatcher.isDownloading(mission) || mDispatcher.isWaiting(mission)) {
                     // 防止多次调用
                     Logger.d(TAG, "mission has in the queue!");
                     return;
                 }
-                ThreadPool.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        // TODO 将任务保存至本地，需要判断本地是否存在该任务
-
-                        if (!mRepository.hasMission(mission)) {
-                            mRepository.saveMissionInfo(mission);
-                            mRepository.saveConfig(mission.getConfig());
-
-
-                            onMissionAdd(mission);
-                        }
-
-                        // 任务排队等待开始下载
-                        enqueue(mission);
-                    }
-                });
+                if (!mRepository.hasMission(mission)) {
+                    mRepository.saveMissionInfo(mission);
+                    mRepository.saveConfig(mission.getConfig());
+                    onMissionAdd(mission);
+                }
+                // 任务排队等待开始下载
+                enqueue(mission);
                 break;
-            case Mission.Status.WAITING:
+            case Event.WAIT:
                 if (mDispatcher.waiting(mission)) {
                     setStatus(mission, Mission.Status.WAITING);
-                    onMissionWaiting(mission);
                 }
                 break;
-            case Mission.Status.PREPARING:
+            case Event.PREPARE:
                 if (mDispatcher.prepare(mission)) {
                     setStatus(mission, Mission.Status.PREPARING);
                     ThreadPool.execute(new Runnable() {
@@ -248,8 +243,9 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
                                     Logger.d(TAG, "blocks=" + blocks);
                                     if (blocks == null || blocks.isEmpty()) {
                                         mission.setErrorCode(-1);
+                                        mission.setErrorMessage("divide block failed!");
                                         // 分片失败
-                                        notifyStatus(mission, Mission.Status.ERROR);
+                                        sendEvent(mission, Event.ERROR);
                                         return;
                                     }
                                     mRepository.saveBlocks(blocks);
@@ -258,20 +254,20 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
                                     Logger.d(TAG, "block=" + block);
                                     mRepository.saveBlocks(block);
                                 }
-                                mission.getMissionInfo().isPrepared = true;
+                                mission.getMissionInfo().setPrepared(true);
                                 mRepository.saveMissionInfo(mission);
-                                notifyStatus(mission, Mission.Status.DOWNLOADING);
+                                sendEvent(mission, Event.DOWNLOAD);
                             } else {
                                 mission.setErrorCode(result.getCode());
                                 mission.setErrorMessage(result.getMessage());
-                                notifyStatus(mission, Mission.Status.ERROR);
                                 mRepository.saveMissionInfo(mission);
+                                sendEvent(mission, Event.ERROR);
                             }
                         }
                     });
                 }
                 break;
-            case Mission.Status.DOWNLOADING:
+            case Event.DOWNLOAD:
                 ThreadPool.execute(new Runnable() {
                     @Override
                     public void run() {
@@ -280,17 +276,22 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
                             return;
                         }
                         setStatus(mission, Mission.Status.DOWNLOADING);
+                        ThreadPool.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                // TODO notify
+                                if (mNotifier != null) {
+                                    mNotifier.onProgress(ContextUtils.getApplicationContext(),
+                                            mission, mission.getProgress(), false);
+                                }
+                            }
+                        });
 
                         List<Block> blocks = getRepository().queryShouldDownloadBlocks(mission);
                         Logger.d(TAG, "blocks=" + blocks);
                         if (blocks == null || blocks.isEmpty()) {
                             Logger.e(TAG, "blocks is empty!");
-//                            mission.setErrorCode(-1);
-//                            mission.setErrorMessage("blocks is empty!");
-//                            notifyStatus(mission, Mission.Status.ERROR);
-
-                            notifyStatus(mission, Mission.Status.COMPLETE);
-
+                            sendEvent(mission, Event.COMPLETE);
                         } else {
                             for (final Block block : blocks) {
                                 execute(mission, new BlockTask<>(AbsDownloader.this, mission, block));
@@ -298,142 +299,163 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
                         }
                     }
                 });
-                // TODO notify
-                if (mNotifier != null) {
-                    mNotifier.onProgress(ContextUtils.getApplicationContext(),
-                            mission, mission.getProgress(), false);
-                }
 
                 break;
-            case Mission.Status.PAUSED:
+            case Event.PROGRESS:
+                break;
+            case Event.PAUSE:
                 boolean downloading = mDispatcher.isDownloading(mission);
                 if (mDispatcher.remove(mission)) {
                     setStatus(mission, Mission.Status.PAUSED);
                     ExecutorService executor = mExecutors.remove(mission);
                     if (executor != null) {
-                        executor.shutdown();
+                        executor.shutdownNow();
                     }
-                    onMissionPaused(mission);
                     if (downloading) {
                         enqueue(mDispatcher.nextMission());
                     }
                 }
                 break;
-            case Mission.Status.ERROR:
+            case Event.ERROR:
                 boolean isDownloading = mDispatcher.isDownloading(mission);
                 Logger.d(TAG, "onError isDownloading=" + isDownloading);
                 if (mDispatcher.remove(mission)) {
                     setStatus(mission, Mission.Status.ERROR);
                     ExecutorService executor = mExecutors.remove(mission);
                     if (executor != null) {
-                        executor.shutdown();
+                        executor.shutdownNow();
                     }
-                    onMissionError(mission);
                     if (isDownloading) {
                         enqueue(mDispatcher.nextMission());
                     }
                 }
                 break;
-//            case Mission.Status.RETRYING:
-//                // TODO notify
-//                ThreadPool.postDelayed(new Runnable() {
-//                    @Override
-//                    public void run() {
-//                        mission.start();
-//                    }
-//                }, mission.getConfig().getRetryDelayMillis());
-//                break;
-            case Mission.Status.CLEAR:
+            case Event.COMPLETE:
+                if (mDispatcher.remove(mission)) {
+                    setStatus(mission, Mission.Status.COMPLETE);
+                    enqueue(mDispatcher.nextMission());
+                }
+                break;
+            case Event.RESTART:
+                mDispatcher.remove(mission);
+
+                MissionInfo info = mission.getMissionInfo();
+                info.setPrepared(false);
+                info.setDownloaded(0);
+                info.setSpeed(0);
+                info.setMissionStatus(Mission.Status.CREATED);
+                info.setErrorCode(0);
+                info.setErrorMessage(null);
+                info.setBlockDownload(false);
+                info.setLength(0);
+                info.setUrl(info.getOriginUrl());
+                mRepository.updateMissionInfo(mission);
+                mRepository.deleteBlocks(mission);
+                setStatus(mission, Mission.Status.CREATED);
+
+                mission.start();
+
+                break;
+            case Event.DELETE:
+                handleEvent(mission, Event.PAUSE);
+                ThreadPool.execute(new Runnable() {
+                    @Override
+                    public void run() {
+                        getRepository().deleteMission(mission);
+                    }
+                });
+                break;
+            case Event.CLEAR:
+                handleEvent(mission, Event.PAUSE);
                 ThreadPool.execute(new Runnable() {
                     @Override
                     public void run() {
                         getRepository().deleteMission(mission);
                         mission.getFile().delete();
-                        onMissionClear(mission);
                     }
                 });
                 break;
-            case Mission.Status.DELETE:
-//                delete(mission);
-                ThreadPool.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        getRepository().deleteMission(mission);
-                        onMissionDelete(mission);
-                    }
-                });
+            case Event.RETRY:
+            default:
+                break;
+        }
+    }
+
+    @Override
+    public void startMission(final T mission) {
+        if (mission != null && mission.canStart()) {
+            sendEvent(mission, Event.CREATE);
+        }
+    }
+
+    @Override
+    public void restartMission(T mission) {
+        if (mission != null) {
+            sendEvent(mission, Event.RESTART);
+        }
+    }
+
+    @Override
+    public void waitingMission(T mission) {
+        if (mission != null) {
+            sendEvent(mission, Event.WAIT);
+        }
+    }
+
+    @Override
+    public void pauseMission(final T mission) {
+        if (mission != null && mission.canPause()) {
+            sendEvent(mission, Event.PAUSE);
+        }
+    }
+
+    @Override
+    public void deleteMission(T mission) {
+        if (mission != null) {
+            sendEvent(mission, Event.DELETE);
+        }
+    }
+
+    @Override
+    public void clearMission(T mission) {
+        if (mission != null) {
+            sendEvent(mission, Event.CLEAR);
+        }
+    }
+
+    private void setStatus(final T mission, final @Mission.Status int status) {
+        Logger.d(TAG, "setStatus name=" + mission.getName() + " status=" + status);
+        mission.setStatus(status);
+        mRepository.updateStatus(mission, status);
+        switch (status) {
+            case Mission.Status.PREPARING:
+
+                break;
+            case Mission.Status.DOWNLOADING:
+                onMissionStart(mission);
+                break;
+            case Mission.Status.WAITING:
+                onMissionWaiting(mission);
+                break;
+            case Mission.Status.PAUSED:
+                onMissionPaused(mission);
+                break;
+            case Mission.Status.ERROR:
+                onMissionError(mission);
                 break;
             case Mission.Status.COMPLETE:
-                // TODO notify
-                if (mDispatcher.remove(mission)) {
-                    setStatus(mission, Mission.Status.COMPLETE);
-                    onMissionFinished(mission);
-                    enqueue(mDispatcher.nextMission());
-                }
+                onMissionFinished(mission);
+                break;
+            case Mission.Status.DELETE:
+                onMissionDelete(mission);
+                break;
+            case Mission.Status.CLEAR:
+                onMissionClear(mission);
                 break;
             default:
                 break;
         }
-        notifyStatus(mission);
 
-    }
-
-    private void setStatus(final T mission, final @Mission.Status int status) {
-        mission.setStatus(status);
-        ThreadPool.execute(new Runnable() {
-            @Override
-            public void run() {
-                mRepository.updateStatus(mission, status);
-            }
-        });
-    }
-
-    protected void notifyStatus(final T mission) {
-        final int missionStatus = mission.getStatus();
-        ThreadPool.post(new Runnable() {
-            @Override
-            public void run() {
-                List<Mission.Observer> observers = mission.getObservers();
-                for (Mission.Observer observer : observers) {
-                    switch (missionStatus) {
-                        case Mission.Status.PREPARING:
-                            observer.onPrepare();
-                            break;
-//                        case Mission.Status.START:
-//                            observer.onStart();
-//                            break;
-                        case Mission.Status.DOWNLOADING:
-                            observer.onProgress(mission, 0);
-                            break;
-                        case Mission.Status.WAITING:
-                            observer.onWaiting();
-                            break;
-                        case Mission.Status.PAUSED:
-                            observer.onPaused();
-                            break;
-//                        case Mission.Status.RETRYING:
-//                            observer.onRetrying();
-//                            break;
-                        case Mission.Status.ERROR:
-                            // TODO
-                            observer.onError(new Error("" + mission.getErrorCode()));
-                            break;
-                        case Mission.Status.COMPLETE:
-                            observer.onProgress(mission, 0);
-                            observer.onFinished();
-                            break;
-                        case Mission.Status.DELETE:
-                            observer.onDelete();
-                            break;
-                        case Mission.Status.CLEAR:
-                            observer.onClear();
-                            break;
-                        default:
-                            break;
-                    }
-                }
-            }
-        });
     }
 
     private void onMissionAdd(final T mission) {
@@ -483,13 +505,13 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
     }
 
     private void onMissionError(final T mission) {
-        Logger.d(TAG, "onMissionError mission=" + mission.getUrl());
+        Logger.d(TAG, "onMissionError mission=" + mission.getName());
         ThreadPool.post(new Runnable() {
             @Override
             public void run() {
                 List<Mission.Observer> observers = mission.getObservers();
                 for (Mission.Observer observer : observers) {
-                    observer.onStart();
+                    observer.onError(new Error(mission.getErrorMessage()));
                 }
 
                 if (mNotifier != null) {
@@ -591,19 +613,12 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
             }
             if (result.isOk()) {
                 // TODO 通知block下载完成
-//                downloader.getDao().updateBlockDownloaded(block, block.)
                 block.setStatus(1);
                 downloader.getRepository().updateBlock(block);
-//                if (mission.isBlockDownload()) {
-//                    // TODO
-//
-//                } else {
-//                    downloader.notifyStatus(mission, Mission.Status.COMPLETE);
-//                }
                 List<Block> blocks = downloader.getRepository().queryShouldDownloadBlocks(mission);
                 Logger.d(TAG, "unfinishedBlocks=" + blocks);
                 if (blocks.isEmpty()) {
-                    downloader.notifyStatus(mission, Mission.Status.COMPLETE);
+                    downloader.sendEvent(mission, Event.COMPLETE);
                 }
             } else {
 
@@ -615,13 +630,34 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
                         }
                     }, mission.getConfig().getRetryDelayMillis());
                 } else {
-                    mission.pause();
                     mission.setErrorCode(result.getCode());
                     mission.setErrorMessage(result.getMessage());
-                    downloader.notifyStatus(mission, Mission.Status.ERROR);
+                    downloader.sendEvent(mission, Event.ERROR);
                 }
             }
         }
+    }
+
+    @Retention(RetentionPolicy.SOURCE)
+    @IntDef({
+            Event.CREATE, Event.PREPARE, Event.WAIT, Event.DOWNLOAD, Event.PROGRESS,
+            Event.PAUSE, Event.ERROR, Event.RETRY, Event.COMPLETE, Event.RESTART, Event.DELETE, Event.CLEAR
+    })
+    public @interface Event {
+        int CREATE = 0;
+        int PREPARE = 1;
+        int WAIT = 2;
+        int DOWNLOAD = 3;
+        int PROGRESS = 4;
+        int PAUSE = 5;
+        int ERROR = 6;
+        int RETRY = 7;
+        int COMPLETE = 8;
+
+        int RESTART = 9;
+
+        int DELETE = 10;
+        int CLEAR = 11;
     }
 
 }

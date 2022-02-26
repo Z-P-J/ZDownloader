@@ -2,6 +2,7 @@ package com.zpj.downloader.core.http;
 
 import android.support.annotation.NonNull;
 
+import com.zpj.downloader.constant.HttpHeader;
 import com.zpj.downloader.utils.Logger;
 
 import java.io.IOException;
@@ -17,15 +18,13 @@ public class UrlConnectionResponse implements Response {
 
     private static final String TAG = "UrlConnectionResponse";
 
-    public static final String CONTENT_LENGTH = "Content-Length";
-
     @NonNull
     private final HttpURLConnection mConnection;
 
     private final int statusCode;
     private final String statusMessage;
     private final String contentType;
-    private long contentLength;
+    private long contentLength = -1;
     private final Map<String, String> headers;
 
     public UrlConnectionResponse(@NonNull HttpURLConnection conn) throws IOException {
@@ -35,25 +34,16 @@ public class UrlConnectionResponse implements Response {
         statusMessage = conn.getResponseMessage();
         contentType = conn.getContentType();
 
-        Logger.d(TAG, "statusCode=" + statusCode + " statusMessage=" + statusMessage + " contentType=" + contentType);
-
-        String len = conn.getHeaderField("content-length");
         try {
-            contentLength = Long.parseLong(conn.getHeaderField(CONTENT_LENGTH));
-
-            Logger.d(TAG, "contentLength=" + contentLength + " len=" + len + " getContentLength=" + conn.getContentLength());
-            if (contentLength < 0) {
-                contentLength = conn.getContentLength();
-            }
-        } catch (Exception ignore) {
+            contentLength = Long.parseLong(conn.getHeaderField(HttpHeader.CONTENT_LENGTH));
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        if (contentLength < 0) {
             contentLength = conn.getContentLength();
         }
-        Logger.d(TAG, "contentLength=" + contentLength + " len=" + len + " getContentLength=" + conn.getContentLength());
-
 
         headers = getHeaderMap(conn);
-        Logger.d(TAG, "headers=" + headers);
-
     }
 
     @Override
@@ -103,7 +93,7 @@ public class UrlConnectionResponse implements Response {
     }
 
     private boolean hasContentEncoding(String value) {
-        return value.equalsIgnoreCase(headers().get("Content-Encoding"));
+        return value.equalsIgnoreCase(headers().get(HttpHeader.CONTENT_ENCODING));
     }
 
     @Override
@@ -128,4 +118,14 @@ public class UrlConnectionResponse implements Response {
         return headers;
     }
 
+    @Override
+    public String toString() {
+        return "UrlConnectionResponse{" +
+                "statusCode=" + statusCode +
+                ", statusMessage='" + statusMessage + '\'' +
+                ", contentType='" + contentType + '\'' +
+                ", contentLength=" + contentLength +
+                ", headers=" + headers +
+                '}';
+    }
 }

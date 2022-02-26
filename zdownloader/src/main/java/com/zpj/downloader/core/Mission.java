@@ -81,8 +81,6 @@ public interface Mission {
 
     void start();
 
-    void prepare();
-
     void pause();
 
     void waiting();
