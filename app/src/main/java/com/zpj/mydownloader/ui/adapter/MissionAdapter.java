@@ -203,6 +203,7 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		@Override
 		public void onStart() {
 			menu.resume();
+			updateProgress();
 		}
 
 		@Override

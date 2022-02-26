@@ -16,9 +16,6 @@ import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Locale;
-import java.util.Objects;
-import java.util.concurrent.atomic.AtomicInteger;
-import java.util.concurrent.atomic.AtomicLong;
 
 public class DownloadMission implements Mission {
 
@@ -32,81 +29,42 @@ public class DownloadMission implements Mission {
 
     protected transient ArrayList<WeakReference<Observer>> mObservers;
 
-
-
-//    public DownloadMission(Config config) {
-//        this.config = config;
-//        this.info = new MissionInfo(config.getMissionId());
-//    }
-
     public DownloadMission(Config config, MissionInfo info) {
         this.config = config;
         this.info = info;
     }
 
-    private static <T extends Mission> void notifyStatus(Class<T> clazz, Mission mission, @Status final int status) {
-        ZDownloader.get(clazz).notifyStatus((T) mission, status);
-    }
-
-    protected void notifyStatus(@Status final int status) {
-        notifyStatus(getClass(), this, status);
-    }
-
     @Override
     public void start() {
-        int missionStatus = getStatus();
-        Logger.d(TAG, "start missionStatus=" + missionStatus);
-        if (canStart()) {
+        Logger.d(TAG, "start");
+        ZDownloader.get(this).startMission(this);
 
-            notifyStatus(Status.CREATED);
-
-//            if (missionStatus == Status.NEW) {
-//                notifyStatus(Status.NEW);
-//            } else if (getMissionInfo().isPrepared()) {
-//                notifyStatus(Status.DOWNLOADING);
-//            } else {
-//                prepare();
-//            }
-        }
-    }
-
-    @Override
-    public void prepare() {
-        Logger.d(TAG, "prepare");
-        notifyStatus(Status.PREPARING);
     }
 
     @Override
     public void pause() {
-        if (canPause()) {
-            // TODO 暂停任务
-            notifyStatus(Status.PAUSED);
-        }
-
+        Logger.d(TAG, "pause");
+        ZDownloader.get(this).pauseMission(this);
     }
 
     @Override
     public void waiting() {
-        notifyStatus(Status.WAITING);
+        ZDownloader.get(this).waitingMission(this);
     }
 
     @Override
     public void restart() {
-        pause();
-        setStatus(Status.CREATED);
-        start();
+        ZDownloader.get(this).restartMission(this);
     }
 
     @Override
     public void delete() {
-        pause();
-        notifyStatus(Status.DELETE);
+        ZDownloader.get(this).deleteMission(this);
     }
 
     @Override
     public void clear() {
-        pause();
-        notifyStatus(Status.CLEAR);
+        ZDownloader.get(this).clearMission(this);
     }
 
     @Override
@@ -175,9 +133,14 @@ public class DownloadMission implements Mission {
 
     @Override
     public boolean isPreparing() {
+        if (getStatus() != Status.PREPARING) {
+            return false;
+        }
+        if (getMissionInfo().isPrepared()) {
+            return false;
+        }
         Downloader<DownloadMission> downloader = ZDownloader.get(this);
         return downloader.getDispatcher().isPreparing(this);
-//        return getStatus() == Status.PREPARING;
     }
 
     @Override

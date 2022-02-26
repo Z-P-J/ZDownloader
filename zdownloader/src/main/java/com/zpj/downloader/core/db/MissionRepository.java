@@ -115,4 +115,10 @@ public class MissionRepository<T extends Mission> implements Repository<T> {
 //        result |= database.configDao().delete(mission.getConfig());
         return true;
     }
+
+    @Override
+    public boolean deleteBlocks(T mission) {
+        database.blockDao().delete(mission.getMissionId());
+        return true;
+    }
 }

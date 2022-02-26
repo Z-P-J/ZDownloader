@@ -40,4 +40,6 @@ public interface Repository<T extends Mission> {
 
     boolean deleteMission(final T mission);
 
+    boolean deleteBlocks(final T mission);
+
 }

@@ -29,7 +29,7 @@ import java.util.Map;
  */
 public class BlockTransfer<T extends Mission> implements Transfer<T> {
 
-    public static final String TAG = "AbsTransfer";
+    public static final String TAG = "BlockTransfer";
 
     @WorkerThread
     @Override
@@ -50,16 +50,14 @@ public class BlockTransfer<T extends Mission> implements Transfer<T> {
         }
         Logger.d(TAG, "start=" + start + " end=" + end);
 
-        Logger.d(TAG, "headers=" + headers);
-
         Response response = null;
         try {
             response = downloader.getHttpFactory().request(mission, headers);
             if (!mission.isDownloading()) {
                 return Result.paused();
             }
+            Logger.d(TAG, "response=" + response);
             int code = response.statusCode();
-            Logger.d(TAG, "code=" + code);
             if (code / 100 == 2) {
                 try (BufferedInputStream is = new BufferedInputStream(response.bodyStream());
                      BufferedRandomAccessFile f = new BufferedRandomAccessFile(mission.getFilePath(), "rw")) {
@@ -72,7 +70,7 @@ public class BlockTransfer<T extends Mission> implements Transfer<T> {
                     while ((len = is.read(buf, 0, buf.length)) != -1) {
                         f.write(buf, 0, len);
                         downloaded += len;
-                        Logger.d(TAG, "downloaded=" + downloaded);
+//                        Logger.d(TAG, "downloaded=" + downloaded);
                         block.setDownloaded(downloaded);
                         downloader.getRepository().updateBlockDownloaded(block, downloaded);
 
@@ -90,7 +88,7 @@ public class BlockTransfer<T extends Mission> implements Transfer<T> {
                 }
                 return Result.ok("block transfer success!");
             } else {
-                return Result.error(Error.SERVER_UNSUPPORTED.getErrorMsg());
+                return Result.error(response.statusMessage());
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();

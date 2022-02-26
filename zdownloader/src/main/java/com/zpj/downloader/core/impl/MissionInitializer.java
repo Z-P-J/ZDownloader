@@ -35,6 +35,7 @@ public class MissionInitializer<T extends Mission> implements Initializer<T> {
             Map<String, String> headers = new HashMap<>(mission.getConfig().getHeaders());
             headers.put(HttpHeader.RANGE, "bytes=0-");
             response = downloader.getHttpFactory().request(mission, headers);
+            Logger.d(TAG, "response=" + response);
 
             String contentType = response.contentType();
             String contentDisposition = response.header(HttpHeader.Content_Disposition);
@@ -70,9 +71,7 @@ public class MissionInitializer<T extends Mission> implements Initializer<T> {
                 // 成功响应码2xx
                 mission.setLength(response.contentLength());
                 Logger.d("mission.length", "mission.length=" + mission.getLength());
-                if (mission.getLength() <= 0) {
-                    return Result.error(ErrorCode.ERROR_SERVER_UNSUPPORTED, Error.SERVER_UNSUPPORTED.getErrorMsg());
-                } else if (mission.getLength() >= FileUtils.getAvailableSize()) {
+                if (mission.getLength() >= FileUtils.getAvailableSize()) {
                     return Result.error(ErrorCode.ERROR_NO_ENOUGH_SPACE, Error.NO_ENOUGH_SPACE.getErrorMsg());
                 }
             } else {
