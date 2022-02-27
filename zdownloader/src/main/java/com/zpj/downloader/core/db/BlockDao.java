@@ -1,13 +1,11 @@
 package com.zpj.downloader.core.db;
 
 import android.arch.persistence.room.Dao;
-import android.arch.persistence.room.Delete;
 import android.arch.persistence.room.Insert;
 import android.arch.persistence.room.Query;
 import android.arch.persistence.room.Update;
 
-import com.zpj.downloader.core.Block;
-import com.zpj.downloader.core.Mission;
+import com.zpj.downloader.core.model.Block;
 
 import java.util.List;
 

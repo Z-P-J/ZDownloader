@@ -7,9 +7,9 @@ import android.arch.persistence.room.RoomDatabase;
 import android.arch.persistence.room.migration.Migration;
 import android.support.annotation.NonNull;
 
-import com.zpj.downloader.core.Block;
-import com.zpj.downloader.core.impl.Config;
-import com.zpj.downloader.core.impl.MissionInfo;
+import com.zpj.downloader.core.model.Block;
+import com.zpj.downloader.core.model.Config;
+import com.zpj.downloader.core.model.MissionInfo;
 import com.zpj.utils.ContextUtils;
 
 @Database(entities = {Config.class, MissionInfo.class, Block.class}, version = 2, exportSchema = false)

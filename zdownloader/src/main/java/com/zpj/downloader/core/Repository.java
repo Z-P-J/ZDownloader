@@ -1,8 +1,8 @@
 package com.zpj.downloader.core;
 
-import com.zpj.downloader.core.impl.Config;
+import com.zpj.downloader.core.model.Config;
+import com.zpj.downloader.core.model.Block;
 
-import java.io.File;
 import java.util.List;
 
 /**

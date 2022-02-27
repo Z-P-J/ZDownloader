@@ -3,6 +3,8 @@ package com.zpj.downloader.core;
 import android.support.annotation.NonNull;
 import android.support.annotation.WorkerThread;
 
+import com.zpj.downloader.core.model.Block;
+
 /**
  * 文件传输接口
  * @param <T> mission

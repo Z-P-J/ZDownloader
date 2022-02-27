@@ -6,17 +6,15 @@ import android.text.TextUtils;
 import com.zpj.downloader.ZDownloader;
 import com.zpj.downloader.constant.DefaultConstant;
 import com.zpj.downloader.constant.Error;
-import com.zpj.downloader.core.impl.Config;
-import com.zpj.downloader.core.impl.MissionInfo;
+import com.zpj.downloader.constant.HttpHeader;
+import com.zpj.downloader.core.model.Config;
+import com.zpj.downloader.core.model.MissionInfo;
 import com.zpj.downloader.utils.Logger;
 import com.zpj.downloader.utils.MissionIdGenerator;
-import com.zpj.downloader.utils.SerializableProxy;
 
 import java.io.File;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
-import java.net.InetSocketAddress;
-import java.net.Proxy;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -192,18 +190,17 @@ public interface Mission {
 
     void setErrorMessage(String msg);
 
-    void setSupportSlice(boolean support);
+    void setBlockDownload(boolean support);
 
 
 
 
-    public static class Builder {
+    class Builder {
 
         private static final String TAG = "Mission.Builder";
 
         private String url;
         private String name;
-
 
         /*
          * 下载线程数
@@ -265,11 +262,7 @@ public interface Mission {
          * */
         String cookie = "";
 
-        boolean allowAllSSL = true;
-
         final HashMap<String, String> headers = new HashMap<>();
-
-        SerializableProxy proxy;
 
         public Builder(String url) {
             this(url, null);
@@ -332,27 +325,13 @@ public interface Mission {
             return readOutTime;
         }
 
-        public boolean isAllowAllSSL() {
-            return allowAllSSL;
-        }
-
         public Map<String, String> getHeaders() {
             return headers;
-        }
-
-        public Proxy getProxy() {
-            if (proxy == null) {
-                return null;
-            }
-            return proxy.proxy();
         }
 
         public boolean getEnableNotification() {
             return enableNotification;
         }
-
-
-
 
         //-----------------------------------------------------------------setter------------------------------------------------------
 
@@ -383,8 +362,7 @@ public interface Mission {
         }
 
         public Builder setUserAgent(String userAgent) {
-            this.userAgent = userAgent;
-            return this;
+            return addHeader(HttpHeader.USER_AGENT, userAgent);
         }
 
         public Builder setRetryCount(int retryCount) {
@@ -393,8 +371,7 @@ public interface Mission {
         }
 
         public Builder setCookie(String cookie) {
-            this.cookie = cookie;
-            return this;
+            return addHeader(HttpHeader.COOKIE, cookie);
         }
 
         public Builder setRetryDelayMillis(int retryDelayMillis) {
@@ -412,11 +389,6 @@ public interface Mission {
             return this;
         }
 
-        public Builder setAllowAllSSL(boolean allowAllSSL) {
-            this.allowAllSSL = allowAllSSL;
-            return this;
-        }
-
         public Builder setHeaders(Map<String, String> headers) {
             this.headers.clear();
             this.headers.putAll(headers);
@@ -426,22 +398,6 @@ public interface Mission {
         public Builder addHeader(String key, String value) {
             this.headers.put(key, value);
             return this;
-        }
-
-        public Builder setProxy(SerializableProxy proxy) {
-            this.proxy = proxy;
-            return this;
-        }
-
-        public Builder setProxy(Proxy proxy) {
-            if (proxy == null) {
-                return this;
-            }
-            return setProxy(SerializableProxy.with(proxy));
-        }
-
-        public Builder setProxy(String host, int port) {
-            return setProxy(new Proxy(Proxy.Type.HTTP, InetSocketAddress.createUnresolved(host, port)));
         }
 
         public Builder setEnableNotification(boolean enableNotification) {

@@ -1,4 +1,4 @@
-package com.zpj.downloader.core.impl;
+package com.zpj.downloader.core.model;
 
 import android.arch.persistence.room.ColumnInfo;
 import android.arch.persistence.room.Entity;

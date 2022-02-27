@@ -3,9 +3,9 @@ package com.zpj.downloader.core;
 import android.support.annotation.NonNull;
 
 import com.zpj.downloader.core.http.HttpFactory;
-import com.zpj.downloader.core.impl.Config;
-import com.zpj.downloader.core.impl.DownloaderConfig;
-import com.zpj.downloader.core.impl.MissionInfo;
+import com.zpj.downloader.core.model.Config;
+import com.zpj.downloader.core.model.DownloaderConfig;
+import com.zpj.downloader.core.model.MissionInfo;
 
 public interface Downloader<T extends Mission> {
 
@@ -38,7 +38,7 @@ public interface Downloader<T extends Mission> {
     void removeObserver(DownloaderObserver<T> observer);
 
 
-    BlockDivider<T> getBlockDivider();
+    BlockSplitter<T> getBlockDivider();
 
     Dispatcher<T> getDispatcher();
 

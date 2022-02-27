@@ -4,8 +4,8 @@ import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
 
 import com.zpj.downloader.constant.Error;
-import com.zpj.downloader.core.Block;
-import com.zpj.downloader.core.BlockDivider;
+import com.zpj.downloader.core.model.Block;
+import com.zpj.downloader.core.BlockSplitter;
 import com.zpj.downloader.core.Dispatcher;
 import com.zpj.downloader.core.Downloader;
 import com.zpj.downloader.core.ExecutorFactory;
@@ -20,6 +20,9 @@ import com.zpj.downloader.core.db.MissionDatabase;
 import com.zpj.downloader.core.db.MissionRepository;
 import com.zpj.downloader.core.http.HttpFactory;
 import com.zpj.downloader.core.http.UrlConnectionHttpFactory;
+import com.zpj.downloader.core.model.Config;
+import com.zpj.downloader.core.model.DownloaderConfig;
+import com.zpj.downloader.core.model.MissionInfo;
 import com.zpj.downloader.utils.Logger;
 import com.zpj.downloader.utils.ThreadPool;
 import com.zpj.utils.ContextUtils;
@@ -36,7 +39,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
-public abstract class AbsDownloader<T extends Mission> implements Downloader<T> {
+public abstract class BaseDownloader<T extends Mission> implements Downloader<T> {
 
     private static final String TAG = "AbsDownloader";
 
@@ -44,10 +47,10 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
 
     private final HashMap<T, ExecutorService> mExecutors = new HashMap<>();
 
-    private Dispatcher<T> mDispatcher = new AbsDispatcher<>();
+    private Dispatcher<T> mDispatcher = new MissionDispatcher<>();
     private Initializer<T> mInitializer = new MissionInitializer<>();
     private Notifier<T> mNotifier;
-    private Transfer<T> mTransfer = new BlockTransfer<>();
+    private Transfer<T> mTransfer = new MissionBlockTransfer<>();
     private final Repository<T> mRepository;
 
     private final ExecutorService mScheduler = Executors.newSingleThreadExecutor(new ThreadFactory() {
@@ -57,7 +60,7 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
         }
     });
 
-    public AbsDownloader() {
+    public BaseDownloader() {
         mRepository = new MissionRepository<>(MissionDatabase.getInstance(getKey()));
     }
 
@@ -87,8 +90,8 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
     }
 
     @Override
-    public BlockDivider<T> getBlockDivider() {
-        return new BaseBlockDivider<>();
+    public BlockSplitter<T> getBlockDivider() {
+        return new MissionBlockSplitter<>();
     }
 
     @Override
@@ -118,7 +121,7 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
 
     @Override
     public ExecutorFactory<T> getExecutorFactory() {
-        return new AbsExecutorFactory<>();
+        return new MissionExecutorFactory<>();
     }
 
     @Override
@@ -134,7 +137,7 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
         ThreadPool.execute(new Runnable() {
             @Override
             public void run() {
-                final List<T> missions = getRepository().queryMissions(AbsDownloader.this);
+                final List<T> missions = getRepository().queryMissions(BaseDownloader.this);
                 Logger.d(TAG, "loadMissions missions=" + missions);
                 ThreadPool.post(new Runnable() {
                     @Override
@@ -218,7 +221,7 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
                     ThreadPool.execute(new Runnable() {
                         @Override
                         public void run() {
-                            Result result = mInitializer.initMission(AbsDownloader.this, mission);
+                            Result result = mInitializer.initMission(BaseDownloader.this, mission);
                             Logger.d(TAG, "mission init result=" + result
                                     + " missionId=" + mission.getMissionInfo().getMissionId()
                                     + " configMissionId=" + mission.getConfig().getMissionId()
@@ -294,7 +297,7 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
                             sendEvent(mission, Event.COMPLETE);
                         } else {
                             for (final Block block : blocks) {
-                                execute(mission, new BlockTask<>(AbsDownloader.this, mission, block));
+                                execute(mission, new BlockTask<>(BaseDownloader.this, mission, block));
                             }
                         }
                     }
@@ -588,12 +591,12 @@ public abstract class AbsDownloader<T extends Mission> implements Downloader<T> 
 
         private static final String TAG = "BlockTask";
 
-        private final AbsDownloader<T> downloader;
+        private final BaseDownloader<T> downloader;
         private final T mission;
         @NonNull
         private final Block block;
 
-        public BlockTask(AbsDownloader<T> downloader, T mission, @NonNull Block block) {
+        public BlockTask(BaseDownloader<T> downloader, T mission, @NonNull Block block) {
             this.downloader = downloader;
             this.mission = mission;
             this.block = block;

@@ -2,12 +2,12 @@ package com.zpj.downloader.core.db;
 
 import android.support.annotation.NonNull;
 
-import com.zpj.downloader.core.Block;
+import com.zpj.downloader.core.model.Block;
 import com.zpj.downloader.core.Repository;
 import com.zpj.downloader.core.Downloader;
 import com.zpj.downloader.core.Mission;
-import com.zpj.downloader.core.impl.Config;
-import com.zpj.downloader.core.impl.MissionInfo;
+import com.zpj.downloader.core.model.Config;
+import com.zpj.downloader.core.model.MissionInfo;
 
 import java.util.ArrayList;
 import java.util.Arrays;
