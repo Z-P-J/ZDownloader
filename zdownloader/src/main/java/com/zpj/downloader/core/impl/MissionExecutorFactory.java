@@ -10,7 +10,7 @@ import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 
-public class AbsExecutorFactory<T extends Mission> implements ExecutorFactory<T> {
+public class MissionExecutorFactory<T extends Mission> implements ExecutorFactory<T> {
 
     @Override
     public ExecutorService createExecutor(T mission) {

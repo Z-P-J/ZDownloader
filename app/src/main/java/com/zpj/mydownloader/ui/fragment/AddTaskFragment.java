@@ -11,6 +11,8 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.zpj.downloader.constant.Error;
+import com.zpj.downloader.constant.HttpHeader;
 import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.impl.DownloadMission;
 import com.zpj.fragmentation.dialog.base.BottomDragDialogFragment;
@@ -143,8 +145,86 @@ public class AddTaskFragment extends BottomDragDialogFragment<AddTaskFragment> i
 //                    .start();
 
 
-            Mission mission = new Mission.Builder(url, name.getText().toString())
+            // 创建下载任务
+            DownloadMission mission = new Mission.Builder(url, name.getText().toString())
+                    // 设置文件保存地址
+                    .setDownloadPath("custom download path")
+                    // 下载线程（分块下载有效）
+                    .setThreadCount(3)
+                    // 设置User-Agent
+                    .setUserAgent("custom user-agent")
+                    // 设置Cookie
+                    .setCookie("set cookies")
+                    // 添加请求头
+                    .addHeader(HttpHeader.REFERER, url)
+                    // 设置分块大小
+                    .setBlockSize(2 * 1024 * 1024)
+                    // 设置缓冲区大小
+                    .setBufferSize(64 * 1024)
+                    // 设置连接超时时间
+                    .setConnectOutTime(20000)
+                    // 设置读取超时时间
+                    .setReadOutTime(20000)
+                    // 设置进度回调频率，单位ms
+                    .setProgressInterval(2000)
+                    // 设置出错重试次数
+                    .setRetryCount(10)
+                    // 设置出错重试延迟
+                    .setRetryDelayMillis(10000)
+                    // 设置是否允许通知栏通知
+                    .setEnableNotification(true)
+                    // 创建DownloadMission类型的下载任务
                     .build(DownloadMission.class);
+
+            // 任务状态监听回调
+            mission.addObserver(new Mission.Observer() {
+                @Override
+                public void onPrepare() {
+
+                }
+
+                @Override
+                public void onStart() {
+
+                }
+
+                @Override
+                public void onPaused() {
+
+                }
+
+                @Override
+                public void onWaiting() {
+
+                }
+
+                @Override
+                public void onProgress(Mission mission, float speed) {
+
+                }
+
+                @Override
+                public void onFinished() {
+
+                }
+
+                @Override
+                public void onError(Error e) {
+
+                }
+
+                @Override
+                public void onDelete() {
+
+                }
+
+                @Override
+                public void onClear() {
+
+                }
+            });
+
+            // 开始下载
             mission.start();
 
 

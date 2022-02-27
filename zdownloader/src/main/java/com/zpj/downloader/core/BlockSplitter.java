@@ -1,8 +1,10 @@
 package com.zpj.downloader.core;
 
+import com.zpj.downloader.core.model.Block;
+
 import java.util.List;
 
-public interface BlockDivider<T extends Mission> {
+public interface BlockSplitter<T extends Mission> {
 
     List<Block> divide(T mission);
 

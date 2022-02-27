@@ -24,7 +24,7 @@ import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-public class AbsDispatcher<T extends Mission> implements Dispatcher<T> {
+public class MissionDispatcher<T extends Mission> implements Dispatcher<T> {
 
     private final ConcurrentHashMap<String, MissionDelegate<T>> mDownloadingQueue = new ConcurrentHashMap<>();
     private final ConcurrentLinkedQueue<T> mWaitingQueue = new ConcurrentLinkedQueue<>();

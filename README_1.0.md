@@ -1,4 +1,4 @@
-# ZDownloader (TODO 完善2.0 README)
+# ZDownloader
 Android多线程下载库，可以自定义下载任务，可扩展性强。
 
 
@@ -10,7 +10,7 @@ Android多线程下载库，可以自定义下载任务，可扩展性强。
 
 ## Install
 
-#### Latest Version：2.0.0
+#### Latest Version：1.0.0
 ```groovy
 implementation 'com.github.Z-P-J:ZDownloader:latest_version'
 ```
@@ -24,8 +24,7 @@ public class MyApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        // 注册默认下载器或自定义下载器
-        ZDownloader.register(DownloadMission.class, new MissionDownloader());
+        ZDownloader.init(this); //初始化
     }
 
 }            
@@ -33,93 +32,40 @@ public class MyApplication extends Application {
 
 #### 2. 创建下载并监听进度
 ```java
-public class Test {
-    
-    public void testDownload() {
-        // 创建下载任务
-        DownloadMission mission = new Mission.Builder(url, name.getText().toString())
-                // 设置文件保存地址
-                .setDownloadPath("custom download path")
-                // 下载线程（分块下载有效）
-                .setThreadCount(3)
-                // 设置User-Agent
-                .setUserAgent("custom user-agent")
-                // 设置Cookie
-                .setCookie("set cookies")
-                // 添加请求头
-                .addHeader(HttpHeader.REFERER, url)
-                // 设置分块大小
-                .setBlockSize(2 * 1024 * 1024)
-                // 设置缓冲区大小
-                .setBufferSize(64 * 1024)
-                // 设置连接超时时间
-                .setConnectOutTime(20000)
-                // 设置读取超时时间
-                .setReadOutTime(20000)
-                // 设置进度回调频率，单位ms
-                .setProgressInterval(2000)
-                // 设置出错重试次数
-                .setRetryCount(10)
-                // 设置出错重试延迟
-                .setRetryDelayMillis(10000)
-                // 设置是否允许通知栏通知
-                .setEnableNotification(true)
-                // 创建DownloadMission类型的下载任务
-                .build(DownloadMission.class);
+ZDownloader.download("your download url")
+    .addListener(new DownloadMission.MissionListener() {
+        @Override
+        public void onInit() {}
+        
+        @Override
+        public void onStart() {}
+        
+        @Override
+        public void onPause() {}
+        
+        @Override
+        public void onWaiting() {}
+        
+        @Override
+        public void onRetry() {}
+        
+        @Override
+        public void onProgress(ProgressUpdater update) {}
+        
+        @Override
+        public void onFinish() {}
+        
+        @Override
+        public void onError(Error e) {}
+        
+        @Override
+        public void onDelete() {}
+        
+        @Override
+        public void onClear() {}
+    })
+    .start(); // 开始下载任务
 
-        // 任务状态监听回调
-        mission.addObserver(new Mission.Observer() {
-            @Override
-            public void onPrepare() {
-
-            }
-
-            @Override
-            public void onStart() {
-
-            }
-
-            @Override
-            public void onPaused() {
-
-            }
-
-            @Override
-            public void onWaiting() {
-
-            }
-
-            @Override
-            public void onProgress(Mission mission, float speed) {
-
-            }
-
-            @Override
-            public void onFinished() {
-
-            }
-
-            @Override
-            public void onError(Error e) {
-
-            }
-
-            @Override
-            public void onDelete() {
-
-            }
-
-            @Override
-            public void onClear() {
-
-            }
-        });
-
-        // 开始下载
-        mission.start();
-    }
-    
-}
 ```
 
 #### 3. 退出应用时

@@ -4,7 +4,7 @@ import android.app.Application;
 
 import com.zpj.downloader.ZDownloader;
 import com.zpj.downloader.core.impl.DownloadMission;
-import com.zpj.downloader.core.impl.FileDownloader;
+import com.zpj.downloader.core.impl.MissionDownloader;
 
 /**
  * @author Z-P-J
@@ -27,7 +27,7 @@ public class MyApplication extends Application {
 //                .init();
 
         // 注册Downloader
-        ZDownloader.register(DownloadMission.class, new FileDownloader());
+        ZDownloader.register(DownloadMission.class, new MissionDownloader());
     }
 
 }

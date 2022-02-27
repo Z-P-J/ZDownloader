@@ -1,7 +1,6 @@
 package com.zpj.downloader.core.impl;
 
 import android.text.TextUtils;
-import android.util.Log;
 import android.webkit.URLUtil;
 
 import com.zpj.downloader.constant.Error;
@@ -37,15 +36,19 @@ public class MissionInitializer<T extends Mission> implements Initializer<T> {
             response = downloader.getHttpFactory().request(mission, headers);
             Logger.d(TAG, "response=" + response);
 
-            String contentType = response.contentType();
-            String contentDisposition = response.header(HttpHeader.Content_Disposition);
-            String mimeType = null;
-            int i = contentType.indexOf(";");
-            if (i > 0) {
-                mimeType = contentType.substring(0, i).trim();
+
+            if (TextUtils.isEmpty(mission.getName())) {
+                String contentType = response.contentType();
+                String contentDisposition = response.header(HttpHeader.Content_Disposition);
+                String mimeType = null;
+                int i = contentType.indexOf(";");
+                if (i > 0) {
+                    mimeType = contentType.substring(0, i).trim();
+                }
+                String name = URLUtil.guessFileName(mission.getUrl(), contentDisposition, mimeType);
+                mission.setName(name);
             }
-            String name = URLUtil.guessFileName(mission.getUrl(), contentDisposition, mimeType);
-            mission.setName(name);
+
 
             Logger.d(TAG, "mission.name=" + mission.getName());
 
@@ -79,14 +82,7 @@ public class MissionInitializer<T extends Mission> implements Initializer<T> {
                 return Result.error(statusCode, response.statusMessage());
             }
 
-            mission.setSupportSlice(statusCode == HttpURLConnection.HTTP_PARTIAL);
-            mission.getMissionInfo().setBlockDownload(statusCode == HttpURLConnection.HTTP_PARTIAL);
-
-//            Log.d("mission.name", "mission.name444=" + mission.getName());
-//            if (TextUtils.isEmpty(mission.getName())) {
-//                Log.d("Initializer", "getMissionNameFromUrl--url=" + mission.getUrl());
-//                mission.setName(generateFileNameFromUrl(mission, mission.getUrl()));
-//            }
+            mission.setBlockDownload(statusCode == HttpURLConnection.HTTP_PARTIAL);
 
             Logger.d("mission.name", "mission.name555=" + mission.getName());
             Logger.d(TAG, "storage=" + FileUtils.getAvailableSize());

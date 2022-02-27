@@ -1,14 +1,14 @@
 package com.zpj.downloader.core.impl;
 
 import com.zpj.downloader.constant.DefaultConstant;
-import com.zpj.downloader.core.Block;
-import com.zpj.downloader.core.BlockDivider;
+import com.zpj.downloader.core.model.Block;
+import com.zpj.downloader.core.BlockSplitter;
 import com.zpj.downloader.core.Mission;
 
 import java.util.ArrayList;
 import java.util.List;
 
-public class BaseBlockDivider<T extends Mission> implements BlockDivider<T> {
+public class MissionBlockSplitter<T extends Mission> implements BlockSplitter<T> {
     @Override
     public List<Block> divide(T mission) {
 

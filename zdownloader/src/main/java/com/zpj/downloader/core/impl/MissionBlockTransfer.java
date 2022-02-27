@@ -6,7 +6,7 @@ import android.support.annotation.WorkerThread;
 import com.zpj.downloader.ZDownloader;
 import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.constant.HttpHeader;
-import com.zpj.downloader.core.Block;
+import com.zpj.downloader.core.model.Block;
 import com.zpj.downloader.core.Downloader;
 import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.Result;
@@ -27,7 +27,7 @@ import java.util.Map;
  * @param <T> mission
  * @author Z-P-J
  */
-public class BlockTransfer<T extends Mission> implements Transfer<T> {
+public class MissionBlockTransfer<T extends Mission> implements Transfer<T> {
 
     public static final String TAG = "BlockTransfer";
 

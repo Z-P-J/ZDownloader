@@ -21,9 +21,9 @@ import java.util.Arrays;
 public final class BufferedRandomAccessFile extends RandomAccessFile {
     static final int LogBuffSz_ = 16; // 64K buffer
     public static final int BuffSz_ = (1 << LogBuffSz_);
-    static final long BuffMask_ = ~(((long) BuffSz_) - 1L);
+    static final long BuffMask_ = -((long) BuffSz_);
 
-    private String path_;
+    private final String path_;
 
     /*
      * This implementation is based on the buffer implementation in Modula-3's

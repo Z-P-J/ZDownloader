@@ -6,6 +6,8 @@ import android.webkit.MimeTypeMap;
 import com.zpj.downloader.ZDownloader;
 import com.zpj.downloader.core.Downloader;
 import com.zpj.downloader.core.Mission;
+import com.zpj.downloader.core.model.Config;
+import com.zpj.downloader.core.model.MissionInfo;
 import com.zpj.downloader.utils.Logger;
 import com.zpj.utils.FormatUtils;
 
@@ -24,8 +26,6 @@ public class DownloadMission implements Mission {
     protected final Config config;
 
     protected final MissionInfo info;
-
-    //-----------------------------------------------------transient---------------------------------------------------------------
 
     protected transient ArrayList<WeakReference<Observer>> mObservers;
 
@@ -192,62 +192,62 @@ public class DownloadMission implements Mission {
 
     @Override
     public String getMissionId() {
-        return info.missionId;
+        return info.getMissionId();
     }
 
     @Override
     public String getName() {
-        return info.name;
+        return info.getName();
     }
 
     @Override
     public String getUrl() {
-        return info.url;
+        return info.getUrl();
     }
 
     @Override
     public String getOriginUrl() {
-        return info.originUrl;
+        return info.getOriginUrl();
     }
 
     @Override
     public long getCreateTime() {
-        return info.createTime;
+        return info.getCreateTime();
     }
 
     @Override
     public long getFinishTime() {
-        return info.finishTime;
+        return info.getFinishTime();
     }
 
     @Override
     public long getLength() {
-        return info.length;
+        return info.getLength();
     }
 
     @Override
     public long getDownloaded() {
-        return info.downloaded;
+        return info.getDownloaded();
     }
 
     @Override
     public int getStatus() {
-        return info.missionStatus;
+        return info.getMissionStatus();
     }
 
     @Override
     public int getErrorCode() {
-        return info.errorCode;
+        return info.getErrorCode();
     }
 
     @Override
     public String getErrorMessage() {
-        return info.errorMessage;
+        return info.getErrorMessage();
     }
 
     @Override
     public boolean isBlockDownload() {
-        return info.isBlockDownload;
+        return info.isBlockDownload();
     }
 
     @Override
@@ -259,9 +259,9 @@ public class DownloadMission implements Mission {
     public String getFilePath() {
         String path = config.getDownloadPath();
         if (path.endsWith(File.separator)) {
-            return path + info.name;
+            return path + info.getName();
         }
-        return path + File.separator + info.name;
+        return path + File.separator + info.getName();
     }
 
     @Override
@@ -276,7 +276,7 @@ public class DownloadMission implements Mission {
 
     @Override
     public float getProgress() {
-        return getProgress(getDownloaded(), info.length);
+        return getProgress(getDownloaded(), getLength());
     }
 
     private float getProgress(long done, long length) {
@@ -296,7 +296,7 @@ public class DownloadMission implements Mission {
 
     @Override
     public String getFileSizeStr() {
-        return FormatUtils.formatSize(info.length);
+        return FormatUtils.formatSize(getLength());
     }
 
     @Override
@@ -306,7 +306,7 @@ public class DownloadMission implements Mission {
 
     @Override
     public long getSpeed() {
-        return info.speed;
+        return info.getSpeed();
     }
 
     @Override
@@ -341,42 +341,42 @@ public class DownloadMission implements Mission {
 
     @Override
     public void setStatus(int status) {
-        info.missionStatus = status;
+        info.setMissionStatus(status);
     }
 
     @Override
     public void setName(String name) {
-        info.name = name;
+        info.setName(name);
     }
 
     @Override
     public void setUrl(String url) {
-        info.url = url;
+        info.setUrl(url);
     }
 
     @Override
     public void setOriginUrl(String originUrl) {
-        info.originUrl = originUrl;
+        info.setOriginUrl(originUrl);
     }
 
     @Override
     public void setLength(long length) {
-        info.length = length;
+        info.setLength(length);
     }
 
     @Override
     public void setErrorCode(int errCode) {
-        info.errorCode = errCode;
+        info.setErrorCode(errCode);
     }
 
     @Override
     public void setErrorMessage(String msg) {
-        info.errorMessage = msg;
+        info.setErrorMessage(msg);
     }
 
     @Override
-    public void setSupportSlice(boolean support) {
-        info.isBlockDownload = support;
+    public void setBlockDownload(boolean support) {
+        info.setBlockDownload(support);
     }
 
     @Override
