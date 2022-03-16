@@ -166,8 +166,6 @@ public interface Mission {
 
     int getNotifyId();
 
-    String getMissionInfoFilePath();
-
     boolean isSupportSlice();
 
     Config getConfig();
