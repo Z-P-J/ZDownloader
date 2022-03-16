@@ -45,6 +45,9 @@ public class MissionBlockTransfer<T extends Mission> implements Transfer<T> {
             end = block.getEnd();
             headers.put(HttpHeader.RANGE, String.format(Locale.ENGLISH, "bytes=%d-%d", start, end));
         } else {
+            mission.getMissionInfo().setDownloaded(0);
+            downloader.getRepository().updateMissionInfo(mission);
+            block.setDownloaded(0);
             start = end = 0;
             headers.put(HttpHeader.RANGE, "bytes=0-");
         }
@@ -66,7 +69,7 @@ public class MissionBlockTransfer<T extends Mission> implements Transfer<T> {
                     int bufferSize = 512 * 1024; // mission.getConfig().getBufferSize()
                     byte[] buf = new byte[bufferSize];
                     int len;
-                    int downloaded = 0;
+                    long downloaded = block.getDownloaded();
                     while ((len = is.read(buf, 0, buf.length)) != -1) {
                         f.write(buf, 0, len);
                         downloaded += len;

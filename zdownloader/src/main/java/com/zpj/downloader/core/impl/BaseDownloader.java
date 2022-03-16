@@ -28,6 +28,7 @@ import com.zpj.downloader.utils.ThreadPool;
 import com.zpj.utils.ContextUtils;
 
 import java.io.File;
+import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.ref.WeakReference;
@@ -234,7 +235,13 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
                             if (result.isOk()) {
                                 File location = new File(mission.getConfig().getDownloadPath());
                                 if (!location.exists()) {
-                                    location.mkdirs();
+                                    if (!location.mkdirs()) {
+                                        mission.setErrorCode(-1);
+                                        mission.setErrorMessage("download path create failed! path=" + location);
+                                        // 创建下载路径失败
+                                        sendEvent(mission, Event.ERROR);
+                                        return;
+                                    }
                                 }
 //                                File file = new File(mission.getFilePath());
 //                                if (!file.exists()) {

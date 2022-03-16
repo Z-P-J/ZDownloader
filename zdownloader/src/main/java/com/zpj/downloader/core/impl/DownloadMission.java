@@ -320,11 +320,6 @@ public class DownloadMission implements Mission {
     }
 
     @Override
-    public String getMissionInfoFilePath() {
-        return null;
-    }
-
-    @Override
     public boolean isSupportSlice() {
         return isBlockDownload();
     }

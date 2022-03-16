@@ -190,7 +190,7 @@ public class MissionDispatcher<T extends Mission> implements Dispatcher<T> {
 
                         downloader.getRepository().saveMissionInfo(mission);
 
-                        if (shouldStopped()) {
+                        if (shouldStop()) {
                             return;
                         }
 
@@ -210,15 +210,16 @@ public class MissionDispatcher<T extends Mission> implements Dispatcher<T> {
                                 }
                             }
                         });
-                    } else if (shouldStopped()) {
+                    } else if (shouldStop()) {
                         return;
                     }
+                    lastDownloaded = downloaded;
                     lastTime = currentTime;
                 }
             }, 0, mission.getConfig().getProgressInterval(), TimeUnit.MILLISECONDS);
         }
 
-        private boolean shouldStopped() {
+        private boolean shouldStop() {
             if (mission.isPaused() || mission.isError() || mission.isComplete()) {
                 stop();
                 return true;

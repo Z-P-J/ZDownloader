@@ -11,7 +11,7 @@ import android.net.NetworkInfo;
  */
 public class NetworkChangeReceiver extends BroadcastReceiver {
 
-    private static NetworkChangeReceiver networkChangeReceiver;
+    private volatile static NetworkChangeReceiver networkChangeReceiver;
 
     public synchronized static NetworkChangeReceiver getInstance() {
         if (networkChangeReceiver == null) {
