@@ -27,7 +27,7 @@ public class MyApplication extends Application {
 //                .init();
 
         // 注册Downloader
-        ZDownloader.register(DownloadMission.class, new MissionDownloader());
+//        ZDownloader.register(DownloadMission.class, new MissionDownloader());
     }
 
 }

@@ -577,6 +577,11 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
         ThreadPool.post(new Runnable() {
             @Override
             public void run() {
+                List<Mission.Observer> observers = mission.getObservers();
+                for (Mission.Observer observer : observers) {
+                    observer.onFinished();
+                }
+
                 Iterator<WeakReference<DownloaderObserver<T>>> iterator = mObservers.iterator();
                 while (iterator.hasNext()) {
                     DownloaderObserver<T> observer = iterator.next().get();

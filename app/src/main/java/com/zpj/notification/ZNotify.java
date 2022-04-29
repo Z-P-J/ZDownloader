@@ -143,7 +143,7 @@ public class ZNotify {
 
     private static NotificationManager nm;
 
-    public static void init(Context context1){
+    public static void init(Context context1) {
 //        context = context1;
         nm = (NotificationManager) context1
                 .getSystemService(Activity.NOTIFICATION_SERVICE);
@@ -204,15 +204,15 @@ public class ZNotify {
 //        return progressBuilder;
 //    }
 
-    public ProgressBuilder buildProgressNotify(){
+    public ProgressBuilder buildProgressNotify() {
         return new ProgressBuilder(context);
     }
 
-    public BaseBuilder buildNotify(){
+    public BaseBuilder buildNotify() {
         return new BaseBuilder(context);
     }
 
-    public static void notify(int id, Notification notification){
+    public static void notify(int id, Notification notification) {
 //        Log.d("Notification", "id = " + id);
 //        Log.d("Notification", "notification = " + notification);
         nm.notify(id, notification);
@@ -226,14 +226,14 @@ public class ZNotify {
 //        return pi;
 //    }
 
-    public static void cancel(int id){
-        if(nm!=null){
+    public static void cancel(int id) {
+        if (nm != null) {
             nm.cancel(id);
         }
     }
 
-    public static void cancelAll(){
-        if(nm!=null){
+    public static void cancelAll() {
+        if (nm != null) {
             nm.cancelAll();
         }
     }

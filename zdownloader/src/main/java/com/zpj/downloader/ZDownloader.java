@@ -3,6 +3,8 @@ package com.zpj.downloader;
 import com.zpj.downloader.core.Downloader;
 import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.MissionLoader;
+import com.zpj.downloader.core.impl.DownloadMission;
+import com.zpj.downloader.core.impl.MissionDownloader;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -27,6 +29,10 @@ public class ZDownloader {
 //        return download(url, name, DownloadMission.class);
 //    }
 
+
+    static {
+        ZDownloader.register(DownloadMission.class, new MissionDownloader());
+    }
 
 
     public static  <T extends Mission> void register(Class<T> clazz, Downloader<T> downloader) {
