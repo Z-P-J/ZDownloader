@@ -18,6 +18,10 @@ public class MissionRepository<T extends Mission> implements Repository<T> {
     @NonNull
     private final MissionDatabase database;
 
+    public MissionRepository(String key) {
+        this(MissionDatabase.getInstance(key));
+    }
+
     public MissionRepository(@NonNull MissionDatabase database) {
         this.database = database;
     }

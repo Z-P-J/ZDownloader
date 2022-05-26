@@ -2,16 +2,46 @@ package com.zpj.downloader.utils;
 
 import android.util.Log;
 
+import com.zpj.downloader.BuildConfig;
+
+/**
+ * 日志工具类
+ * @author Z-P-J
+ */
 public class Logger {
 
-    private static final String PREFIX = "ZDownloader_";
+    private static final String PREFIX = "ZDownloader.";
+
+    private static boolean DEBUG = BuildConfig.DEBUG;
+
+    public static void init(boolean debug) {
+        DEBUG = debug;
+    }
+
+    public static void i(String tag, String msg) {
+        Log.i(PREFIX + tag, msg);
+    }
 
     public static void d(String tag, String msg) {
-        Log.d(PREFIX + tag, msg);
+        if (DEBUG) {
+            Log.d(PREFIX + tag, msg);
+        }
+    }
+
+    public static void d(String tag, String format, Object...args) {
+        d(tag, String.format(format, args));
+    }
+
+    public static void w(String tag, String msg) {
+        Log.w(PREFIX + tag, msg);
     }
 
     public static void e(String tag, String msg) {
-        Log.d(PREFIX + tag, msg);
+        Log.e(PREFIX + tag, msg);
+    }
+
+    public static void e(String tag, String msg, Throwable e) {
+        Log.e(PREFIX + tag, msg, e);
     }
 
 }

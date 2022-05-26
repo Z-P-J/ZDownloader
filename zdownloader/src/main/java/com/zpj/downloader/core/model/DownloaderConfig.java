@@ -1,12 +1,9 @@
 package com.zpj.downloader.core.model;
 
-import android.app.Activity;
-import android.app.Application;
-import android.os.Bundle;
 import android.text.TextUtils;
 
 import com.zpj.downloader.constant.DefaultConstant;
-import com.zpj.utils.ContextUtils;
+import com.zpj.downloader.utils.ContextProvider;
 
 import java.io.File;
 
@@ -37,7 +34,7 @@ public class DownloaderConfig extends Config {
 
     public String getTaskPath() {
         if (TextUtils.isEmpty(taskPath)) {
-            File file = new File(ContextUtils.getApplicationContext().getFilesDir(), MISSIONS_PATH);
+            File file = new File(ContextProvider.getApplicationContext().getFilesDir(), MISSIONS_PATH);
             taskPath = file.getAbsolutePath();
         } else {
             File file = new File(taskPath);
@@ -67,7 +64,7 @@ public class DownloaderConfig extends Config {
     }
 
     public void init() {
-        File path = new File(ContextUtils.getApplicationContext().getFilesDir(), MISSIONS_PATH);
+        File path = new File(ContextProvider.getApplicationContext().getFilesDir(), MISSIONS_PATH);
         if (!path.exists()) {
             path.mkdirs();
         }
@@ -77,42 +74,42 @@ public class DownloaderConfig extends Config {
             file.mkdirs();
         }
 
-        ContextUtils.getApplication().registerActivityLifecycleCallbacks(new Application.ActivityLifecycleCallbacks() {
-            @Override
-            public void onActivityCreated(Activity activity, Bundle savedInstanceState) {
-//                DownloadManagerImpl.register(DownloaderConfig.this, clazz);
-            }
-
-            @Override
-            public void onActivityStarted(Activity activity) {
-
-            }
-
-            @Override
-            public void onActivityResumed(Activity activity) {
-
-            }
-
-            @Override
-            public void onActivityPaused(Activity activity) {
-
-            }
-
-            @Override
-            public void onActivityStopped(Activity activity) {
-
-            }
-
-            @Override
-            public void onActivitySaveInstanceState(Activity activity, Bundle outState) {
-
-            }
-
-            @Override
-            public void onActivityDestroyed(Activity activity) {
-
-            }
-        });
+//        ContextUtils.getApplication().registerActivityLifecycleCallbacks(new Application.ActivityLifecycleCallbacks() {
+//            @Override
+//            public void onActivityCreated(Activity activity, Bundle savedInstanceState) {
+////                DownloadManagerImpl.register(DownloaderConfig.this, clazz);
+//            }
+//
+//            @Override
+//            public void onActivityStarted(Activity activity) {
+//
+//            }
+//
+//            @Override
+//            public void onActivityResumed(Activity activity) {
+//
+//            }
+//
+//            @Override
+//            public void onActivityPaused(Activity activity) {
+//
+//            }
+//
+//            @Override
+//            public void onActivityStopped(Activity activity) {
+//
+//            }
+//
+//            @Override
+//            public void onActivitySaveInstanceState(Activity activity, Bundle outState) {
+//
+//            }
+//
+//            @Override
+//            public void onActivityDestroyed(Activity activity) {
+//
+//            }
+//        });
 
 //        DownloadManagerImpl.register(this, clazz);
     }

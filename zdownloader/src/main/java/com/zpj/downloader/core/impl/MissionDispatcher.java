@@ -8,9 +8,9 @@ import com.zpj.downloader.core.Dispatcher;
 import com.zpj.downloader.core.Downloader;
 import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.Notifier;
+import com.zpj.downloader.utils.ContextProvider;
 import com.zpj.downloader.utils.Logger;
 import com.zpj.downloader.utils.ThreadPool;
-import com.zpj.utils.ContextUtils;
 
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
@@ -206,7 +206,7 @@ public class MissionDispatcher<T extends Mission> implements Dispatcher<T> {
 
                                 Notifier<T> notifier = downloader.getNotifier();
                                 if (notifier != null) {
-                                    notifier.onProgress(ContextUtils.getApplicationContext(), mission, mission.getProgress(), false);
+                                    notifier.onProgress(ContextProvider.getApplicationContext(), mission, mission.getProgress(), false);
                                 }
                             }
                         });

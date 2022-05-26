@@ -7,7 +7,7 @@ import com.zpj.downloader.core.model.Config;
 import com.zpj.downloader.core.model.DownloaderConfig;
 import com.zpj.downloader.core.model.MissionInfo;
 
-public interface Downloader<T extends Mission> {
+public interface Downloader<T extends Mission> extends DownloadManager<T> {
 
     interface DownloaderObserver<T extends Mission> {
         void onMissionAdd(T mission);
@@ -53,24 +53,5 @@ public interface Downloader<T extends Mission> {
     ExecutorFactory<T> getExecutorFactory();
 
     Repository<T> getRepository();
-
-
-
-
-
-
-
-
-    void startMission(T mission);
-
-    void restartMission(T mission);
-
-    void waitingMission(T mission);
-
-    void pauseMission(T mission);
-
-    void deleteMission(T mission);
-
-    void clearMission(T mission);
 
 }

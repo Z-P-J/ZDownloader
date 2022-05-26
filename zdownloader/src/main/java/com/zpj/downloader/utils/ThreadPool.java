@@ -23,7 +23,14 @@ public class ThreadPool {
     }
 
     public static void post(Runnable runnable) {
-        Holder.HANDLER.post(runnable);
+        if (runnable == null) {
+            return;
+        }
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            runnable.run();
+        } else {
+            Holder.HANDLER.post(runnable);
+        }
     }
 
     public static void postDelayed(Runnable r, long delayMillis) {

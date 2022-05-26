@@ -10,7 +10,7 @@ import android.support.annotation.NonNull;
 import com.zpj.downloader.core.model.Block;
 import com.zpj.downloader.core.model.Config;
 import com.zpj.downloader.core.model.MissionInfo;
-import com.zpj.utils.ContextUtils;
+import com.zpj.downloader.utils.ContextProvider;
 
 @Database(entities = {Config.class, MissionInfo.class, Block.class}, version = 2, exportSchema = false)
 public abstract class MissionDatabase extends RoomDatabase {
@@ -27,7 +27,7 @@ public abstract class MissionDatabase extends RoomDatabase {
         if (INSTANCE == null) {
             synchronized (MissionDatabase.class) {
                 if (INSTANCE == null) {
-                    INSTANCE = Room.databaseBuilder(ContextUtils.getApplicationContext(), MissionDatabase.class, dbName)
+                    INSTANCE = Room.databaseBuilder(ContextProvider.getApplicationContext(), MissionDatabase.class, dbName)
                             .addMigrations(MIGRATION_1)
                             .build();
                 }

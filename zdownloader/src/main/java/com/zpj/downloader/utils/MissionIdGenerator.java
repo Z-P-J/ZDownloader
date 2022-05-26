@@ -4,25 +4,32 @@
 
 package com.zpj.downloader.utils;
 
-import com.zpj.utils.PrefsHelper;
+import android.content.Context;
+import android.content.SharedPreferences;
 
 import java.util.concurrent.atomic.AtomicLong;
 
 
 public class MissionIdGenerator {
 
-    public static final String PREF_NEXT_ID = "MISSION_NEXT_ID";
+    private static final class SingletonHolder {
+        private static final MissionIdGenerator INSTANCE = new MissionIdGenerator();
+    }
 
-    private static final Object INSTANCE_LOCK = new Object();
-    private static MissionIdGenerator sInstance;
+    private static final String SP_NAME = "z_downloader_mission_id_generator";
+    public static final String KEY_MISSION_NEXT_ID = "KEY_MISSION_NEXT_ID";
 
     private final AtomicLong mIdCounter = new AtomicLong(0);
 
+    private final SharedPreferences mSp;
+
+    private MissionIdGenerator() {
+        mSp = ContextProvider.getApplicationContext().getSharedPreferences(SP_NAME, Context.MODE_PRIVATE);
+        mIdCounter.set(mSp.getLong(KEY_MISSION_NEXT_ID, 0));
+    }
+
     public static MissionIdGenerator getInstance() {
-        synchronized (INSTANCE_LOCK) {
-            if (sInstance == null) sInstance = new MissionIdGenerator();
-        }
-        return sInstance;
+        return SingletonHolder.INSTANCE;
     }
 
     public final long generateValidId() {
@@ -34,13 +41,7 @@ public class MissionIdGenerator {
     private void incrementIdCounterTo(long id) {
         long diff = id - mIdCounter.get();
         if (diff < 0) return;
-
-        mIdCounter.addAndGet(diff);
-        PrefsHelper.with().putLong(PREF_NEXT_ID, mIdCounter.get());
-    }
-
-    private MissionIdGenerator() {
-        mIdCounter.set(PrefsHelper.with().getLong(PREF_NEXT_ID, 0));
+        mSp.edit().putLong(KEY_MISSION_NEXT_ID, mIdCounter.addAndGet(diff)).apply();
     }
 
 }

@@ -2,12 +2,13 @@ package com.zpj.downloader.core.impl;
 
 import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
+import android.util.SparseArray;
 
 import com.zpj.downloader.constant.Error;
-import com.zpj.downloader.core.model.Block;
 import com.zpj.downloader.core.BlockSplitter;
 import com.zpj.downloader.core.Dispatcher;
 import com.zpj.downloader.core.Downloader;
+import com.zpj.downloader.core.DownloaderConfiguration;
 import com.zpj.downloader.core.ExecutorFactory;
 import com.zpj.downloader.core.Initializer;
 import com.zpj.downloader.core.Mission;
@@ -20,15 +21,15 @@ import com.zpj.downloader.core.db.MissionDatabase;
 import com.zpj.downloader.core.db.MissionRepository;
 import com.zpj.downloader.core.http.HttpFactory;
 import com.zpj.downloader.core.http.UrlConnectionHttpFactory;
+import com.zpj.downloader.core.model.Block;
 import com.zpj.downloader.core.model.Config;
 import com.zpj.downloader.core.model.DownloaderConfig;
 import com.zpj.downloader.core.model.MissionInfo;
+import com.zpj.downloader.utils.ContextProvider;
 import com.zpj.downloader.utils.Logger;
 import com.zpj.downloader.utils.ThreadPool;
-import com.zpj.utils.ContextUtils;
 
 import java.io.File;
-import java.io.IOException;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.ref.WeakReference;
@@ -48,11 +49,15 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
 
     private final HashMap<T, ExecutorService> mExecutors = new HashMap<>();
 
-    private Dispatcher<T> mDispatcher = new MissionDispatcher<>();
-    private Initializer<T> mInitializer = new MissionInitializer<>();
-    private Notifier<T> mNotifier;
-    private Transfer<T> mTransfer = new MissionBlockTransfer<>();
+    private final String mKey;
+
+    private final Dispatcher<T> mDispatcher;
+    private final Initializer<T> mInitializer;
+    private final Notifier<T> mNotifier;
+    private final Transfer<T> mTransfer;
     private final Repository<T> mRepository;
+
+    private final DownloaderConfiguration<T> mConfiguration;
 
     private final ExecutorService mScheduler = Executors.newSingleThreadExecutor(new ThreadFactory() {
         @Override
@@ -61,8 +66,19 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
         }
     });
 
-    public BaseDownloader() {
-        mRepository = new MissionRepository<>(MissionDatabase.getInstance(getKey()));
+    public BaseDownloader(@NonNull DownloaderConfiguration<T> configuration) {
+        this.mConfiguration = configuration;
+        this.mKey = configuration.getKey();
+        this.mDispatcher = configuration.getDispatcher();
+        this.mInitializer = configuration.getInitializer();
+        this.mNotifier = configuration.getNotifier();
+        this.mTransfer = configuration.getTransfer();
+        Repository<T> repository = configuration.getRepository();
+        if (repository == null) {
+            this.mRepository = new MissionRepository<>(this.mKey);
+        } else {
+            this.mRepository = configuration.getRepository();
+        }
     }
 
     @Override
@@ -165,7 +181,10 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
     }
 
     private void enqueue(final T mission) {
-        Logger.d(TAG, "enqueue mission=" + mission);
+        if (mission == null) {
+            return;
+        }
+        Logger.d(TAG, "enqueue next mission=%s", mission);
         if (mDispatcher.enqueue(mission) && mDispatcher.isDownloading(mission)) {
             mission.setErrorCode(0);
             mission.setErrorMessage(null);
@@ -180,8 +199,8 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
         }
     }
 
-    private void sendEvent(final T mission, @Event final int event) {
-        Logger.d(TAG, "sendEvent name=" + mission.getName() + " event=" + event);
+    private void sendEvent(@NonNull final T mission, @Event final int event) {
+        Logger.d(TAG, "sendEvent name=%s event=%s", mission.getName(), eventToString(event));
         mScheduler.execute(new Runnable() {
             @Override
             public void run() {
@@ -195,7 +214,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
             Logger.d(TAG, "handleEvent mission is null!");
             return;
         }
-        Logger.d(TAG, "handleEvent name=" + mission.getName() + " event=" + event);
+        Logger.d(TAG, "handleEvent name=%s event=%s", mission.getName(), eventToString(event));
         switch (event) {
             case Event.CREATE:
                 if (mDispatcher.isDownloading(mission) || mDispatcher.isWaiting(mission)) {
@@ -291,7 +310,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
                             public void run() {
                                 // TODO notify
                                 if (mNotifier != null) {
-                                    mNotifier.onProgress(ContextUtils.getApplicationContext(),
+                                    mNotifier.onProgress(ContextProvider.getApplicationContext(),
                                             mission, mission.getProgress(), false);
                                 }
                             }
@@ -434,7 +453,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
     }
 
     private void setStatus(final T mission, final @Mission.Status int status) {
-        Logger.d(TAG, "setStatus name=" + mission.getName() + " status=" + status);
+        Logger.d(TAG, "setStatus name=%s status=%d", mission.getName(), status);
         mission.setStatus(status);
         mRepository.updateStatus(mission, status);
         switch (status) {
@@ -468,7 +487,8 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
 
     }
 
-    private void onMissionAdd(final T mission) {
+    private void onMissionAdd(@NonNull final T mission) {
+        Logger.d(TAG, "onMissionAdd mission=%s", mission.getName());
         ThreadPool.post(new Runnable() {
             @Override
             public void run() {
@@ -485,7 +505,8 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
         });
     }
 
-    private void onMissionStart(final T mission) {
+    private void onMissionStart(@NonNull final T mission) {
+        Logger.d(TAG, "onMissionStart mission=%s", mission.getName());
         ThreadPool.post(new Runnable() {
             @Override
             public void run() {
@@ -497,7 +518,8 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
         });
     }
 
-    private void onMissionPaused(final T mission) {
+    private void onMissionPaused(@NonNull final T mission) {
+        Logger.d(TAG, "onMissionPaused mission=%s", mission.getName());
         ThreadPool.post(new Runnable() {
             @Override
             public void run() {
@@ -507,15 +529,16 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
                 }
 
                 if (mNotifier != null) {
-                    mNotifier.onProgress(ContextUtils.getApplicationContext(),
+                    mNotifier.onProgress(ContextProvider.getApplicationContext(),
                             mission, mission.getProgress(), true);
                 }
             }
         });
     }
 
-    private void onMissionError(final T mission) {
-        Logger.d(TAG, "onMissionError mission=" + mission.getName());
+    private void onMissionError(@NonNull final T mission) {
+        Logger.d(TAG, "onMissionError mission=%s code=%d msg=%s",
+                mission.getName(), mission.getErrorCode(), mission.getErrorMessage());
         ThreadPool.post(new Runnable() {
             @Override
             public void run() {
@@ -525,7 +548,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
                 }
 
                 if (mNotifier != null) {
-                    mNotifier.onError(ContextUtils.getApplicationContext(),
+                    mNotifier.onError(ContextProvider.getApplicationContext(),
                             mission, mission.getErrorCode());
                 }
             }
@@ -533,7 +556,8 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
 
     }
 
-    private void onMissionWaiting(final T mission) {
+    private void onMissionWaiting(@NonNull final T mission) {
+        Logger.d(TAG, "onMissionWaiting mission=%s", mission.getName());
         ThreadPool.post(new Runnable() {
             @Override
             public void run() {
@@ -546,10 +570,12 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
     }
 
     private void onMissionClear(T mission) {
+        Logger.d(TAG, "onMissionClear mission=%s", mission.getName());
         // TODO 移除本地记录
     }
 
-    private void onMissionDelete(final T mission) {
+    private void onMissionDelete(@NonNull final T mission) {
+        Logger.d(TAG, "onMissionDelete mission=%s", mission.getName());
         ThreadPool.post(new Runnable() {
             @Override
             public void run() {
@@ -567,7 +593,8 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
         });
     }
 
-    private void onMissionFinished(final T mission) {
+    private void onMissionFinished(@NonNull final T mission) {
+        Logger.d(TAG, "onMissionFinished mission=%s", mission.getName());
         // 销毁线程池
         ExecutorService executor = mExecutors.remove(mission);
         if (executor != null) {
@@ -593,7 +620,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
                 }
 
                 if (mNotifier != null) {
-                    mNotifier.onFinished(ContextUtils.getApplicationContext(), mission);
+                    mNotifier.onFinished(ContextProvider.getApplicationContext(), mission);
                 }
             }
         });
@@ -673,6 +700,27 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
 
         int DELETE = 10;
         int CLEAR = 11;
+
+    }
+
+    private static final SparseArray<String> EVENT_TEXT_ARRAY = new SparseArray<>();
+    static {
+        EVENT_TEXT_ARRAY.append(Event.CREATE, "create");
+        EVENT_TEXT_ARRAY.append(Event.PREPARE, "prepare");
+        EVENT_TEXT_ARRAY.append(Event.WAIT, "wait");
+        EVENT_TEXT_ARRAY.append(Event.DOWNLOAD, "download");
+        EVENT_TEXT_ARRAY.append(Event.PROGRESS, "progress");
+        EVENT_TEXT_ARRAY.append(Event.PAUSE, "pause");
+        EVENT_TEXT_ARRAY.append(Event.ERROR, "error");
+        EVENT_TEXT_ARRAY.append(Event.RETRY, "retry");
+        EVENT_TEXT_ARRAY.append(Event.COMPLETE, "complete");
+        EVENT_TEXT_ARRAY.append(Event.RESTART, "restart");
+        EVENT_TEXT_ARRAY.append(Event.DELETE, "delete");
+        EVENT_TEXT_ARRAY.append(Event.CLEAR, "clear");
+    }
+
+    private static String eventToString(@Event int event) {
+        return EVENT_TEXT_ARRAY.get(event, "unknown");
     }
 
 }

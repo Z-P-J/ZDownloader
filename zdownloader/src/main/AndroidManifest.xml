@@ -8,6 +8,11 @@
 
     <application>
 
+        <provider
+            android:name=".utils.ContextProvider"
+            android:authorities="${applicationId}.ZDownloaderContextProvider"
+            android:exported="false" />
+
     </application>
 
 </manifest>

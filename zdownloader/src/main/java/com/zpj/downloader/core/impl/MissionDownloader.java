@@ -2,11 +2,16 @@ package com.zpj.downloader.core.impl;
 
 import android.support.annotation.NonNull;
 
+import com.zpj.downloader.core.DownloaderConfiguration;
 import com.zpj.downloader.core.model.Config;
 import com.zpj.downloader.core.model.DownloaderConfig;
 import com.zpj.downloader.core.model.MissionInfo;
 
 public class MissionDownloader extends BaseDownloader<DownloadMission> {
+
+    public MissionDownloader() {
+        super(new DownloaderConfiguration.Builder<DownloadMission>("default_downloader").build());
+    }
 
     @Override
     public DownloadMission create(MissionInfo info, Config config) {

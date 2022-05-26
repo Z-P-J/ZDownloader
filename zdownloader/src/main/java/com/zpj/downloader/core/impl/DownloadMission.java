@@ -8,8 +8,8 @@ import com.zpj.downloader.core.Downloader;
 import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.model.Config;
 import com.zpj.downloader.core.model.MissionInfo;
+import com.zpj.downloader.utils.FormatUtils;
 import com.zpj.downloader.utils.Logger;
-import com.zpj.utils.FormatUtils;
 
 import java.io.File;
 import java.lang.ref.WeakReference;

@@ -1,5 +1,7 @@
 package com.zpj.downloader.core.impl;
 
+import android.os.Environment;
+import android.os.StatFs;
 import android.text.TextUtils;
 import android.webkit.URLUtil;
 
@@ -12,11 +14,9 @@ import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.Result;
 import com.zpj.downloader.core.http.Response;
 import com.zpj.downloader.utils.Logger;
-import com.zpj.utils.FileUtils;
 
-import java.io.IOException;
+import java.io.File;
 import java.net.HttpURLConnection;
-import java.net.SocketException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -102,7 +102,7 @@ public class MissionInitializer<T extends Mission> implements Initializer<T> {
             // 成功响应码2xx
             mission.setLength(response.contentLength());
             Logger.d("mission.length", "mission.length=" + mission.getLength());
-            if (mission.getLength() >= FileUtils.getAvailableSize()) {
+            if (mission.getLength() >= getAvailableSize()) {
                 return Result.error(ErrorCode.ERROR_NO_ENOUGH_SPACE, Error.NO_ENOUGH_SPACE.getErrorMsg());
             }
         } else {
@@ -113,9 +113,26 @@ public class MissionInitializer<T extends Mission> implements Initializer<T> {
         mission.setBlockDownload(statusCode == HttpURLConnection.HTTP_PARTIAL);
 
         Logger.d("mission.name", "mission.name555=" + mission.getName());
-        Logger.d(TAG, "storage=" + FileUtils.getAvailableSize());
+        Logger.d(TAG, "storage=" + getAvailableSize());
 
         return Result.ok(statusCode, response.statusMessage());
+    }
+
+    private long getAvailableSize() {
+        String sdcard = Environment.getExternalStorageState();
+        String state = Environment.MEDIA_MOUNTED;
+        File file = Environment.getExternalStorageDirectory();
+        StatFs statFs = new StatFs(file.getPath());
+        if(sdcard.equals(state)) {
+            //获得Sdcard上每个block的size
+            long blockSize = statFs.getBlockSizeLong();
+            //获取可供程序使用的Block数量
+            long blockavailable = statFs.getAvailableBlocksLong();
+            //计算标准大小使用：1024，当然使用1000也可以
+            return blockSize * blockavailable;
+        } else {
+            return -1;
+        }
     }
 
 
