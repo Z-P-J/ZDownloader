@@ -1,4 +1,4 @@
-package com.zpj.downloader.constant;
+package com.zpj.downloader.core.http;
 
 public interface HttpHeader {
 

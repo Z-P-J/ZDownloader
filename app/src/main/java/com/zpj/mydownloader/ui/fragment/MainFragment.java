@@ -7,9 +7,11 @@ import android.support.v7.widget.RecyclerView;
 import android.view.View;
 
 import com.zpj.downloader.ZDownloader;
+import com.zpj.downloader.core.ConflictPolicy;
 import com.zpj.downloader.core.Downloader;
+import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.MissionLoader;
-import com.zpj.downloader.core.impl.DownloadMission;
+import com.zpj.downloader.impl.DownloadMission;
 import com.zpj.fragmentation.SimpleFragment;
 import com.zpj.mydownloader.R;
 import com.zpj.mydownloader.ui.adapter.MissionAdapter;
@@ -81,4 +83,9 @@ public class MainFragment extends SimpleFragment implements Downloader.Downloade
     public void onMissionFinished(DownloadMission mission) {
 
     }
+
+//    @Override
+//    public void onMissionConflict(Mission mission, ConflictPolicy.Callback callback) {
+//
+//    }
 }

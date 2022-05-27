@@ -1,17 +1,16 @@
-package com.zpj.downloader.core.impl;
+package com.zpj.downloader.impl;
 
 import android.support.annotation.NonNull;
 import android.support.annotation.WorkerThread;
 
 import com.zpj.downloader.ZDownloader;
-import com.zpj.downloader.constant.Error;
-import com.zpj.downloader.constant.HttpHeader;
-import com.zpj.downloader.core.model.Block;
+import com.zpj.downloader.core.http.HttpHeader;
 import com.zpj.downloader.core.Downloader;
 import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.Result;
 import com.zpj.downloader.core.Transfer;
 import com.zpj.downloader.core.http.Response;
+import com.zpj.downloader.core.model.Block;
 import com.zpj.downloader.utils.Logger;
 import com.zpj.downloader.utils.io.BufferedRandomAccessFile;
 
@@ -95,7 +94,7 @@ public class MissionBlockTransfer<T extends Mission> implements Transfer<T> {
             }
         } catch (FileNotFoundException e) {
             e.printStackTrace();
-            return Result.error(Error.FILE_NOT_FOUND.getErrorMsg());
+            return Result.error("file not found!");
         } catch (IOException e) {
             e.printStackTrace();
             return Result.error(e.getMessage());

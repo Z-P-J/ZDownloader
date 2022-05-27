@@ -1,7 +1,5 @@
 package com.zpj.downloader.core;
 
-import com.zpj.downloader.core.Mission;
-
 public interface ConflictPolicy {
 
     /**

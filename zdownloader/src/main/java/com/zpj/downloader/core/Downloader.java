@@ -4,7 +4,6 @@ import android.support.annotation.NonNull;
 
 import com.zpj.downloader.core.http.HttpFactory;
 import com.zpj.downloader.core.model.Config;
-import com.zpj.downloader.core.model.DownloaderConfig;
 import com.zpj.downloader.core.model.MissionInfo;
 
 public interface Downloader<T extends Mission> extends DownloadManager<T> {
@@ -15,13 +14,11 @@ public interface Downloader<T extends Mission> extends DownloadManager<T> {
         void onMissionDelete(T mission);
 
         void onMissionFinished(T mission);
+
+//        void onMissionConflict(Mission mission, ConflictPolicy.Callback callback);
     }
 
-    Config config();
-
-    T create(MissionInfo info, Config config);
-
-    DownloaderConfig getConfig();
+    T createMission(MissionInfo info, Config config);
 
     /**
      * 一个唯一的key代表该Downloader

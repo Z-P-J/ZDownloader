@@ -1,6 +1,5 @@
 package com.zpj.downloader.core.http;
 
-import com.zpj.downloader.constant.HttpHeader;
 import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.model.Config;
 import com.zpj.downloader.utils.Logger;

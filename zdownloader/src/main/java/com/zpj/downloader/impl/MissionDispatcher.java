@@ -1,4 +1,4 @@
-package com.zpj.downloader.core.impl;
+package com.zpj.downloader.impl;
 
 import android.os.SystemClock;
 import android.support.annotation.NonNull;

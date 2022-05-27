@@ -35,7 +35,7 @@ public class MainActivity extends SupportActivity {
             loadRootFragment(R.id._fl_container, fragment);
         }
 
-        showRequestPermissionPopup();
+        post(this::showRequestPermissionPopup);
     }
 
     @Override
@@ -82,12 +82,9 @@ public class MainActivity extends SupportActivity {
                 .callback(new XPermission.SimpleCallback() {
                     @Override
                     public void onGranted() {
-
                         if (fragment != null) {
                             fragment.loadTasks();
                         }
-
-
                     }
 
                     @Override

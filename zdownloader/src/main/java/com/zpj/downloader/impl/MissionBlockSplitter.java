@@ -1,4 +1,4 @@
-package com.zpj.downloader.core.impl;
+package com.zpj.downloader.impl;
 
 import com.zpj.downloader.constant.DefaultConstant;
 import com.zpj.downloader.core.model.Block;

@@ -2,9 +2,6 @@ package com.zpj.downloader.core.http;
 
 import android.support.annotation.NonNull;
 
-import com.zpj.downloader.constant.HttpHeader;
-import com.zpj.downloader.utils.Logger;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.HttpURLConnection;

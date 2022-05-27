@@ -12,10 +12,12 @@ import com.zpj.downloader.core.model.Config;
 import com.zpj.downloader.core.model.MissionInfo;
 import com.zpj.downloader.utils.ContextProvider;
 
+import java.util.HashMap;
+
 @Database(entities = {Config.class, MissionInfo.class, Block.class}, version = 2, exportSchema = false)
 public abstract class MissionDatabase extends RoomDatabase {
 
-    private static MissionDatabase INSTANCE;
+    private static final HashMap<String, MissionDatabase> DATABASE_MAP = new HashMap<>();
 
     public abstract ConfigDao configDao();
 
@@ -23,17 +25,20 @@ public abstract class MissionDatabase extends RoomDatabase {
 
     public abstract BlockDao blockDao();
 
-    public static MissionDatabase getInstance(String dbName) {
-        if (INSTANCE == null) {
-            synchronized (MissionDatabase.class) {
-                if (INSTANCE == null) {
-                    INSTANCE = Room.databaseBuilder(ContextProvider.getApplicationContext(), MissionDatabase.class, dbName)
+    public static MissionDatabase get(String dbName) {
+        MissionDatabase database = DATABASE_MAP.get(dbName);
+        if (database == null) {
+            synchronized (DATABASE_MAP) {
+                database = DATABASE_MAP.get(dbName);
+                if (database == null) {
+                    database = Room.databaseBuilder(ContextProvider.getApplicationContext(), MissionDatabase.class, dbName)
                             .addMigrations(MIGRATION_1)
                             .build();
+                    DATABASE_MAP.put(dbName, database);
                 }
             }
         }
-        return INSTANCE;
+        return database;
     }
 
     private static final Migration MIGRATION_1 = new Migration(1, 2) {

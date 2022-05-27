@@ -1,29 +1,11 @@
-package com.zpj.downloader.core.impl;
+package com.zpj.downloader.core;
 
 import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
 import android.util.SparseArray;
 
-import com.zpj.downloader.constant.Error;
-import com.zpj.downloader.core.BlockSplitter;
-import com.zpj.downloader.core.Dispatcher;
-import com.zpj.downloader.core.Downloader;
-import com.zpj.downloader.core.DownloaderConfiguration;
-import com.zpj.downloader.core.ExecutorFactory;
-import com.zpj.downloader.core.Initializer;
-import com.zpj.downloader.core.Mission;
-import com.zpj.downloader.core.MissionLoader;
-import com.zpj.downloader.core.Notifier;
-import com.zpj.downloader.core.Repository;
-import com.zpj.downloader.core.Result;
-import com.zpj.downloader.core.Transfer;
-import com.zpj.downloader.core.db.MissionDatabase;
-import com.zpj.downloader.core.db.MissionRepository;
 import com.zpj.downloader.core.http.HttpFactory;
-import com.zpj.downloader.core.http.UrlConnectionHttpFactory;
 import com.zpj.downloader.core.model.Block;
-import com.zpj.downloader.core.model.Config;
-import com.zpj.downloader.core.model.DownloaderConfig;
 import com.zpj.downloader.core.model.MissionInfo;
 import com.zpj.downloader.utils.ContextProvider;
 import com.zpj.downloader.utils.Logger;
@@ -37,13 +19,14 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
 
 public abstract class BaseDownloader<T extends Mission> implements Downloader<T> {
 
-    private static final String TAG = "AbsDownloader";
+    private static final String TAG = "BaseDownloader";
 
     private final ArrayList<WeakReference<DownloaderObserver<T>>> mObservers = new ArrayList<>();
 
@@ -56,8 +39,9 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
     private final Notifier<T> mNotifier;
     private final Transfer<T> mTransfer;
     private final Repository<T> mRepository;
-
-    private final DownloaderConfiguration<T> mConfiguration;
+    private final HttpFactory mHttpFactory;
+    private final BlockSplitter<T> mBlockSplitter;
+    private final ExecutorFactory<T> mExecutorFactory;
 
     private final ExecutorService mScheduler = Executors.newSingleThreadExecutor(new ThreadFactory() {
         @Override
@@ -66,49 +50,65 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
         }
     });
 
-    public BaseDownloader(@NonNull DownloaderConfiguration<T> configuration) {
-        this.mConfiguration = configuration;
-        this.mKey = configuration.getKey();
-        this.mDispatcher = configuration.getDispatcher();
-        this.mInitializer = configuration.getInitializer();
-        this.mNotifier = configuration.getNotifier();
-        this.mTransfer = configuration.getTransfer();
-        Repository<T> repository = configuration.getRepository();
-        if (repository == null) {
-            this.mRepository = new MissionRepository<>(this.mKey);
-        } else {
-            this.mRepository = configuration.getRepository();
-        }
+    public BaseDownloader(@NonNull DownloaderConfig<T> config) {
+        this.mKey = config.getKey();
+        this.mDispatcher = Objects.requireNonNull(config.getDispatcher(),
+                "Dispatcher must not be null!");
+        this.mInitializer = Objects.requireNonNull(config.getInitializer(),
+                "Initializer must not be null!");
+        this.mNotifier = config.getNotifier();
+        this.mTransfer = Objects.requireNonNull(config.getTransfer(),
+                "Transfer must not be null!");
+        this.mRepository = Objects.requireNonNull(config.getRepository(),
+                "Repository must not be null!");
+        this.mBlockSplitter = Objects.requireNonNull(config.getBlockSplitter(),
+                "BlockSplitter must not be null!");
+        this.mHttpFactory = Objects.requireNonNull(config.getHttpFactory(),
+                "HttpFactory must not be null!");
+        this.mExecutorFactory = Objects.requireNonNull(config.getExecutorFactory(),
+                "ExecutorFactory must not be null!");
     }
 
     @Override
-    public void addObserver(DownloaderObserver<T> observer) {
-        synchronized (mObservers) {
-            mObservers.add(new WeakReference<>(observer));
-        }
+    public void addObserver(final DownloaderObserver<T> observer) {
+        ThreadPool.post(new Runnable() {
+            @Override
+            public void run() {
+                mObservers.add(new WeakReference<>(observer));
+            }
+        });
     }
 
     @Override
-    public void removeObserver(DownloaderObserver<T> observer) {
-        synchronized (mObservers) {
-            Iterator<WeakReference<DownloaderObserver<T>>> iterator = mObservers.iterator();
-            while (iterator.hasNext()) {
-                DownloaderObserver<T> o = iterator.next().get();
-                if (o == null || o == observer) {
-                    iterator.remove();
+    public void removeObserver(final DownloaderObserver<T> observer) {
+        ThreadPool.post(new Runnable() {
+            @Override
+            public void run() {
+                Iterator<WeakReference<DownloaderObserver<T>>> iterator = mObservers.iterator();
+                while (iterator.hasNext()) {
+                    DownloaderObserver<T> o = iterator.next().get();
+                    if (o == null || o == observer) {
+                        iterator.remove();
+                    }
                 }
             }
-        }
+        });
     }
 
+    @NonNull
     @Override
-    public Config config() {
-        return new DownloaderConfig();
+    public String getKey() {
+        return mKey;
     }
+
+    //    @Override
+//    public Config config() {
+//        return new DownloaderConfig();
+//    }
 
     @Override
     public BlockSplitter<T> getBlockDivider() {
-        return new MissionBlockSplitter<>();
+        return mBlockSplitter;
     }
 
     @Override
@@ -118,7 +118,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
 
     @Override
     public HttpFactory getHttpFactory() {
-        return new UrlConnectionHttpFactory();
+        return mHttpFactory;
     }
 
     @Override
@@ -138,7 +138,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
 
     @Override
     public ExecutorFactory<T> getExecutorFactory() {
-        return new MissionExecutorFactory<>();
+        return mExecutorFactory;
     }
 
     @Override
@@ -362,6 +362,11 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
             case Event.COMPLETE:
                 if (mDispatcher.remove(mission)) {
                     setStatus(mission, Mission.Status.COMPLETE);
+                    MissionInfo info = mission.getMissionInfo();
+                    if (info.getLength() < 0) {
+                        info.setLength(info.getDownloaded());
+                    }
+                    mRepository.updateMissionInfo(mission);
                     enqueue(mDispatcher.nextMission());
                 }
                 break;
@@ -457,9 +462,6 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
         mission.setStatus(status);
         mRepository.updateStatus(mission, status);
         switch (status) {
-            case Mission.Status.PREPARING:
-
-                break;
             case Mission.Status.DOWNLOADING:
                 onMissionStart(mission);
                 break;
@@ -481,6 +483,8 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
             case Mission.Status.CLEAR:
                 onMissionClear(mission);
                 break;
+            case Mission.Status.CREATED:
+            case Mission.Status.PREPARING:
             default:
                 break;
         }
@@ -544,7 +548,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
             public void run() {
                 List<Mission.Observer> observers = mission.getObservers();
                 for (Mission.Observer observer : observers) {
-                    observer.onError(new Error(mission.getErrorMessage()));
+                    observer.onError(mission.getErrorCode(), mission.getErrorMessage());
                 }
 
                 if (mNotifier != null) {
@@ -658,7 +662,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
                 block.setStatus(1);
                 downloader.getRepository().updateBlock(block);
                 List<Block> blocks = downloader.getRepository().queryShouldDownloadBlocks(mission);
-                Logger.d(TAG, "unfinishedBlocks=" + blocks);
+                Logger.d(TAG, "unfinishedBlocks=%s", blocks);
                 if (blocks.isEmpty()) {
                     downloader.sendEvent(mission, Event.COMPLETE);
                 }

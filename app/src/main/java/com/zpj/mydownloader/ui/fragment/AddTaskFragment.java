@@ -11,10 +11,8 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.zpj.downloader.constant.Error;
-import com.zpj.downloader.constant.HttpHeader;
 import com.zpj.downloader.core.Mission;
-import com.zpj.downloader.core.impl.DownloadMission;
+import com.zpj.downloader.impl.DownloadMission;
 import com.zpj.fragmentation.dialog.base.BottomDragDialogFragment;
 import com.zpj.mydownloader.R;
 
@@ -100,6 +98,9 @@ public class AddTaskFragment extends BottomDragDialogFragment<AddTaskFragment> i
         findViewById(R.id.bt_cancel).setOnClickListener(this);
 
         etBufferSize.setText("1");
+
+
+        text.setText("https://services.gradle.org/distributions/gradle-5.6-all.zip");
     }
 
     @Override

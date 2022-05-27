@@ -3,8 +3,8 @@ package com.zpj.downloader;
 import com.zpj.downloader.core.Downloader;
 import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.MissionLoader;
-import com.zpj.downloader.core.impl.DownloadMission;
-import com.zpj.downloader.core.impl.MissionDownloader;
+import com.zpj.downloader.impl.DownloadMission;
+import com.zpj.downloader.impl.MissionDownloader;
 
 import java.util.HashMap;
 import java.util.Map;

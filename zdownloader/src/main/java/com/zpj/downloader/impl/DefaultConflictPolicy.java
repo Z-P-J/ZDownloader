@@ -1,4 +1,4 @@
-package com.zpj.downloader.core.impl;
+package com.zpj.downloader.impl;
 
 import android.text.TextUtils;
 
@@ -17,4 +17,5 @@ public class DefaultConflictPolicy implements ConflictPolicy {
     public void onConflict(Mission mission, Callback callback) {
         callback.onResult(true);
     }
+
 }

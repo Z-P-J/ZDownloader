@@ -1,5 +1,6 @@
-package com.zpj.downloader.core.impl;
+package com.zpj.downloader.impl;
 
+import android.support.annotation.UiThread;
 import android.text.TextUtils;
 import android.webkit.MimeTypeMap;
 
@@ -10,6 +11,7 @@ import com.zpj.downloader.core.model.Config;
 import com.zpj.downloader.core.model.MissionInfo;
 import com.zpj.downloader.utils.FormatUtils;
 import com.zpj.downloader.utils.Logger;
+import com.zpj.downloader.utils.ThreadPool;
 
 import java.io.File;
 import java.lang.ref.WeakReference;
@@ -68,16 +70,22 @@ public class DownloadMission implements Mission {
     }
 
     @Override
-    public synchronized void addObserver(Observer observer) {
-        if (hasObserver(observer)) {
-            return;
-        }
-        if (mObservers == null) {
-            mObservers = new ArrayList<>();
-        }
-        mObservers.add(new WeakReference<>(observer));
+    public synchronized void addObserver(final Observer observer) {
+        ThreadPool.post(new Runnable() {
+            @Override
+            public void run() {
+                if (hasObserver(observer)) {
+                    return;
+                }
+                if (mObservers == null) {
+                    mObservers = new ArrayList<>();
+                }
+                mObservers.add(new WeakReference<>(observer));
+            }
+        });
     }
 
+    @UiThread
     @Override
     public synchronized boolean hasObserver(Observer observer) {
         if (mObservers == null || observer == null) {
@@ -92,19 +100,26 @@ public class DownloadMission implements Mission {
     }
 
     @Override
-    public synchronized void removeObserver(Observer observer) {
-        if (mObservers == null || observer == null) {
-            return;
-        }
-        for (Iterator<WeakReference<Observer>> iterator = mObservers.iterator();
-             iterator.hasNext(); ) {
-            WeakReference<Observer> weakRef = iterator.next();
-            if (observer == weakRef.get()) {
-                iterator.remove();
+    public synchronized void removeObserver(final Observer observer) {
+        ThreadPool.post(new Runnable() {
+            @Override
+            public void run() {
+                if (mObservers == null || observer == null) {
+                    return;
+                }
+                for (Iterator<WeakReference<Observer>> iterator = mObservers.iterator();
+                     iterator.hasNext(); ) {
+                    WeakReference<Observer> weakRef = iterator.next();
+                    if (observer == weakRef.get()) {
+                        iterator.remove();
+                    }
+                }
             }
-        }
+        });
+
     }
 
+    @UiThread
     @Override
     public synchronized List<Observer> getObservers() {
         if (mObservers == null) {
@@ -125,10 +140,17 @@ public class DownloadMission implements Mission {
 
     @Override
     public synchronized void removeAllObserver() {
-        if (mObservers == null) {
-            return;
-        }
-        mObservers.clear();
+        ThreadPool.post(new Runnable() {
+            @Override
+            public void run() {
+                if (mObservers == null) {
+                    return;
+                }
+                mObservers.clear();
+                mObservers = null;
+            }
+        });
+
     }
 
     @Override
@@ -222,6 +244,9 @@ public class DownloadMission implements Mission {
 
     @Override
     public long getLength() {
+        if (info.getLength() < 0) {
+            return getDownloaded();
+        }
         return info.getLength();
     }
 

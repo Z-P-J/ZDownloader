@@ -1,10 +1,8 @@
-package com.zpj.downloader.core.impl;
+package com.zpj.downloader.impl;
 
 import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.ExecutorFactory;
 
-import java.util.HashMap;
-import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.LinkedBlockingQueue;
 import java.util.concurrent.ThreadPoolExecutor;

@@ -13,9 +13,8 @@ import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
 
-import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.core.Mission;
-import com.zpj.downloader.core.impl.DownloadMission;
+import com.zpj.downloader.impl.DownloadMission;
 import com.zpj.mydownloader.R;
 import com.zpj.mydownloader.ui.fragment.ActionBottomFragment;
 import com.zpj.mydownloader.ui.widget.ArrowDownloadButton;
@@ -235,10 +234,10 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 		}
 
 		@Override
-		public void onError(Error e) {
+		public void onError(int errorCode, String errorMessage) {
 			menu.pause();
 			size.setText("");
-			status.setText("出错了：" + e.getErrorMsg());
+			status.setText("出错了：" + errorMessage);
 		}
 
 		@Override

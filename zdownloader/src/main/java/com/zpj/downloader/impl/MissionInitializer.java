@@ -1,13 +1,12 @@
-package com.zpj.downloader.core.impl;
+package com.zpj.downloader.impl;
 
 import android.os.Environment;
 import android.os.StatFs;
 import android.text.TextUtils;
 import android.webkit.URLUtil;
 
-import com.zpj.downloader.constant.Error;
 import com.zpj.downloader.constant.ErrorCode;
-import com.zpj.downloader.constant.HttpHeader;
+import com.zpj.downloader.core.http.HttpHeader;
 import com.zpj.downloader.core.Downloader;
 import com.zpj.downloader.core.Initializer;
 import com.zpj.downloader.core.Mission;
@@ -103,7 +102,7 @@ public class MissionInitializer<T extends Mission> implements Initializer<T> {
             mission.setLength(response.contentLength());
             Logger.d("mission.length", "mission.length=" + mission.getLength());
             if (mission.getLength() >= getAvailableSize()) {
-                return Result.error(ErrorCode.ERROR_NO_ENOUGH_SPACE, Error.NO_ENOUGH_SPACE.getErrorMsg());
+                return Result.error(ErrorCode.ERROR_NO_ENOUGH_SPACE, "no enough space!");
             }
         } else {
             // 请求错误响应码4xx和5xx，请求码1xx出现的情况太少，暂时视为错误码。

@@ -14,55 +14,83 @@ import java.util.Arrays;
 import java.util.List;
 
 public class MissionRepository<T extends Mission> implements Repository<T> {
+    
+    private volatile MissionDatabase database;
+    
+    private final MissionDatabaseFactory mFactory;
 
-    @NonNull
-    private final MissionDatabase database;
-
-    public MissionRepository(String key) {
-        this(MissionDatabase.getInstance(key));
+//    public MissionRepository(String key) {
+//        this(MissiongetInstance(key));
+//    }
+//
+//    public MissionRepository(@NonNull MissionDatabase database) {
+//        this.database = database;
+//    }
+    
+    public MissionRepository(@NonNull MissionDatabaseFactory factory) {
+        this.mFactory = factory;
+    }
+    
+    private MissionDatabase getDatabase() {
+        if (database == null) {
+            synchronized (mFactory) {
+                if (database == null) {
+                    database = mFactory.createDatabase();
+                }
+            }
+        }
+        return database;
     }
 
-    public MissionRepository(@NonNull MissionDatabase database) {
-        this.database = database;
+    public ConfigDao getConfigDao() {
+        return getDatabase().configDao();
+    }
+
+    public MissionInfoDao getMissionDao() {
+        return getDatabase().missionDao();
+    }
+
+    public BlockDao getBlockDao() {
+        return getDatabase().blockDao();
     }
 
     @Override
     public List<T> queryMissions(Downloader<T> downloader) {
-        List<MissionInfo> infoList = database.missionDao().queryInfos();
+        List<MissionInfo> infoList = getMissionDao().queryInfos();
         List<T> list = new ArrayList<>();
         for (MissionInfo info : infoList) {
-            Config config = database.configDao().queryConfig(info.getMissionId());
-            list.add(downloader.create(info, config));
+            Config config = getConfigDao().queryConfig(info.getMissionId());
+            list.add(downloader.createMission(info, config));
         }
         return list;
     }
 
     @Override
     public boolean saveConfig(Config config) {
-        database.configDao().insert(config);
+        getConfigDao().insert(config);
         return true;
     }
 
     @Override
     public boolean saveMissionInfo(T mission) {
-        database.missionDao().insert(mission.getMissionInfo());
+        getMissionDao().insert(mission.getMissionInfo());
         return true;
     }
 
     @Override
     public boolean hasMission(T mission) {
-        return database.missionDao().queryInfo(mission.getMissionId()) != null;
+        return getMissionDao().queryInfo(mission.getMissionId()) != null;
     }
 
     @Override
     public boolean updateMissionInfo(T mission) {
-        database.missionDao().update(mission.getMissionInfo());
+        getMissionDao().update(mission.getMissionInfo());
         return true;
     }
 
     @Override
     public boolean saveBlocks(List<Block> blocks) {
-        database.blockDao().insert(blocks);
+        getBlockDao().insert(blocks);
         return true;
     }
 
@@ -73,56 +101,56 @@ public class MissionRepository<T extends Mission> implements Repository<T> {
 
     @Override
     public boolean updateBlock(Block block) {
-        database.blockDao().update(block);
+        getBlockDao().update(block);
         return true;
     }
 
     @Override
     public List<Block> queryBlocks(T mission) {
-        return database.blockDao().queryAll(mission.getMissionId());
+        return getBlockDao().queryAll(mission.getMissionId());
     }
 
     @Override
     public long queryDownloaded(T mission) {
-        return database.blockDao().queryDownloaded(mission.getMissionId());
+        return getBlockDao().queryDownloaded(mission.getMissionId());
     }
 
     @Override
     public List<Block> queryShouldDownloadBlocks(T mission) {
-        return database.blockDao().queryDownloadableBlocks(mission.getMissionId());
+        return getBlockDao().queryDownloadableBlocks(mission.getMissionId());
     }
 
     @Override
     public boolean updateBlockDownloaded(Block block, long downloaded) {
-        database.blockDao().update(block);
+        getBlockDao().update(block);
         return true;
     }
 
     @Override
     public boolean updateProgress(T mission, long done) {
-        database.missionDao().update(mission.getMissionInfo());
+        getMissionDao().update(mission.getMissionInfo());
         return true;
     }
 
     @Override
     public boolean updateStatus(T mission, int status) {
-        database.missionDao().update(mission.getMissionInfo());
+        getMissionDao().update(mission.getMissionInfo());
         return true;
     }
 
     @Override
     public boolean deleteMission(T mission) {
-        database.configDao().delete(mission.getConfig());
-        database.blockDao().delete(mission.getMissionId());
-        database.missionDao().delete(mission.getMissionInfo());
+        getConfigDao().delete(mission.getConfig());
+        getBlockDao().delete(mission.getMissionId());
+        getMissionDao().delete(mission.getMissionInfo());
 
-//        result |= database.configDao().delete(mission.getConfig());
+//        result |= configDao().delete(mission.getConfig());
         return true;
     }
 
     @Override
     public boolean deleteBlocks(T mission) {
-        database.blockDao().delete(mission.getMissionId());
+        getBlockDao().delete(mission.getMissionId());
         return true;
     }
 }

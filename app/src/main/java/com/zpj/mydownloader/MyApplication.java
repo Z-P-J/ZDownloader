@@ -2,10 +2,6 @@ package com.zpj.mydownloader;
 
 import android.app.Application;
 
-import com.zpj.downloader.ZDownloader;
-import com.zpj.downloader.core.impl.DownloadMission;
-import com.zpj.downloader.core.impl.MissionDownloader;
-
 /**
  * @author Z-P-J
  * */

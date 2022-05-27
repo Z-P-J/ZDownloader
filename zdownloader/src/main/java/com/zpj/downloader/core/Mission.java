@@ -5,8 +5,7 @@ import android.text.TextUtils;
 
 import com.zpj.downloader.ZDownloader;
 import com.zpj.downloader.constant.DefaultConstant;
-import com.zpj.downloader.constant.Error;
-import com.zpj.downloader.constant.HttpHeader;
+import com.zpj.downloader.core.http.HttpHeader;
 import com.zpj.downloader.core.model.Config;
 import com.zpj.downloader.core.model.MissionInfo;
 import com.zpj.downloader.utils.Logger;
@@ -35,7 +34,7 @@ public interface Mission {
 
         void onFinished();
 
-        void onError(Error e);
+        void onError(int errorCode, String errorMessage);
 
         void onDelete();
 
@@ -56,24 +55,6 @@ public interface Mission {
 
         int DELETE = 9;
         int CLEAR = 10;
-    }
-
-    interface Lifecycle {
-        void onPrepare();
-
-        void onStart();
-
-        void onPaused();
-
-        void onWaiting();
-
-        void onFinished();
-
-        void onError(Error e);
-
-        void onDelete();
-
-        void onClear();
     }
 
 
@@ -408,7 +389,7 @@ public interface Mission {
             String missionId = String.valueOf(MissionIdGenerator.getInstance().generateValidId());
             Logger.d(TAG, "missionId=" + missionId);
             MissionInfo info = new MissionInfo(missionId, url, name);
-            return ZDownloader.get(clazz).create(info, new Config(missionId, this));
+            return ZDownloader.get(clazz).createMission(info, new Config(missionId, this));
         }
 
     }
