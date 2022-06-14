@@ -19,7 +19,7 @@ public class DownloaderConfig<T extends Mission> {
     private final String mKey;
     private final Dispatcher<T> mDispatcher;
     private final Initializer<T> mInitializer;
-    private final Notifier<T> mNotifier;
+    private final Notifier<? super T> mNotifier;
     private final Transfer<T> mTransfer;
     private final Repository<T> mRepository;
     private final BlockSplitter<T> mBlockSplitter;
@@ -51,7 +51,7 @@ public class DownloaderConfig<T extends Mission> {
         return mInitializer;
     }
 
-    public Notifier<T> getNotifier() {
+    public Notifier<? super T> getNotifier() {
         return mNotifier;
     }
 
@@ -80,7 +80,7 @@ public class DownloaderConfig<T extends Mission> {
         private final String mKey;
         private Dispatcher<T> mDispatcher = new MissionDispatcher<>();
         private Initializer<T> mInitializer = new MissionInitializer<>();
-        private Notifier<T> mNotifier;
+        private Notifier<? super T> mNotifier;
         private Transfer<T> mTransfer = new MissionBlockTransfer<>();
         private Repository<T> mRepository;
         private BlockSplitter<T> mBlockSplitter = new MissionBlockSplitter<>();
@@ -108,7 +108,7 @@ public class DownloaderConfig<T extends Mission> {
             return this;
         }
 
-        public Builder<T> setNotifier(Notifier<T> notifier) {
+        public Builder<T> setNotifier(Notifier<? super T> notifier) {
             this.mNotifier = notifier;
             return this;
         }

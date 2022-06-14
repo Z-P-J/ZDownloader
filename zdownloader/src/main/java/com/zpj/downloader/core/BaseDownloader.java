@@ -36,7 +36,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
 
     private final Dispatcher<T> mDispatcher;
     private final Initializer<T> mInitializer;
-    private final Notifier<T> mNotifier;
+    private final Notifier<? super T> mNotifier;
     private final Transfer<T> mTransfer;
     private final Repository<T> mRepository;
     private final HttpFactory mHttpFactory;
@@ -127,7 +127,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
     }
 
     @Override
-    public Notifier<T> getNotifier() {
+    public Notifier<? super T> getNotifier() {
         return mNotifier;
     }
 

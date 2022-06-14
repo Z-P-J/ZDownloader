@@ -38,81 +38,36 @@ public class Test {
     public void testDownload() {
         // 创建下载任务
         DownloadMission mission = new Mission.Builder(url, name.getText().toString())
-                // 设置文件保存地址
-                .setDownloadPath("custom download path")
-                // 下载线程（分块下载有效）
-                .setThreadCount(3)
-                // 设置User-Agent
-                .setUserAgent("custom user-agent")
-                // 设置Cookie
-                .setCookie("set cookies")
-                // 添加请求头
-                .addHeader(HttpHeader.REFERER, url)
-                // 设置分块大小
-                .setBlockSize(2 * 1024 * 1024)
-                // 设置缓冲区大小
-                .setBufferSize(64 * 1024)
-                // 设置连接超时时间
-                .setConnectOutTime(20000)
-                // 设置读取超时时间
-                .setReadOutTime(20000)
-                // 设置进度回调频率，单位ms
-                .setProgressInterval(2000)
-                // 设置出错重试次数
-                .setRetryCount(10)
-                // 设置出错重试延迟
-                .setRetryDelayMillis(10000)
-                // 设置是否允许通知栏通知
-                .setEnableNotification(true)
-                // 创建DownloadMission类型的下载任务
                 .build(DownloadMission.class);
 
         // 任务状态监听回调
         mission.addObserver(new Mission.Observer() {
             @Override
-            public void onPrepare() {
-
-            }
+            public void onPrepare() { }
 
             @Override
-            public void onStart() {
-
-            }
+            public void onStart() { }
 
             @Override
-            public void onPaused() {
-
-            }
+            public void onPaused() { }
 
             @Override
-            public void onWaiting() {
-
-            }
+            public void onWaiting() { }
 
             @Override
-            public void onProgress(Mission mission, float speed) {
-
-            }
+            public void onProgress(Mission mission, float speed) { }
 
             @Override
-            public void onFinished() {
-
-            }
+            public void onFinished() { }
 
             @Override
-            public void onError(Error e) {
-
-            }
+            public void onError(Error e) { }
 
             @Override
-            public void onDelete() {
-
-            }
+            public void onDelete() { }
 
             @Override
-            public void onClear() {
-
-            }
+            public void onClear() { }
         });
 
         // 开始下载
@@ -178,30 +133,12 @@ public class MyApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
-        //全局设置
-        ZDownloader.config(this)
-            .setDownloadPath("") //设置默认下载路径
-            .setProducerThreadCount(3) // 生产者线程数
-            .setConsumerThreadCount(9) // 消费者线程数
-            .setConcurrentMissionCount(3) // 同时下载任务数
-            .setBlockSize(1024 * 1024) //设置下载块大小，默认为1024 * 1024
-            .setBufferSize(1024) //设置缓存大小
-            //.setThreadCount(5) //已过时。设置线程大小，默认为3
-            .setRetryCount(10) //设置出错重试次数，默认为5
-            .setRetryDelayMillis(10000) //设置重试延迟，单位为ms
-            .setUserAgent("") //设置UA，默认为系统自带UA
-            .setCookie("") //设置全局下载任务cookie，默认为空
-            .setConnectOutTime(10000) //设置连接超时，单位ms
-            .setReadOutTime(10000) //设置读取请求内容超时，单位ms
-            .setEnableNotification(true) //是否显示通知栏下载进度通知，默认为true
-            .setNotificationInterceptor(new DownloadNotificationInterceptor()) // 设置通知拦截器
-            .setHeaders(new HashMap<>()) //设置请求头
-            .addHeader(key, value)
-            .setProxy(Proxy.NO_PROXY) //设置代理
-            //.setProxy("127.0.0.1", 80) //设置代理
-            .setAllowAllSSL() // 是否取消https验证
-            .setConflictPolicy(new DefaultConflictPolicy()) // 设置下载任务冲突策略，处理相同的冲突任务，默认不处理冲突（DefaultConflictPolicy）
-            .init();
+        DownloaderConfig<DownloadMission> config = MissionDownloader.builder()
+                // 设置状态栏通知回调
+                .setNotifier(new DownloadNotifierImpl())
+                .build();
+
+        ZDownloader.register(DownloadMission.class, new MissionDownloader(config));
     }
 
 }            
@@ -209,78 +146,65 @@ public class MyApplication extends Application {
 
 #### 2. 创建下载任务时单独设置下载配置
 ```java
-//为每个下载任务进行设置，优先使用单独设置的参数
-ZDownloader.download(url)
-    .setDownloadPath("") //设置默认下载路径
-    .setProducerThreadCount(3) // 生产者线程数
-    .setConsumerThreadCount(9) // 消费者线程数
-    .setBlockSize(1024 * 1024) //设置下载块大小，默认为1024 * 1024
-    .setBufferSize(1024) //设置缓存大小
-    //.setThreadCount(5) //已过时。设置线程大小，默认为3
-    .setRetryCount(10) //设置出错重试次数，默认为5
-    .setRetryDelayMillis(10000) //设置重试延迟，单位为ms
-    .setUserAgent("") //设置UA，默认为系统自带UA
-    .setCookie("") //设置全局下载任务cookie，默认为空
-    .setConnectOutTime(10000) //设置连接超时，单位ms
-    .setReadOutTime(10000) //设置读取请求内容超时，单位ms
-    .setEnableNotification(true) //是否显示通知栏下载进度通知，默认为true
-    .setNotificationInterceptor(new DownloadNotificationInterceptor()) // 设置通知拦截器
-    .setHeaders(new HashMap<>()) //设置请求头，键值对形式
-    .setProxy(Proxy.NO_PROXY) //设置代理
-    //.setProxy("127.0.0.1", 80) //设置代理
-    .setAllowAllSSL() // 是否取消https验证
-    .addListener(listener) // 下载进度回调
-    .setConflictPolicy(new DefaultConflictPolicy() { // 设置下载任务冲突策略，以下展示了当冲突时弹出对话框确认是否继续下载
-        @Override
-        public void onConflict(BaseMission<?> mission, Callback callback) {
-            ZDialog.alert()
-                .setTitle("任务已存在")
-                .setContent("下载任务已存在，是否继续下载？")
-                .setPositiveButton(new IDialog.OnButtonClickListener<ZDialog.AlertDialogImpl>() {
-                    @Override
-                    public void onClick(ZDialog.AlertDialogImpl fragment, int which) {
-                        callback.onResult(true); // 接受下载任务
-                    }
-                })
-                 .setNegativeButton(new IDialog.OnButtonClickListener<ZDialog.AlertDialogImpl>() {
-                    @Override
-                    public void onClick(ZDialog.AlertDialogImpl fragment, int which) {
-                        callback.onResult(false); // 拒绝下载任务
-                    }
-                 })
-                 .show(context);
-        }
-    })
-    .start();
+		// 创建下载任务
+        DownloadMission mission = new Mission.Builder(url, name.getText().toString())
+                // 设置文件保存地址
+                .setDownloadPath("custom download path")
+                // 下载线程（分块下载有效）
+                .setThreadCount(3)
+                // 设置User-Agent
+                .setUserAgent("custom user-agent")
+                // 设置Cookie
+                .setCookie("set cookies")
+                // 添加请求头
+                .addHeader(HttpHeader.REFERER, url)
+                // 设置分块大小
+                .setBlockSize(2 * 1024 * 1024)
+                // 设置缓冲区大小
+                .setBufferSize(64 * 1024)
+                // 设置连接超时时间
+                .setConnectOutTime(20000)
+                // 设置读取超时时间
+                .setReadOutTime(20000)
+                // 设置进度回调频率，单位ms
+                .setProgressInterval(2000)
+                // 设置出错重试次数
+                .setRetryCount(10)
+                // 设置出错重试延迟
+                .setRetryDelayMillis(10000)
+                // 设置是否允许通知栏通知
+                .setEnableNotification(true)
+                // 创建DownloadMission类型的下载任务
+                .build(DownloadMission.class);
 ```
 
 #### 3. 通知拦截
 ```java
 /**
- * 实现INotificationInterceptor接口，在onProgress、onFinished、onError方法中更新通知
+ * 实现Notifier接口，在onProgress、onFinished、onError方法中更新通知
  */
-public class DownloadNotificationInterceptor implements INotificationInterceptor {
+public class DownloadNotifierImpl implements Notifier<Mission> {
 
     @Override
-    public void onProgress(Context context, BaseMission<?> mission, float progress, boolean isPause) {
+    public void onProgress(Context context, Mission mission, float progress, boolean isPause) {
         Intent intent = new Intent(context, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         ZNotify.with(context)
                 .buildProgressNotify()
                 .setProgressAndFormat(progress, false, "")
-                .setContentTitle((isPause ? "已暂停：" : "") + mission.getTaskName())
+                .setContentTitle((isPause ? "已暂停：" : "") + mission.getName())
                 .setContentIntent(pendingIntent)
                 .setId(mission.getNotifyId())
                 .show();
     }
 
     @Override
-    public void onFinished(Context context, BaseMission<?> mission) {
+    public void onFinished(Context context, Mission mission) {
         Intent intent = new Intent(context, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         ZNotify.with(context)
                 .buildNotify()
-                .setContentTitle(mission.getTaskName())
+                .setContentTitle(mission.getName())
                 .setContentText("下载已完成")
                 .setContentIntent(pendingIntent)
                 .setId(mission.getNotifyId())
@@ -288,19 +212,19 @@ public class DownloadNotificationInterceptor implements INotificationInterceptor
     }
 
     @Override
-    public void onError(Context context, BaseMission<?> mission, int errCode) {
+    public void onError(Context context, Mission mission, int errCode) {
         Intent intent = new Intent(context, MainActivity.class);
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         ZNotify.with(context)
                 .buildNotify()
-                .setContentTitle("下载出错" + errCode + ":" + mission.getTaskName())
+                .setContentTitle("下载出错" + errCode + ":" + mission.getName())
                 .setContentIntent(pendingIntent)
                 .setId(mission.getNotifyId())
                 .show();
     }
 
     @Override
-    public void onCancel(Context context, BaseMission<?> mission) {
+    public void onCancel(Context context, Mission mission) {
         ZNotify.cancel(mission.getNotifyId());
     }
 
@@ -311,15 +235,12 @@ public class DownloadNotificationInterceptor implements INotificationInterceptor
 
 }
 
-// 全局设置通知拦截器
-ZDownloader.config(this)
-            .setNotificationInterceptor(new DownloadNotificationInterceptor())
-            .init();
+	DownloaderConfig<DownloadMission> config = MissionDownloader.builder()
+		// 设置状态栏通知回调
+		.setNotifier(new DownloadNotifierImpl())
+		.build();
 
-// 或者下载时单独设置通知拦截器
-ZDownloader.download(url)
-    .setNotificationInterceptor(new DownloadNotificationInterceptor())
-    .start();
+	ZDownloader.register(DownloadMission.class, new MissionDownloader(config));
 ```
 
 #### 4. 自定义下载任务（TODO 完善README）

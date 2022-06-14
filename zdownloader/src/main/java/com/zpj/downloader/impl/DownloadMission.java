@@ -1,5 +1,6 @@
 package com.zpj.downloader.impl;
 
+import android.support.annotation.NonNull;
 import android.support.annotation.UiThread;
 import android.text.TextUtils;
 import android.webkit.MimeTypeMap;
@@ -25,15 +26,17 @@ public class DownloadMission implements Mission {
 
     private static final String TAG = "DownloadMission";
 
-    protected final Config config;
-
+    @NonNull
     protected final MissionInfo info;
+
+    @NonNull
+    protected final Config config;
 
     protected transient ArrayList<WeakReference<Observer>> mObservers;
 
-    public DownloadMission(Config config, MissionInfo info) {
-        this.config = config;
+    public DownloadMission(@NonNull MissionInfo info, @NonNull Config config) {
         this.info = info;
+        this.config = config;
     }
 
     @Override

@@ -204,7 +204,7 @@ public class MissionDispatcher<T extends Mission> implements Dispatcher<T> {
                                     observer.onProgress(mission, speed);
                                 }
 
-                                Notifier<T> notifier = downloader.getNotifier();
+                                Notifier<? super T> notifier = downloader.getNotifier();
                                 if (notifier != null) {
                                     notifier.onProgress(ContextProvider.getApplicationContext(), mission, mission.getProgress(), false);
                                 }

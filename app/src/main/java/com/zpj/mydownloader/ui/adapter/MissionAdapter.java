@@ -19,6 +19,7 @@ import com.zpj.mydownloader.R;
 import com.zpj.mydownloader.ui.fragment.ActionBottomFragment;
 import com.zpj.mydownloader.ui.widget.ArrowDownloadButton;
 import com.zpj.mydownloader.utils.Utils;
+import com.zpj.utils.FileUtils;
 
 import java.io.File;
 import java.util.List;
@@ -114,7 +115,11 @@ public class MissionAdapter extends RecyclerView.Adapter<MissionAdapter.ViewHold
 
 
 			itemView.setOnClickListener(v -> {
-				Toast.makeText(context, "点击了下载任务:" + mission.getName(), Toast.LENGTH_SHORT).show();
+				if (mission.isComplete()) {
+					FileUtils.openFile(context, mission.getFile());
+				} else {
+					Toast.makeText(context, "点击了下载任务:" + mission.getName(), Toast.LENGTH_SHORT).show();
+				}
 			});
 
 			itemView.setOnLongClickListener(v -> {

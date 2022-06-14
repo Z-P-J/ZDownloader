@@ -43,7 +43,7 @@ public interface Downloader<T extends Mission> extends DownloadManager<T> {
 
     Initializer<T> getInitializer();
 
-    Notifier<T> getNotifier();
+    Notifier<? super T> getNotifier();
 
     Transfer<T> getTransfer();
 

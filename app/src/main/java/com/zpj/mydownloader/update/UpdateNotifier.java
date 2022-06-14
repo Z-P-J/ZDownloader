@@ -1,4 +1,4 @@
-package com.zpj.mydownloader.utils;
+package com.zpj.mydownloader.update;
 
 import android.app.PendingIntent;
 import android.content.Context;
@@ -10,9 +10,9 @@ import com.zpj.mydownloader.ui.MainActivity;
 import com.zpj.notification.ZNotify;
 
 /**
- * 实现INotificationInterceptor接口，在onProgress、onFinished、onError方法中更新通知
+ * 实现Notifier接口，在onProgress、onFinished、onError方法中更新通知
  */
-public class DownloadNotificationInterceptor implements Notifier<Mission> {
+public class UpdateNotifier implements Notifier<Mission> {
 
     @Override
     public void onProgress(Context context, Mission mission, float progress, boolean isPause) {
@@ -34,7 +34,7 @@ public class DownloadNotificationInterceptor implements Notifier<Mission> {
         ZNotify.with(context)
                 .buildNotify()
                 .setContentTitle(mission.getName())
-                .setContentText("下载已完成")
+                .setContentText("下载已完成，点击安装")
                 .setContentIntent(pendingIntent)
                 .setId(mission.getNotifyId())
                 .show();
@@ -46,7 +46,7 @@ public class DownloadNotificationInterceptor implements Notifier<Mission> {
         PendingIntent pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
         ZNotify.with(context)
                 .buildNotify()
-                .setContentTitle("下载出错" + errCode + ":" + mission.getName())
+                .setContentTitle(String.format("应用更新失败！code=%s, msg=%s", errCode, mission.getErrorMessage()))
                 .setContentIntent(pendingIntent)
                 .setId(mission.getNotifyId())
                 .show();
