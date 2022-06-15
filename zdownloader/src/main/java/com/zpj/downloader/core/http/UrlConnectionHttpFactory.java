@@ -23,7 +23,7 @@ public class UrlConnectionHttpFactory implements HttpFactory {
             conn.setRequestMethod("GET");
             wrapConnection(conn, mission, headers);
 
-            Logger.d(TAG, "getRequestProperties=" + conn.getRequestProperties());
+            Logger.d(TAG, "getRequestProperties=%s", conn.getRequestProperties());
 
             conn.connect();
 

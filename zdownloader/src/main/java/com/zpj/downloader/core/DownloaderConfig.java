@@ -10,7 +10,7 @@ import com.zpj.downloader.core.http.UrlConnectionHttpFactory;
 import com.zpj.downloader.impl.MissionBlockSplitter;
 import com.zpj.downloader.impl.MissionBlockTransfer;
 import com.zpj.downloader.impl.MissionDispatcher;
-import com.zpj.downloader.impl.MissionExecutorFactory;
+import com.zpj.downloader.impl.MissionExecutorFactoryImpl;
 import com.zpj.downloader.impl.MissionInitializer;
 
 public class DownloaderConfig<T extends Mission> {
@@ -23,7 +23,7 @@ public class DownloaderConfig<T extends Mission> {
     private final Transfer<T> mTransfer;
     private final Repository<T> mRepository;
     private final BlockSplitter<T> mBlockSplitter;
-    private final ExecutorFactory<T> mExecutorFactory;
+    private final MissionExecutorFactory<T> mMissionExecutorFactory;
 //    private final MissionFactory<T> mMissionFactory;
     private final HttpFactory mHttpFactory;
 
@@ -35,7 +35,7 @@ public class DownloaderConfig<T extends Mission> {
         this.mTransfer = builder.mTransfer;
         this.mRepository = builder.mRepository;
         this.mBlockSplitter = builder.mBlockSplitter;
-        this.mExecutorFactory = builder.mExecutorFactory;
+        this.mMissionExecutorFactory = builder.mMissionExecutorFactory;
         this.mHttpFactory = builder.mHttpFactory;
     }
 
@@ -67,8 +67,8 @@ public class DownloaderConfig<T extends Mission> {
         return mBlockSplitter;
     }
 
-    public ExecutorFactory<T> getExecutorFactory() {
-        return mExecutorFactory;
+    public MissionExecutorFactory<T> getExecutorFactory() {
+        return mMissionExecutorFactory;
     }
 
     public HttpFactory getHttpFactory() {
@@ -84,7 +84,7 @@ public class DownloaderConfig<T extends Mission> {
         private Transfer<T> mTransfer = new MissionBlockTransfer<>();
         private Repository<T> mRepository;
         private BlockSplitter<T> mBlockSplitter = new MissionBlockSplitter<>();
-        private ExecutorFactory<T> mExecutorFactory = new MissionExecutorFactory<>();
+        private MissionExecutorFactory<T> mMissionExecutorFactory = new MissionExecutorFactoryImpl<>();
 //        private final MissionFactory<T> mMissionFactory;
         private HttpFactory mHttpFactory = new UrlConnectionHttpFactory();
 
@@ -128,8 +128,8 @@ public class DownloaderConfig<T extends Mission> {
             return this;
         }
 
-        public Builder<T> setExecutorFactory(ExecutorFactory<T> executorFactory) {
-            this.mExecutorFactory = executorFactory;
+        public Builder<T> setExecutorFactory(MissionExecutorFactory<T> missionExecutorFactory) {
+            this.mMissionExecutorFactory = missionExecutorFactory;
             return this;
         }
 

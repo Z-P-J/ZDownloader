@@ -35,7 +35,7 @@ public class MissionInitializer<T extends Mission> implements Initializer<T> {
             Map<String, String> headers = new HashMap<>(mission.getConfig().getHeaders());
             headers.put(HttpHeader.RANGE, "bytes=0-");
             response = downloader.getHttpFactory().request(mission, headers);
-            Logger.d(TAG, "response=" + response);
+            Logger.d(TAG, "response=%s", response);
 
 
             return handleResponse(downloader, mission, response);
@@ -77,7 +77,7 @@ public class MissionInitializer<T extends Mission> implements Initializer<T> {
         }
 
 
-        Logger.d(TAG, "mission.name=" + mission.getName());
+        Logger.d(TAG, "mission.name=%s", mission.getName());
 
         if (!mission.isDownloading()) {
             return Result.paused();
@@ -88,7 +88,7 @@ public class MissionInitializer<T extends Mission> implements Initializer<T> {
         if (code == 3) {
             // 重定向响应码3xx
             String redirectUrl = response.header(HttpHeader.LOCATION);
-            Logger.d(TAG, "redirectUrl=" + redirectUrl);
+            Logger.d(TAG, "redirectUrl=%s", redirectUrl);
             if (TextUtils.isEmpty(redirectUrl)) {
                 // 重定向链接为空，出错了
                 return Result.error(statusCode, response.statusMessage());
@@ -100,7 +100,7 @@ public class MissionInitializer<T extends Mission> implements Initializer<T> {
         } else if (code == 2) {
             // 成功响应码2xx
             mission.setLength(response.contentLength());
-            Logger.d("mission.length", "mission.length=" + mission.getLength());
+            Logger.d(TAG, "mission.length=%s", mission.getLength());
             if (mission.getLength() >= getAvailableSize()) {
                 return Result.error(ErrorCode.ERROR_NO_ENOUGH_SPACE, "no enough space!");
             }
@@ -111,8 +111,8 @@ public class MissionInitializer<T extends Mission> implements Initializer<T> {
 
         mission.setBlockDownload(statusCode == HttpURLConnection.HTTP_PARTIAL);
 
-        Logger.d("mission.name", "mission.name555=" + mission.getName());
-        Logger.d(TAG, "storage=" + getAvailableSize());
+        Logger.d(TAG, "mission.name555=%s", mission.getName());
+        Logger.d(TAG, "storage=%s", getAvailableSize());
 
         return Result.ok(statusCode, response.statusMessage());
     }

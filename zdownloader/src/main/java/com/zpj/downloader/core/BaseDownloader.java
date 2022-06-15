@@ -30,7 +30,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
 
     private final ArrayList<WeakReference<DownloaderObserver<T>>> mObservers = new ArrayList<>();
 
-    private final HashMap<T, ExecutorService> mExecutors = new HashMap<>();
+    private final HashMap<T, MissionExecutor<T>> mExecutors = new HashMap<>();
 
     private final String mKey;
 
@@ -41,7 +41,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
     private final Repository<T> mRepository;
     private final HttpFactory mHttpFactory;
     private final BlockSplitter<T> mBlockSplitter;
-    private final ExecutorFactory<T> mExecutorFactory;
+    private final MissionExecutorFactory<T> mMissionExecutorFactory;
 
     private final ExecutorService mScheduler = Executors.newSingleThreadExecutor(new ThreadFactory() {
         @Override
@@ -65,7 +65,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
                 "BlockSplitter must not be null!");
         this.mHttpFactory = Objects.requireNonNull(config.getHttpFactory(),
                 "HttpFactory must not be null!");
-        this.mExecutorFactory = Objects.requireNonNull(config.getExecutorFactory(),
+        this.mMissionExecutorFactory = Objects.requireNonNull(config.getExecutorFactory(),
                 "ExecutorFactory must not be null!");
     }
 
@@ -137,8 +137,8 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
     }
 
     @Override
-    public ExecutorFactory<T> getExecutorFactory() {
-        return mExecutorFactory;
+    public MissionExecutorFactory<T> getExecutorFactory() {
+        return mMissionExecutorFactory;
     }
 
     @Override
@@ -155,7 +155,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
             @Override
             public void run() {
                 final List<T> missions = getRepository().queryMissions(BaseDownloader.this);
-                Logger.d(TAG, "loadMissions missions=" + missions);
+                Logger.d(TAG, "loadMissions missions=%s", missions);
                 ThreadPool.post(new Runnable() {
                     @Override
                     public void run() {
@@ -166,8 +166,8 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
         });
     }
 
-    private void execute(T mission, Runnable runnable) {
-        ExecutorService executor = mExecutors.get(mission);
+    private void execute(T mission, BlockTask<T> block) {
+        MissionExecutor<T> executor = mExecutors.get(mission);
         if (executor == null) {
             synchronized (mExecutors) {
                 executor = mExecutors.get(mission);
@@ -177,7 +177,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
                 }
             }
         }
-        executor.execute(runnable);
+        executor.execute(block);
     }
 
     private void enqueue(final T mission) {
@@ -238,62 +238,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
             case Event.PREPARE:
                 if (mDispatcher.prepare(mission)) {
                     setStatus(mission, Mission.Status.PREPARING);
-                    ThreadPool.execute(new Runnable() {
-                        @Override
-                        public void run() {
-                            Result result = mInitializer.initMission(BaseDownloader.this, mission);
-                            Logger.d(TAG, "mission init result=" + result
-                                    + " missionId=" + mission.getMissionInfo().getMissionId()
-                                    + " configMissionId=" + mission.getConfig().getMissionId()
-                                    + " name=" + mission.getName()
-                                    + " url=" + mission.getUrl()
-                                    + " isBlockDownload=" + mission.isBlockDownload());
-                            if (!mission.isDownloading()) {
-                                return;
-                            }
-                            if (result.isOk()) {
-                                File location = new File(mission.getConfig().getDownloadPath());
-                                if (!location.exists()) {
-                                    if (!location.mkdirs()) {
-                                        mission.setErrorCode(-1);
-                                        mission.setErrorMessage("download path create failed! path=" + location);
-                                        // 创建下载路径失败
-                                        sendEvent(mission, Event.ERROR);
-                                        return;
-                                    }
-                                }
-//                                File file = new File(mission.getFilePath());
-//                                if (!file.exists()) {
-//                                    file.createNewFile();
-//                                }
-
-                                if (mission.isBlockDownload()) {
-                                    List<Block> blocks = getBlockDivider().divide(mission);
-                                    Logger.d(TAG, "blocks=" + blocks);
-                                    if (blocks == null || blocks.isEmpty()) {
-                                        mission.setErrorCode(-1);
-                                        mission.setErrorMessage("divide block failed!");
-                                        // 分片失败
-                                        sendEvent(mission, Event.ERROR);
-                                        return;
-                                    }
-                                    mRepository.saveBlocks(blocks);
-                                } else {
-                                    Block block = new Block(mission.getMissionInfo().getMissionId(), 0, 0);
-                                    Logger.d(TAG, "block=" + block);
-                                    mRepository.saveBlocks(block);
-                                }
-                                mission.getMissionInfo().setPrepared(true);
-                                mRepository.saveMissionInfo(mission);
-                                sendEvent(mission, Event.DOWNLOAD);
-                            } else {
-                                mission.setErrorCode(result.getCode());
-                                mission.setErrorMessage(result.getMessage());
-                                mRepository.saveMissionInfo(mission);
-                                sendEvent(mission, Event.ERROR);
-                            }
-                        }
-                    });
+                    onMissionPrepare(mission);
                 }
                 break;
             case Event.DOWNLOAD:
@@ -317,7 +262,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
                         });
 
                         List<Block> blocks = getRepository().queryShouldDownloadBlocks(mission);
-                        Logger.d(TAG, "blocks=" + blocks);
+                        Logger.d(TAG, "blocks=%s", blocks);
                         if (blocks == null || blocks.isEmpty()) {
                             Logger.e(TAG, "blocks is empty!");
                             sendEvent(mission, Event.COMPLETE);
@@ -336,9 +281,9 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
                 boolean downloading = mDispatcher.isDownloading(mission);
                 if (mDispatcher.remove(mission)) {
                     setStatus(mission, Mission.Status.PAUSED);
-                    ExecutorService executor = mExecutors.remove(mission);
+                    MissionExecutor<T> executor = mExecutors.remove(mission);
                     if (executor != null) {
-                        executor.shutdownNow();
+                        executor.shutdown();
                     }
                     if (downloading) {
                         enqueue(mDispatcher.nextMission());
@@ -347,12 +292,12 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
                 break;
             case Event.ERROR:
                 boolean isDownloading = mDispatcher.isDownloading(mission);
-                Logger.d(TAG, "onError isDownloading=" + isDownloading);
+                Logger.d(TAG, "onError isDownloading=%s", isDownloading);
                 if (mDispatcher.remove(mission)) {
                     setStatus(mission, Mission.Status.ERROR);
-                    ExecutorService executor = mExecutors.remove(mission);
+                    MissionExecutor<T> executor = mExecutors.remove(mission);
                     if (executor != null) {
-                        executor.shutdownNow();
+                        executor.shutdown();
                     }
                     if (isDownloading) {
                         enqueue(mDispatcher.nextMission());
@@ -457,7 +402,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
         }
     }
 
-    private void setStatus(final T mission, final @Mission.Status int status) {
+    protected void setStatus(final T mission, final @Mission.Status int status) {
         Logger.d(TAG, "setStatus name=%s status=%d", mission.getName(), status);
         mission.setStatus(status);
         mRepository.updateStatus(mission, status);
@@ -491,7 +436,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
 
     }
 
-    private void onMissionAdd(@NonNull final T mission) {
+    protected void onMissionAdd(@NonNull final T mission) {
         Logger.d(TAG, "onMissionAdd mission=%s", mission.getName());
         ThreadPool.post(new Runnable() {
             @Override
@@ -509,7 +454,65 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
         });
     }
 
-    private void onMissionStart(@NonNull final T mission) {
+    protected void onMissionPrepare(@NonNull final T mission) {
+        ThreadPool.execute(new Runnable() {
+            @Override
+            public void run() {
+                Result result = mInitializer.initMission(BaseDownloader.this, mission);
+                Logger.d(TAG,
+                        "mission init result=%s missionId=%s configMissionId=%s name=%s url=%s isBlockDownload=%s",
+                        result, mission.getMissionInfo().getMissionId(),
+                        mission.getConfig().getMissionId(), mission.getName(),
+                        mission.getUrl(), mission.isBlockDownload());
+                if (!mission.isDownloading()) {
+                    return;
+                }
+                if (result.isOk()) {
+                    File location = new File(mission.getConfig().getDownloadPath());
+                    if (!location.exists()) {
+                        if (!location.mkdirs()) {
+                            mission.setErrorCode(-1);
+                            mission.setErrorMessage("download path create failed! path=" + location);
+                            // 创建下载路径失败
+                            sendEvent(mission, Event.ERROR);
+                            return;
+                        }
+                    }
+//                                File file = new File(mission.getFilePath());
+//                                if (!file.exists()) {
+//                                    file.createNewFile();
+//                                }
+
+                    if (mission.isBlockDownload()) {
+                        List<Block> blocks = getBlockDivider().divide(mission);
+                        Logger.d(TAG, "blocks=%s", blocks);
+                        if (blocks == null || blocks.isEmpty()) {
+                            mission.setErrorCode(-1);
+                            mission.setErrorMessage("divide block failed!");
+                            // 分片失败
+                            sendEvent(mission, Event.ERROR);
+                            return;
+                        }
+                        mRepository.saveBlocks(blocks);
+                    } else {
+                        Block block = new Block(mission.getMissionInfo().getMissionId(), 0, 0);
+                        Logger.d(TAG, "block=%s", block);
+                        mRepository.saveBlocks(block);
+                    }
+                    mission.getMissionInfo().setPrepared(true);
+                    mRepository.saveMissionInfo(mission);
+                    sendEvent(mission, Event.DOWNLOAD);
+                } else {
+                    mission.setErrorCode(result.getCode());
+                    mission.setErrorMessage(result.getMessage());
+                    mRepository.saveMissionInfo(mission);
+                    sendEvent(mission, Event.ERROR);
+                }
+            }
+        });
+    }
+
+    protected void onMissionStart(@NonNull final T mission) {
         Logger.d(TAG, "onMissionStart mission=%s", mission.getName());
         ThreadPool.post(new Runnable() {
             @Override
@@ -522,7 +525,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
         });
     }
 
-    private void onMissionPaused(@NonNull final T mission) {
+    protected void onMissionPaused(@NonNull final T mission) {
         Logger.d(TAG, "onMissionPaused mission=%s", mission.getName());
         ThreadPool.post(new Runnable() {
             @Override
@@ -540,7 +543,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
         });
     }
 
-    private void onMissionError(@NonNull final T mission) {
+    protected void onMissionError(@NonNull final T mission) {
         Logger.d(TAG, "onMissionError mission=%s code=%d msg=%s",
                 mission.getName(), mission.getErrorCode(), mission.getErrorMessage());
         ThreadPool.post(new Runnable() {
@@ -560,7 +563,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
 
     }
 
-    private void onMissionWaiting(@NonNull final T mission) {
+    protected void onMissionWaiting(@NonNull final T mission) {
         Logger.d(TAG, "onMissionWaiting mission=%s", mission.getName());
         ThreadPool.post(new Runnable() {
             @Override
@@ -573,12 +576,12 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
         });
     }
 
-    private void onMissionClear(T mission) {
+    protected void onMissionClear(T mission) {
         Logger.d(TAG, "onMissionClear mission=%s", mission.getName());
         // TODO 移除本地记录
     }
 
-    private void onMissionDelete(@NonNull final T mission) {
+    protected void onMissionDelete(@NonNull final T mission) {
         Logger.d(TAG, "onMissionDelete mission=%s", mission.getName());
         ThreadPool.post(new Runnable() {
             @Override
@@ -597,12 +600,12 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
         });
     }
 
-    private void onMissionFinished(@NonNull final T mission) {
+    protected void onMissionFinished(@NonNull final T mission) {
         Logger.d(TAG, "onMissionFinished mission=%s", mission.getName());
         // 销毁线程池
-        ExecutorService executor = mExecutors.remove(mission);
+        MissionExecutor<T> executor = mExecutors.remove(mission);
         if (executor != null) {
-            executor.shutdownNow();
+            executor.shutdown();
         }
 
         ThreadPool.post(new Runnable() {
@@ -630,7 +633,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
         });
     }
 
-    private static class BlockTask<T extends Mission> implements Runnable {
+    public static class BlockTask<T extends Mission> implements Runnable {
 
         private static final String TAG = "BlockTask";
 
@@ -652,7 +655,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
                 return;
             }
             Result result = downloader.getTransfer().transfer(mission, block);
-            Logger.d(TAG, "result=" + result);
+            Logger.d(TAG, "result=%s", result);
             if (result.getCode() == Result.CANCEL_BY_PAUSED) {
                 Logger.d(TAG, "block transfer cancel by paused!");
                 return;
@@ -708,6 +711,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
     }
 
     private static final SparseArray<String> EVENT_TEXT_ARRAY = new SparseArray<>();
+
     static {
         EVENT_TEXT_ARRAY.append(Event.CREATE, "create");
         EVENT_TEXT_ARRAY.append(Event.PREPARE, "prepare");

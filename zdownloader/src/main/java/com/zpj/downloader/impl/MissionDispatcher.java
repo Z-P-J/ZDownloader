@@ -144,14 +144,14 @@ public class MissionDispatcher<T extends Mission> implements Dispatcher<T> {
 
         private ScheduledFuture<?> mFuture;
 
-        public MissionDelegate(@NonNull T mission) {
+        public MissionDelegate(@NonNull final T mission) {
             this.mission = mission;
             downloader = ZDownloader.get(mission);
 
             ScheduledThreadPoolExecutor executor = new ScheduledThreadPoolExecutor(1, new ThreadFactory() {
                 @Override
                 public Thread newThread(Runnable r) {
-                    return new Thread(r, TAG + "_Executor");
+                    return new Thread(r, String.format("%s_Executor_%s", TAG, mission.getMissionId()));
                 }
             });
             executor.allowCoreThreadTimeOut(true);
@@ -180,7 +180,7 @@ public class MissionDispatcher<T extends Mission> implements Dispatcher<T> {
 
                     long currentTime = SystemClock.elapsedRealtime();
 
-                    Logger.d(TAG, "progressRunnable--downloaded=" + downloaded + " delta=" + delta);
+                    Logger.d(TAG, "progressRunnable--downloaded=%s delta=%s", downloaded, delta);
 
                     if (delta > 0) {
 

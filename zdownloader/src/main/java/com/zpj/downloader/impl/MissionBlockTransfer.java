@@ -50,7 +50,7 @@ public class MissionBlockTransfer<T extends Mission> implements Transfer<T> {
             start = end = 0;
             headers.put(HttpHeader.RANGE, "bytes=0-");
         }
-        Logger.d(TAG, "start=" + start + " end=" + end);
+        Logger.d(TAG, "start=%s end=%s", start, end);
 
         Response response = null;
         try {
@@ -58,7 +58,7 @@ public class MissionBlockTransfer<T extends Mission> implements Transfer<T> {
             if (!mission.isDownloading()) {
                 return Result.paused();
             }
-            Logger.d(TAG, "response=" + response);
+            Logger.d(TAG, "response=%s", response);
             int code = response.statusCode();
             if (code / 100 == 2) {
                 try (BufferedInputStream is = new BufferedInputStream(response.bodyStream());
@@ -84,7 +84,7 @@ public class MissionBlockTransfer<T extends Mission> implements Transfer<T> {
                     }
 
 
-                    Logger.d(TAG, "total downloaded=" + downloaded);
+                    Logger.d(TAG, "total downloaded=%s", downloaded);
 
                     f.flush();
                 }

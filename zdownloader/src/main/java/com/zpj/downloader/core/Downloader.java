@@ -47,7 +47,7 @@ public interface Downloader<T extends Mission> extends DownloadManager<T> {
 
     Transfer<T> getTransfer();
 
-    ExecutorFactory<T> getExecutorFactory();
+    MissionExecutorFactory<T> getExecutorFactory();
 
     Repository<T> getRepository();
 

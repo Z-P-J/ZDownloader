@@ -387,7 +387,7 @@ public interface Mission {
         public <T extends Mission> T build(Class<T> clazz) {
             // TODO UUID.randomUUID();
             String missionId = String.valueOf(MissionIdGenerator.getInstance().generateValidId());
-            Logger.d(TAG, "missionId=" + missionId);
+            Logger.d(TAG, "missionId=%s", missionId);
             MissionInfo info = new MissionInfo(missionId, url, name);
             return ZDownloader.get(clazz).createMission(info, new Config(missionId, this));
         }
