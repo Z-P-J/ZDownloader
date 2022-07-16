@@ -28,6 +28,10 @@ public class ActionBottomFragment extends BottomDragDialogFragment<ActionBottomF
 
     @Override
     protected void initView(View view, @Nullable Bundle savedInstanceState) {
+        if (this.mission == null) {
+            dismiss();
+            return;
+        }
         super.initView(view, savedInstanceState);
         LinearLayout openFile = findViewById(R.id.open_file);
         LinearLayout pauseDownload = findViewById(R.id.pause_download);
@@ -36,7 +40,7 @@ public class ActionBottomFragment extends BottomDragDialogFragment<ActionBottomF
         LinearLayout copyLink = findViewById(R.id.copy_link);
 
         openFile.setVisibility(View.GONE);
-        if (mission.isComplete()){
+        if (mission.isComplete()) {
             openFile.setVisibility(View.VISIBLE);
             pauseDownload.setVisibility(View.GONE);
             resumeDownload.setVisibility(View.GONE);

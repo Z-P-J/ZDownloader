@@ -3,20 +3,10 @@ package com.zpj.mydownloader;
 import android.app.Application;
 
 import com.zpj.downloader.ZDownloader;
-import com.zpj.downloader.core.Downloader;
 import com.zpj.downloader.core.DownloaderConfig;
-import com.zpj.downloader.core.Repository;
-import com.zpj.downloader.core.model.Block;
-import com.zpj.downloader.core.model.Config;
 import com.zpj.downloader.impl.DownloadMission;
 import com.zpj.downloader.impl.MissionDownloader;
-import com.zpj.mydownloader.update.UpdateDownloadMission;
-import com.zpj.mydownloader.update.UpdateMissionDownloader;
-import com.zpj.mydownloader.update.UpdateNotifier;
-import com.zpj.mydownloader.update.UpdateRepository;
 import com.zpj.mydownloader.utils.DownloadNotifierImpl;
-
-import java.util.List;
 
 /**
  * @author Z-P-J
@@ -42,7 +32,7 @@ public class MyApplication extends Application {
 //        ZDownloader.register(DownloadMission.class, new MissionDownloader());
 
 
-        DownloaderConfig<DownloadMission> config = MissionDownloader.builder()
+        DownloaderConfig<DownloadMission> config = MissionDownloader.config()
                 // 设置状态栏通知回调
                 .setNotifier(new DownloadNotifierImpl())
                 .build();

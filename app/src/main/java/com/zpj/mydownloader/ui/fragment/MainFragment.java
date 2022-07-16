@@ -1,28 +1,26 @@
 package com.zpj.mydownloader.ui.fragment;
 
+import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.view.View;
 
-import com.zpj.downloader.ZDownloader;
-import com.zpj.downloader.core.ConflictPolicy;
-import com.zpj.downloader.core.Downloader;
-import com.zpj.downloader.core.Mission;
-import com.zpj.downloader.core.MissionLoader;
+import com.zpj.downloader.core.MissionManager;
 import com.zpj.downloader.impl.DownloadMission;
+import com.zpj.downloader.impl.MissionManagerImpl;
 import com.zpj.fragmentation.SimpleFragment;
 import com.zpj.mydownloader.R;
 import com.zpj.mydownloader.ui.adapter.MissionAdapter;
 
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
-public class MainFragment extends SimpleFragment implements Downloader.DownloaderObserver<DownloadMission> {
+public class MainFragment extends SimpleFragment
+        implements MissionManager.Observer<DownloadMission> {
 
-    private final List<DownloadMission> mMissions = new ArrayList<>();
+    private final MissionManager<DownloadMission> mManager =
+            new MissionManagerImpl<>(DownloadMission.class);
 
     private RecyclerView mRecyclerView;
     private MissionAdapter mMissionAdapter;
@@ -36,56 +34,42 @@ public class MainFragment extends SimpleFragment implements Downloader.Downloade
     protected void initView(View view, @Nullable Bundle savedInstanceState) {
         mRecyclerView = findViewById(R.id.recycler_view);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(context));
+        mMissionAdapter = new MissionAdapter(context, mManager.getMissions());
+        mRecyclerView.setAdapter(mMissionAdapter);
     }
 
     @Override
-    public void onDestroy() {
-        ZDownloader.removeObserver(DownloadMission.class, MainFragment.this);
-        super.onDestroy();
+    public void onDestroyView() {
+        mManager.onDestroy();
+        super.onDestroyView();
     }
 
     public void loadTasks() {
-        postOnEnterAnimationEnd(new Runnable() {
-            @Override
-            public void run() {
+        mManager.register(this);
+        postOnEnterAnimationEnd(mManager::loadMissions);
+    }
 
-                ZDownloader.loadMissions(DownloadMission.class, new MissionLoader<DownloadMission>() {
-                    @Override
-                    public void onLoad(List<DownloadMission> missions) {
-                        mMissions.clear();
-                        mMissions.addAll(missions);
-                        Collections.reverse(mMissions);
-
-                        mMissionAdapter = new MissionAdapter(context, mMissions);
-                        mRecyclerView.setAdapter(mMissionAdapter);
-
-                        ZDownloader.addObserver(DownloadMission.class, MainFragment.this);
-                    }
-                });
-
-            }
-        });
+    @SuppressLint("NotifyDataSetChanged")
+    @Override
+    public void onMissionLoaded(List<DownloadMission> missions) {
+        if (mMissionAdapter != null) {
+            mMissionAdapter.notifyDataSetChanged();
+        }
     }
 
     @Override
-    public void onMissionAdd(DownloadMission mission) {
-        mMissions.add(0, mission);
-        mMissionAdapter.notifyItemInserted(0);
+    public void onMissionAdd(DownloadMission mission, int position) {
+        mMissionAdapter.notifyItemInserted(position);
     }
 
     @Override
-    public void onMissionDelete(DownloadMission mission) {
-        mMissions.remove(mission);
-        mMissionAdapter.notifyDataSetChanged();
+    public void onMissionDelete(DownloadMission mission, int position) {
+        mMissionAdapter.notifyItemRemoved(position);
     }
 
     @Override
-    public void onMissionFinished(DownloadMission mission) {
-
+    public void onMissionFinished(DownloadMission mission, int position) {
+        mMissionAdapter.notifyItemChanged(position);
     }
 
-//    @Override
-//    public void onMissionConflict(Mission mission, ConflictPolicy.Callback callback) {
-//
-//    }
 }

@@ -12,18 +12,18 @@ public class MissionDownloader extends BaseDownloader<DownloadMission> {
     public static final String KEY_DEFAULT_DOWNLOADER = "default_downloader";
 
     public MissionDownloader() {
-        this(builder().build());
+        this(config().build());
     }
 
     public MissionDownloader(DownloaderConfig<DownloadMission> config) {
         super(config);
     }
 
-    public static DownloaderConfig.Builder<DownloadMission> builder() {
+    public static DownloaderConfig.Builder<DownloadMission> config() {
         return new DownloaderConfig.Builder<DownloadMission>(KEY_DEFAULT_DOWNLOADER);
     }
 
-    public static DownloaderConfig.Builder<DownloadMission> builder(@NonNull String key) {
+    public static DownloaderConfig.Builder<DownloadMission> config(@NonNull String key) {
         return new DownloaderConfig.Builder<DownloadMission>(key);
     }
 

@@ -341,6 +341,12 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
                     @Override
                     public void run() {
                         getRepository().deleteMission(mission);
+                        ThreadPool.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                onMissionDelete(mission);
+                            }
+                        });
                     }
                 });
                 break;
@@ -351,6 +357,12 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
                     public void run() {
                         getRepository().deleteMission(mission);
                         mission.getFile().delete();
+                        ThreadPool.post(new Runnable() {
+                            @Override
+                            public void run() {
+                                onMissionClear(mission);
+                            }
+                        });
                     }
                 });
                 break;
