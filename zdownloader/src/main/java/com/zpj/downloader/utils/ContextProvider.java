@@ -1,6 +1,6 @@
 package com.zpj.downloader.utils;
 
-import android.annotation.SuppressLint;
+import android.app.Application;
 import android.content.ContentProvider;
 import android.content.ContentValues;
 import android.content.Context;
@@ -9,18 +9,25 @@ import android.net.Uri;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 
+import java.util.Objects;
+
 public final class ContextProvider extends ContentProvider {
 
-    @SuppressLint("StaticFieldLeak")
-    private static Context sContext;
+    private static Application sApp;
 
     public static Context getApplicationContext() {
-        return sContext;
+        return sApp;
     }
 
     @Override
     public boolean onCreate() {
-        sContext = getContext().getApplicationContext();
+        Context context = getContext();
+        Objects.requireNonNull(context, "context is null!");
+        if (context instanceof Application) {
+            sApp = (Application) context;
+        } else {
+            sApp = (Application) context.getApplicationContext();
+        }
         return true;
     }
 

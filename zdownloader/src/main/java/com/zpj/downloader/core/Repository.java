@@ -2,6 +2,7 @@ package com.zpj.downloader.core;
 
 import com.zpj.downloader.core.model.Config;
 import com.zpj.downloader.core.model.Block;
+import com.zpj.downloader.core.model.MissionInfo;
 
 import java.util.List;
 
@@ -10,7 +11,11 @@ import java.util.List;
  */
 public interface Repository<T extends Mission> {
 
+    MissionInfo queryMissionInfo(String missionId);
+
     List<T> queryMissions(Downloader<T> downloader);
+
+    T queryMissionByUrl(Downloader<T> downloader, String url);
 
     boolean saveConfig(Config config);
 

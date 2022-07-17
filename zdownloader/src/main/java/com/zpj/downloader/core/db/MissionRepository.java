@@ -1,6 +1,7 @@
 package com.zpj.downloader.core.db;
 
 import android.support.annotation.NonNull;
+import android.text.TextUtils;
 
 import com.zpj.downloader.core.model.Block;
 import com.zpj.downloader.core.Repository;
@@ -18,14 +19,6 @@ public class MissionRepository<T extends Mission> implements Repository<T> {
     private volatile MissionDatabase database;
     
     private final MissionDatabaseFactory mFactory;
-
-//    public MissionRepository(String key) {
-//        this(MissiongetInstance(key));
-//    }
-//
-//    public MissionRepository(@NonNull MissionDatabase database) {
-//        this.database = database;
-//    }
     
     public MissionRepository(@NonNull MissionDatabaseFactory factory) {
         this.mFactory = factory;
@@ -55,6 +48,11 @@ public class MissionRepository<T extends Mission> implements Repository<T> {
     }
 
     @Override
+    public MissionInfo queryMissionInfo(String missionId) {
+        return getMissionDao().queryInfo(missionId);
+    }
+
+    @Override
     public List<T> queryMissions(Downloader<T> downloader) {
         List<MissionInfo> infoList = getMissionDao().queryInfos();
         List<T> list = new ArrayList<>();
@@ -63,6 +61,13 @@ public class MissionRepository<T extends Mission> implements Repository<T> {
             list.add(downloader.createMission(info, config));
         }
         return list;
+    }
+
+    @Override
+    public T queryMissionByUrl(Downloader<T> downloader, String url) {
+        MissionInfo info = getMissionDao().queryInfoByUrl(url);
+        Config config = getConfigDao().queryConfig(info.getMissionId());
+        return downloader.createMission(info, config);
     }
 
     @Override
@@ -79,7 +84,18 @@ public class MissionRepository<T extends Mission> implements Repository<T> {
 
     @Override
     public boolean hasMission(T mission) {
-        return getMissionDao().queryInfo(mission.getMissionId()) != null;
+        String missionId = mission.getMissionId();
+        String path = mission.getConfig().getDownloadPath();
+        for (MissionInfo info : getMissionDao().queryInfoByName(mission.getName())) {
+            if (TextUtils.equals(info.getMissionId(), missionId)) {
+                continue;
+            }
+            Config config = getConfigDao().queryConfig(info.getMissionId());
+            if (TextUtils.equals(config.getDownloadPath(), path)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     @Override

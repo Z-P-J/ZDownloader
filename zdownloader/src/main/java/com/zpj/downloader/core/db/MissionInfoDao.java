@@ -29,6 +29,12 @@ public interface MissionInfoDao {
     @Query("SELECT * FROM mission_infos WHERE mission_id = :missionId")
     MissionInfo queryInfo(String missionId);
 
+    @Query("SELECT * FROM mission_infos WHERE url = :url or origin_url == :url")
+    MissionInfo queryInfoByUrl(String url);
+
+    @Query("SELECT * FROM mission_infos WHERE name = :name")
+    List<MissionInfo> queryInfoByName(String name);
+
 //    @Query("UPDATE downloaded FROM mission_infos WHERE missionId = :missionId")
 //    MissionInfo updateProgress(String missionId, long downloaded);
 

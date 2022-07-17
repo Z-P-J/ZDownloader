@@ -20,11 +20,11 @@ public class MissionDownloader extends BaseDownloader<DownloadMission> {
     }
 
     public static DownloaderConfig.Builder<DownloadMission> config() {
-        return new DownloaderConfig.Builder<DownloadMission>(KEY_DEFAULT_DOWNLOADER);
+        return new DownloaderConfig.Builder<>(KEY_DEFAULT_DOWNLOADER);
     }
 
     public static DownloaderConfig.Builder<DownloadMission> config(@NonNull String key) {
-        return new DownloaderConfig.Builder<DownloadMission>(key);
+        return new DownloaderConfig.Builder<>(key);
     }
 
     @Override

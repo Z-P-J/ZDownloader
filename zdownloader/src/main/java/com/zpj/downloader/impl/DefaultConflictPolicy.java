@@ -15,6 +15,7 @@ public class DefaultConflictPolicy implements ConflictPolicy {
 
     @Override
     public void onConflict(Mission mission, Callback callback) {
+        // TODO 支持覆盖下载
         callback.onResult(true);
     }
 

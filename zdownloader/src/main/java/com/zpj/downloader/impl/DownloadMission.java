@@ -74,17 +74,14 @@ public class DownloadMission implements Mission {
 
     @Override
     public synchronized void addObserver(final Observer observer) {
-        ThreadPool.post(new Runnable() {
-            @Override
-            public void run() {
-                if (hasObserver(observer)) {
-                    return;
-                }
-                if (mObservers == null) {
-                    mObservers = new ArrayList<>();
-                }
-                mObservers.add(new WeakReference<>(observer));
+        ThreadPool.post(() -> {
+            if (hasObserver(observer)) {
+                return;
             }
+            if (mObservers == null) {
+                mObservers = new ArrayList<>();
+            }
+            mObservers.add(new WeakReference<>(observer));
         });
     }
 
@@ -104,18 +101,15 @@ public class DownloadMission implements Mission {
 
     @Override
     public synchronized void removeObserver(final Observer observer) {
-        ThreadPool.post(new Runnable() {
-            @Override
-            public void run() {
-                if (mObservers == null || observer == null) {
-                    return;
-                }
-                for (Iterator<WeakReference<Observer>> iterator = mObservers.iterator();
-                     iterator.hasNext(); ) {
-                    WeakReference<Observer> weakRef = iterator.next();
-                    if (observer == weakRef.get()) {
-                        iterator.remove();
-                    }
+        ThreadPool.post(() -> {
+            if (mObservers == null || observer == null) {
+                return;
+            }
+            for (Iterator<WeakReference<Observer>> iterator = mObservers.iterator();
+                 iterator.hasNext(); ) {
+                WeakReference<Observer> weakRef = iterator.next();
+                if (observer == weakRef.get()) {
+                    iterator.remove();
                 }
             }
         });
@@ -143,15 +137,12 @@ public class DownloadMission implements Mission {
 
     @Override
     public synchronized void removeAllObserver() {
-        ThreadPool.post(new Runnable() {
-            @Override
-            public void run() {
-                if (mObservers == null) {
-                    return;
-                }
-                mObservers.clear();
-                mObservers = null;
+        ThreadPool.post(() -> {
+            if (mObservers == null) {
+                return;
             }
+            mObservers.clear();
+            mObservers = null;
         });
 
     }

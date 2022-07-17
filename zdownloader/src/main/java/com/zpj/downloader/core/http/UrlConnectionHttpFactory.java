@@ -1,5 +1,6 @@
 package com.zpj.downloader.core.http;
 
+import com.zpj.downloader.constant.DefaultConstant;
 import com.zpj.downloader.core.Mission;
 import com.zpj.downloader.core.model.Config;
 import com.zpj.downloader.utils.Logger;
@@ -46,7 +47,7 @@ public class UrlConnectionHttpFactory implements HttpFactory {
         conn.setConnectTimeout(config.getConnectOutTime());
         conn.setReadTimeout(config.getReadOutTime());
 //        conn.setRequestProperty("Referer", mission.getUrl());
-        conn.setRequestProperty("User-Agent", System.getProperty("http.agent"));
+        conn.setRequestProperty(HttpHeader.USER_AGENT, DefaultConstant.USER_AGENT);
 //        conn.setRequestProperty(HttpHeader.ACCEPT_ENCODING, "identity");
 //        conn.setRequestProperty(HttpHeader.PRAGMA, "no-cache");
 //        conn.setRequestProperty(HttpHeader.CACHE_CONTROL, "no-cache");

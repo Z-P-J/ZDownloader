@@ -26,6 +26,7 @@ public class DownloaderConfig<T extends Mission> {
     private final MissionExecutorFactory<T> mMissionExecutorFactory;
 //    private final MissionFactory<T> mMissionFactory;
     private final HttpFactory mHttpFactory;
+    private final ConflictPolicy mConflictPolicy;
 
     private DownloaderConfig(Builder<T> builder) {
         this.mKey = builder.mKey;
@@ -37,6 +38,7 @@ public class DownloaderConfig<T extends Mission> {
         this.mBlockSplitter = builder.mBlockSplitter;
         this.mMissionExecutorFactory = builder.mMissionExecutorFactory;
         this.mHttpFactory = builder.mHttpFactory;
+        this.mConflictPolicy = builder.mConflictPolicy;
     }
 
     public String getKey() {
@@ -75,6 +77,10 @@ public class DownloaderConfig<T extends Mission> {
         return mHttpFactory;
     }
 
+    public ConflictPolicy getConflictPolicy() {
+        return mConflictPolicy;
+    }
+
     public static class Builder<T extends Mission> {
 
         private final String mKey;
@@ -87,15 +93,11 @@ public class DownloaderConfig<T extends Mission> {
         private MissionExecutorFactory<T> mMissionExecutorFactory = new MissionExecutorFactoryImpl<>();
 //        private final MissionFactory<T> mMissionFactory;
         private HttpFactory mHttpFactory = new UrlConnectionHttpFactory();
+        private ConflictPolicy mConflictPolicy;
 
         public Builder(@NonNull final String key) {
             this.mKey = key;
-            mRepository = new MissionRepository<>(new MissionDatabaseFactory() {
-                @Override
-                public MissionDatabase createDatabase() {
-                    return MissionDatabase.get(key);
-                }
-            });
+            mRepository = new MissionRepository<>(() -> MissionDatabase.get(key));
         }
 
         public Builder<T> setDispatcher(Dispatcher<T> dispatcher) {
@@ -135,6 +137,11 @@ public class DownloaderConfig<T extends Mission> {
 
         public Builder<T> setHttpFactory(HttpFactory httpFactory) {
             this.mHttpFactory = httpFactory;
+            return this;
+        }
+
+        public Builder<T> setConflictPolicy(ConflictPolicy conflictPolicy) {
+            this.mConflictPolicy = conflictPolicy;
             return this;
         }
 

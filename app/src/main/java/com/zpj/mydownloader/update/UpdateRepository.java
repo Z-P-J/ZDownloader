@@ -6,6 +6,7 @@ import com.zpj.downloader.core.Downloader;
 import com.zpj.downloader.core.Repository;
 import com.zpj.downloader.core.model.Block;
 import com.zpj.downloader.core.model.Config;
+import com.zpj.downloader.core.model.MissionInfo;
 import com.zpj.utils.PrefsHelper;
 
 import java.util.List;
@@ -21,7 +22,17 @@ public class UpdateRepository implements Repository<UpdateDownloadMission> {
     }
 
     @Override
+    public MissionInfo queryMissionInfo(String missionId) {
+        return null;
+    }
+
+    @Override
     public List<UpdateDownloadMission> queryMissions(Downloader<UpdateDownloadMission> downloader) {
+        return null;
+    }
+
+    @Override
+    public UpdateDownloadMission queryMissionByUrl(Downloader<UpdateDownloadMission> downloader, String url) {
         return null;
     }
 

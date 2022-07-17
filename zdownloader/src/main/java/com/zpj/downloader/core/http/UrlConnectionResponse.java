@@ -1,6 +1,8 @@
 package com.zpj.downloader.core.http;
 
+import android.os.Build;
 import android.support.annotation.NonNull;
+import android.text.TextUtils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -18,79 +20,86 @@ public class UrlConnectionResponse implements Response {
     @NonNull
     private final HttpURLConnection mConnection;
 
-    private final int statusCode;
-    private final String statusMessage;
-    private final String contentType;
-    private long contentLength = -1;
-    private final Map<String, String> headers;
+    private final int mStatusCode;
+    private final String mStatusMessage;
+    private final String mContentType;
+    private long mContentLength = -1;
+    private final Map<String, String> mHeaders;
 
     public UrlConnectionResponse(@NonNull HttpURLConnection conn) throws IOException {
         this.mConnection = conn;
 
-        statusCode = conn.getResponseCode();
-        statusMessage = conn.getResponseMessage();
-        contentType = conn.getContentType();
+        mStatusCode = conn.getResponseCode();
+        mStatusMessage = conn.getResponseMessage();
+        mContentType = conn.getContentType();
 
-        try {
-            contentLength = Long.parseLong(conn.getHeaderField(HttpHeader.CONTENT_LENGTH));
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        if (contentLength < 0) {
-            contentLength = conn.getContentLength();
+        mHeaders = getHeaderMap(conn);
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            mContentLength = conn.getContentLengthLong();
+        } else {
+            try {
+                mContentLength = Long.parseLong(header(HttpHeader.CONTENT_LENGTH));
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
         }
 
-        headers = getHeaderMap(conn);
+        if (mContentLength < 0) {
+            mContentLength = conn.getContentLength();
+        }
     }
 
     @Override
     public String header(String name) {
-        return headers().get(name);
+        Map<String, String> headers = headers();
+        if (headers == null) {
+            return null;
+        }
+        return headers.get(name);
     }
 
     @Override
     public Map<String, String> headers() {
-        return headers;
+        return mHeaders;
     }
 
     @Override
     public int statusCode() {
-        return statusCode;
+        return mStatusCode;
     }
 
     @Override
     public String statusMessage() {
-        return statusMessage;
+        return mStatusMessage;
     }
 
     @Override
     public String contentType() {
-        return contentType;
+        return mContentType;
     }
 
     @Override
     public long contentLength() {
-        return contentLength;
+        return mContentLength;
     }
 
     @Override
     public InputStream bodyStream() throws IOException {
-        InputStream bodyStream;
-        if (contentLength() != 0 && !"HEAD".equalsIgnoreCase(mConnection.getRequestMethod())) { // -1 means unknown, chunked. sun throws an IO exception on 500 response with no content when trying to read body
+        InputStream bodyStream = mConnection.getErrorStream();
+        if (bodyStream == null) {
             bodyStream = mConnection.getInputStream();
             if (hasContentEncoding("gzip")) {
                 bodyStream = new GZIPInputStream(bodyStream);
             } else if (hasContentEncoding("deflate")) {
                 bodyStream = new InflaterInputStream(bodyStream, new Inflater(true));
             }
-        } else {
-            bodyStream = mConnection.getErrorStream();
         }
         return bodyStream;
     }
 
     private boolean hasContentEncoding(String value) {
-        return value.equalsIgnoreCase(headers().get(HttpHeader.CONTENT_ENCODING));
+        return value.equalsIgnoreCase(header(HttpHeader.CONTENT_ENCODING));
     }
 
     @Override
@@ -99,18 +108,13 @@ public class UrlConnectionResponse implements Response {
     }
 
     private Map<String, String> getHeaderMap(HttpURLConnection conn) {
-        LinkedHashMap<String, String> headers = new LinkedHashMap<>();
-        int i = 0;
-        while (true) {
-            final String key = conn.getHeaderFieldKey(i);
-            final String val = conn.getHeaderField(i);
-            if (key == null && val == null)
-                break;
-            i++;
-            if (key == null || val == null)
-                continue; // skip http1.1 line
-
-            headers.put(key, val);
+        Map<String, String> headers = new LinkedHashMap<>();
+        for (String key : conn.getHeaderFields().keySet()) {
+            if (TextUtils.isEmpty(key)) {
+                continue;
+            }
+            String value = conn.getHeaderField(key);
+            headers.put(key, value);
         }
         return headers;
     }
@@ -118,11 +122,11 @@ public class UrlConnectionResponse implements Response {
     @Override
     public String toString() {
         return "UrlConnectionResponse{" +
-                "statusCode=" + statusCode +
-                ", statusMessage='" + statusMessage + '\'' +
-                ", contentType='" + contentType + '\'' +
-                ", contentLength=" + contentLength +
-                ", headers=" + headers +
+                "statusCode=" + mStatusCode +
+                ", statusMessage='" + mStatusMessage + '\'' +
+                ", contentType='" + mContentType + '\'' +
+                ", contentLength=" + mContentLength +
+                ", headers=" + mHeaders +
                 '}';
     }
 }

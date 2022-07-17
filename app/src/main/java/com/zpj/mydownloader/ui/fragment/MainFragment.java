@@ -47,6 +47,32 @@ public class MainFragment extends SimpleFragment
     public void loadTasks() {
         mManager.register(this);
         postOnEnterAnimationEnd(mManager::loadMissions);
+
+
+
+        mManager.register(new MissionManager.Observer<DownloadMission>() {
+            @Override
+            public void onMissionLoaded(List<DownloadMission> missions) {
+                if (mMissionAdapter != null) {
+                    mMissionAdapter.notifyDataSetChanged();
+                }
+            }
+
+            @Override
+            public void onMissionAdd(DownloadMission mission, int position) {
+                mMissionAdapter.notifyItemInserted(position);
+            }
+
+            @Override
+            public void onMissionDelete(DownloadMission mission, int position) {
+                mMissionAdapter.notifyItemRemoved(position);
+            }
+
+            @Override
+            public void onMissionFinished(DownloadMission mission, int position) {
+                mMissionAdapter.notifyItemChanged(position);
+            }
+        });
     }
 
     @SuppressLint("NotifyDataSetChanged")

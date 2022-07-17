@@ -2,13 +2,15 @@ package com.zpj.downloader.core;
 
 import android.support.annotation.IntDef;
 import android.support.annotation.NonNull;
-import android.util.SparseArray;
+import android.text.TextUtils;
 
 import com.zpj.downloader.core.http.HttpFactory;
 import com.zpj.downloader.core.model.Block;
 import com.zpj.downloader.core.model.MissionInfo;
+import com.zpj.downloader.impl.DefaultConflictPolicy;
 import com.zpj.downloader.utils.ContextProvider;
 import com.zpj.downloader.utils.Logger;
+import com.zpj.downloader.utils.AutoRenameHelper;
 import com.zpj.downloader.utils.ThreadPool;
 
 import java.io.File;
@@ -42,6 +44,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
     private final HttpFactory mHttpFactory;
     private final BlockSplitter<T> mBlockSplitter;
     private final MissionExecutorFactory<T> mMissionExecutorFactory;
+    private final ConflictPolicy mConflictPolicy;
 
     private final ExecutorService mScheduler = Executors.newSingleThreadExecutor(new ThreadFactory() {
         @Override
@@ -67,29 +70,22 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
                 "HttpFactory must not be null!");
         this.mMissionExecutorFactory = Objects.requireNonNull(config.getExecutorFactory(),
                 "ExecutorFactory must not be null!");
+        this.mConflictPolicy = config.getConflictPolicy();
     }
 
     @Override
     public void addObserver(final DownloaderObserver<T> observer) {
-        ThreadPool.post(new Runnable() {
-            @Override
-            public void run() {
-                mObservers.add(new WeakReference<>(observer));
-            }
-        });
+        ThreadPool.post(() -> mObservers.add(new WeakReference<>(observer)));
     }
 
     @Override
     public void removeObserver(final DownloaderObserver<T> observer) {
-        ThreadPool.post(new Runnable() {
-            @Override
-            public void run() {
-                Iterator<WeakReference<DownloaderObserver<T>>> iterator = mObservers.iterator();
-                while (iterator.hasNext()) {
-                    DownloaderObserver<T> o = iterator.next().get();
-                    if (o == null || o == observer) {
-                        iterator.remove();
-                    }
+        ThreadPool.post(() -> {
+            Iterator<WeakReference<DownloaderObserver<T>>> iterator = mObservers.iterator();
+            while (iterator.hasNext()) {
+                DownloaderObserver<T> o = iterator.next().get();
+                if (o == null || o == observer) {
+                    iterator.remove();
                 }
             }
         });
@@ -151,18 +147,10 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
         if (loader == null) {
             return;
         }
-        ThreadPool.execute(new Runnable() {
-            @Override
-            public void run() {
-                final List<T> missions = getRepository().queryMissions(BaseDownloader.this);
-                Logger.d(TAG, "loadMissions missions=%s", missions);
-                ThreadPool.post(new Runnable() {
-                    @Override
-                    public void run() {
-                        loader.onLoad(missions);
-                    }
-                });
-            }
+        ThreadPool.execute(() -> {
+            final List<T> missions = getRepository().queryMissions(BaseDownloader.this);
+            Logger.d(TAG, "loadMissions missions=%s", missions);
+            ThreadPool.post(() -> loader.onLoad(missions));
         });
     }
 
@@ -201,12 +189,7 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
 
     private void sendEvent(@NonNull final T mission, @Event final int event) {
         Logger.d(TAG, "sendEvent name=%s event=%s", mission.getName(), eventToString(event));
-        mScheduler.execute(new Runnable() {
-            @Override
-            public void run() {
-                handleEvent(mission, event);
-            }
-        });
+        mScheduler.execute(() -> handleEvent(mission, event));
     }
 
     private void handleEvent(final T mission, @Event int event) {
@@ -222,7 +205,36 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
                     Logger.d(TAG, "mission has in the queue!");
                     return;
                 }
-                if (!mRepository.hasMission(mission)) {
+
+                if (mRepository.queryMissionInfo(mission.getMissionId()) == null) {
+                    Mission oldMission = mRepository.queryMissionByUrl(this, mission.getUrl());
+                    if (mConflictPolicy == null) {
+                        if (new DefaultConflictPolicy().isConflict(mission, oldMission)) {
+                            renameOnConflict(mission);
+                        }
+                    } else if (mConflictPolicy.isConflict(mission, oldMission)) {
+                        ThreadPool.post(() -> {
+                            mConflictPolicy.onConflict(mission, accept -> {
+                                mScheduler.execute(() -> {
+                                    if (accept) {
+                                        if (!TextUtils.isEmpty(mission.getName())) {
+                                            File file = AutoRenameHelper.renameFile(mission.getFile());
+                                            mission.setName(file.getName());
+                                        }
+                                        mRepository.saveMissionInfo(mission);
+                                        mRepository.saveConfig(mission.getConfig());
+                                        onMissionAdd(mission);
+                                        // 任务排队等待开始下载
+                                        enqueue(mission);
+                                    } else {
+                                        Logger.w(TAG, "onConflict reject mission: %s", mission.getUrl());
+                                    }
+                                });
+                            });
+                        });
+                        return;
+                    }
+
                     mRepository.saveMissionInfo(mission);
                     mRepository.saveConfig(mission.getConfig());
                     onMissionAdd(mission);
@@ -242,34 +254,27 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
                 }
                 break;
             case Event.DOWNLOAD:
-                ThreadPool.execute(new Runnable() {
-                    @Override
-                    public void run() {
+                ThreadPool.execute(() -> {
 
-                        if (mission.getStatus() == Mission.Status.DOWNLOADING) {
-                            return;
+                    if (mission.getStatus() == Mission.Status.DOWNLOADING) {
+                        return;
+                    }
+                    setStatus(mission, Mission.Status.DOWNLOADING);
+                    ThreadPool.post(() -> {
+                        if (mNotifier != null) {
+                            mNotifier.onProgress(ContextProvider.getApplicationContext(),
+                                    mission, mission.getProgress(), false);
                         }
-                        setStatus(mission, Mission.Status.DOWNLOADING);
-                        ThreadPool.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                // TODO notify
-                                if (mNotifier != null) {
-                                    mNotifier.onProgress(ContextProvider.getApplicationContext(),
-                                            mission, mission.getProgress(), false);
-                                }
-                            }
-                        });
+                    });
 
-                        List<Block> blocks = getRepository().queryShouldDownloadBlocks(mission);
-                        Logger.d(TAG, "blocks=%s", blocks);
-                        if (blocks == null || blocks.isEmpty()) {
-                            Logger.e(TAG, "blocks is empty!");
-                            sendEvent(mission, Event.COMPLETE);
-                        } else {
-                            for (final Block block : blocks) {
-                                execute(mission, new BlockTask<>(BaseDownloader.this, mission, block));
-                            }
+                    List<Block> blocks = getRepository().queryShouldDownloadBlocks(mission);
+                    Logger.d(TAG, "blocks=%s", blocks);
+                    if (blocks == null || blocks.isEmpty()) {
+                        Logger.w(TAG, "blocks is empty!");
+                        sendEvent(mission, Event.COMPLETE);
+                    } else {
+                        for (final Block block : blocks) {
+                            execute(mission, new BlockTask<>(BaseDownloader.this, mission, block));
                         }
                     }
                 });
@@ -337,33 +342,18 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
                 break;
             case Event.DELETE:
                 handleEvent(mission, Event.PAUSE);
-                ThreadPool.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        getRepository().deleteMission(mission);
-                        ThreadPool.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                onMissionDelete(mission);
-                            }
-                        });
-                    }
+                ThreadPool.execute(() -> {
+                    getRepository().deleteMission(mission);
+                    ThreadPool.post(() -> onMissionDelete(mission));
                 });
                 break;
             case Event.CLEAR:
                 handleEvent(mission, Event.PAUSE);
-                ThreadPool.execute(new Runnable() {
-                    @Override
-                    public void run() {
-                        getRepository().deleteMission(mission);
-                        mission.getFile().delete();
-                        ThreadPool.post(new Runnable() {
-                            @Override
-                            public void run() {
-                                onMissionClear(mission);
-                            }
-                        });
-                    }
+                ThreadPool.execute(() -> {
+                    getRepository().deleteMission(mission);
+                    ThreadPool.post(() -> onMissionDelete(mission));
+                    mission.getFile().delete();
+                    ThreadPool.post(() -> onMissionClear(mission));
                 });
                 break;
             case Event.RETRY:
@@ -450,107 +440,95 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
 
     protected void onMissionAdd(@NonNull final T mission) {
         Logger.d(TAG, "onMissionAdd mission=%s", mission.getName());
-        ThreadPool.post(new Runnable() {
-            @Override
-            public void run() {
-                Iterator<WeakReference<DownloaderObserver<T>>> iterator = mObservers.iterator();
-                while (iterator.hasNext()) {
-                    DownloaderObserver<T> observer = iterator.next().get();
-                    if (observer == null) {
-                        iterator.remove();
-                    } else {
-                        observer.onMissionAdd(mission);
-                    }
+        ThreadPool.post(() -> {
+            Iterator<WeakReference<DownloaderObserver<T>>> iterator = mObservers.iterator();
+            while (iterator.hasNext()) {
+                DownloaderObserver<T> observer = iterator.next().get();
+                if (observer == null) {
+                    iterator.remove();
+                } else {
+                    observer.onMissionAdd(mission);
                 }
             }
         });
     }
 
     protected void onMissionPrepare(@NonNull final T mission) {
-        ThreadPool.execute(new Runnable() {
-            @Override
-            public void run() {
-                Result result = mInitializer.initMission(BaseDownloader.this, mission);
-                Logger.d(TAG,
-                        "mission init result=%s missionId=%s configMissionId=%s name=%s url=%s isBlockDownload=%s",
-                        result, mission.getMissionInfo().getMissionId(),
-                        mission.getConfig().getMissionId(), mission.getName(),
-                        mission.getUrl(), mission.isBlockDownload());
-                if (!mission.isDownloading()) {
+        ThreadPool.execute(() -> {
+            Result result = mInitializer.initMission(BaseDownloader.this, mission);
+            Logger.d(TAG,
+                    "mission init result=%s missionId=%s configMissionId=%s name=%s url=%s isBlockDownload=%s",
+                    result, mission.getMissionInfo().getMissionId(),
+                    mission.getConfig().getMissionId(), mission.getName(),
+                    mission.getUrl(), mission.isBlockDownload());
+            if (!mission.isDownloading()) {
+                return;
+            }
+            if (result.isOk()) {
+
+                if (mRepository.hasMission(mission)) {
+                    renameOnConflict(mission);
+                }
+
+                File location = new File(mission.getConfig().getDownloadPath());
+                if (!location.exists() && !location.mkdirs()) {
+                    // 文件保存路径创建失败
+                    mission.setErrorCode(-1);
+                    mission.setErrorMessage("download path create failed! path=" + location);
+                    // 创建下载路径失败
+                    sendEvent(mission, Event.ERROR);
                     return;
                 }
-                if (result.isOk()) {
-                    File location = new File(mission.getConfig().getDownloadPath());
-                    if (!location.exists()) {
-                        if (!location.mkdirs()) {
-                            mission.setErrorCode(-1);
-                            mission.setErrorMessage("download path create failed! path=" + location);
-                            // 创建下载路径失败
-                            sendEvent(mission, Event.ERROR);
-                            return;
-                        }
-                    }
-//                                File file = new File(mission.getFilePath());
-//                                if (!file.exists()) {
-//                                    file.createNewFile();
-//                                }
 
-                    if (mission.isBlockDownload()) {
-                        List<Block> blocks = getBlockDivider().divide(mission);
-                        Logger.d(TAG, "blocks=%s", blocks);
-                        if (blocks == null || blocks.isEmpty()) {
-                            mission.setErrorCode(-1);
-                            mission.setErrorMessage("divide block failed!");
-                            // 分片失败
-                            sendEvent(mission, Event.ERROR);
-                            return;
-                        }
-                        mRepository.saveBlocks(blocks);
-                    } else {
-                        Block block = new Block(mission.getMissionInfo().getMissionId(), 0, 0);
-                        Logger.d(TAG, "block=%s", block);
-                        mRepository.saveBlocks(block);
+                if (mission.isBlockDownload()) {
+                    List<Block> blocks = getBlockDivider().divide(mission);
+                    Logger.d(TAG, "blocks=%s", blocks);
+                    if (blocks == null || blocks.isEmpty()) {
+                        mission.setErrorCode(-1);
+                        mission.setErrorMessage("divide block failed!");
+                        // 分片失败
+                        sendEvent(mission, Event.ERROR);
+                        return;
                     }
-                    mission.getMissionInfo().setPrepared(true);
-                    mRepository.saveMissionInfo(mission);
-                    sendEvent(mission, Event.DOWNLOAD);
+                    mRepository.saveBlocks(blocks);
                 } else {
-                    mission.setErrorCode(result.getCode());
-                    mission.setErrorMessage(result.getMessage());
-                    mRepository.saveMissionInfo(mission);
-                    sendEvent(mission, Event.ERROR);
+                    Block block = new Block(mission.getMissionInfo().getMissionId(), 0, 0);
+                    Logger.d(TAG, "block=%s", block);
+                    mRepository.saveBlocks(block);
                 }
+                mission.getMissionInfo().setPrepared(true);
+                mRepository.saveMissionInfo(mission);
+                sendEvent(mission, Event.DOWNLOAD);
+            } else {
+                mission.setErrorCode(result.getCode());
+                mission.setErrorMessage(result.getMessage());
+                mRepository.saveMissionInfo(mission);
+                sendEvent(mission, Event.ERROR);
             }
         });
     }
 
     protected void onMissionStart(@NonNull final T mission) {
         Logger.d(TAG, "onMissionStart mission=%s", mission.getName());
-        ThreadPool.post(new Runnable() {
-            @Override
-            public void run() {
-                List<Mission.Observer> observers = mission.getObservers();
-                for (Mission.Observer observer : observers) {
-                    observer.onStart();
-                }
+        ThreadPool.post(() -> {
+            List<Mission.Observer> observers = mission.getObservers();
+            for (Mission.Observer observer : observers) {
+                observer.onStart();
             }
         });
     }
 
     protected void onMissionPaused(@NonNull final T mission) {
         Logger.d(TAG, "onMissionPaused mission=%s", mission.getName());
-        ThreadPool.post(new Runnable() {
-            @Override
-            public void run() {
-                List<Mission.Observer> observers = mission.getObservers();
-                for (Mission.Observer observer : observers) {
-                    observer.onPaused();
-                }
+        ThreadPool.post(() -> {
+            List<Mission.Observer> observers = mission.getObservers();
+            for (Mission.Observer observer : observers) {
+                observer.onPaused();
+            }
 
-                if (mNotifier != null) {
-                    mNotifier.onProgress(ContextProvider.getApplicationContext(),
-                            mission, mission.getProgress(), true);
-                }
+            if (mNotifier != null) {
+                mNotifier.onProgress(ContextProvider.getApplicationContext(),
+                        mission, mission.getProgress(), true);
             }
         });
     }
@@ -558,18 +536,15 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
     protected void onMissionError(@NonNull final T mission) {
         Logger.d(TAG, "onMissionError mission=%s code=%d msg=%s",
                 mission.getName(), mission.getErrorCode(), mission.getErrorMessage());
-        ThreadPool.post(new Runnable() {
-            @Override
-            public void run() {
-                List<Mission.Observer> observers = mission.getObservers();
-                for (Mission.Observer observer : observers) {
-                    observer.onError(mission.getErrorCode(), mission.getErrorMessage());
-                }
+        ThreadPool.post(() -> {
+            List<Mission.Observer> observers = mission.getObservers();
+            for (Mission.Observer observer : observers) {
+                observer.onError(mission.getErrorCode(), mission.getErrorMessage());
+            }
 
-                if (mNotifier != null) {
-                    mNotifier.onError(ContextProvider.getApplicationContext(),
-                            mission, mission.getErrorCode());
-                }
+            if (mNotifier != null) {
+                mNotifier.onError(ContextProvider.getApplicationContext(),
+                        mission, mission.getErrorCode());
             }
         });
 
@@ -577,13 +552,10 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
 
     protected void onMissionWaiting(@NonNull final T mission) {
         Logger.d(TAG, "onMissionWaiting mission=%s", mission.getName());
-        ThreadPool.post(new Runnable() {
-            @Override
-            public void run() {
-                List<Mission.Observer> observers = mission.getObservers();
-                for (Mission.Observer observer : observers) {
-                    observer.onWaiting();
-                }
+        ThreadPool.post(() -> {
+            List<Mission.Observer> observers = mission.getObservers();
+            for (Mission.Observer observer : observers) {
+                observer.onWaiting();
             }
         });
     }
@@ -595,18 +567,14 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
 
     protected void onMissionDelete(@NonNull final T mission) {
         Logger.d(TAG, "onMissionDelete mission=%s", mission.getName());
-        ThreadPool.post(new Runnable() {
-            @Override
-            public void run() {
-                onMissionClear(mission);
-                Iterator<WeakReference<DownloaderObserver<T>>> iterator = mObservers.iterator();
-                while (iterator.hasNext()) {
-                    DownloaderObserver<T> observer = iterator.next().get();
-                    if (observer == null) {
-                        iterator.remove();
-                    } else {
-                        observer.onMissionDelete(mission);
-                    }
+        ThreadPool.post(() -> {
+            Iterator<WeakReference<DownloaderObserver<T>>> iterator = mObservers.iterator();
+            while (iterator.hasNext()) {
+                DownloaderObserver<T> observer = iterator.next().get();
+                if (observer == null) {
+                    iterator.remove();
+                } else {
+                    observer.onMissionDelete(mission);
                 }
             }
         });
@@ -620,29 +588,37 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
             executor.shutdown();
         }
 
-        ThreadPool.post(new Runnable() {
-            @Override
-            public void run() {
-                List<Mission.Observer> observers = mission.getObservers();
-                for (Mission.Observer observer : observers) {
-                    observer.onFinished();
-                }
+        ThreadPool.post(() -> {
+            List<Mission.Observer> observers = mission.getObservers();
+            for (Mission.Observer observer : observers) {
+                observer.onFinished();
+            }
 
-                Iterator<WeakReference<DownloaderObserver<T>>> iterator = mObservers.iterator();
-                while (iterator.hasNext()) {
-                    DownloaderObserver<T> observer = iterator.next().get();
-                    if (observer == null) {
-                        iterator.remove();
-                    } else {
-                        observer.onMissionFinished(mission);
-                    }
-                }
-
-                if (mNotifier != null) {
-                    mNotifier.onFinished(ContextProvider.getApplicationContext(), mission);
+            Iterator<WeakReference<DownloaderObserver<T>>> iterator = mObservers.iterator();
+            while (iterator.hasNext()) {
+                DownloaderObserver<T> observer = iterator.next().get();
+                if (observer == null) {
+                    iterator.remove();
+                } else {
+                    observer.onMissionFinished(mission);
                 }
             }
+
+            if (mNotifier != null) {
+                mNotifier.onFinished(ContextProvider.getApplicationContext(), mission);
+            }
         });
+    }
+
+    private void renameOnConflict(@NonNull final T mission) {
+        String oldName = mission.getName();
+        if (TextUtils.isEmpty(oldName)) {
+            Logger.w(TAG, "renameOnConflict skip because mission name is empty!");
+        } else {
+            File file = AutoRenameHelper.renameFile(mission.getFile());
+            mission.setName(file.getName());
+            Logger.d(TAG, "renameOnConflict rename '%s' to '%s'", oldName, mission.getName());
+        }
     }
 
     public static class BlockTask<T extends Mission> implements Runnable {
@@ -714,33 +690,40 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
         int ERROR = 6;
         int RETRY = 7;
         int COMPLETE = 8;
-
         int RESTART = 9;
-
         int DELETE = 10;
         int CLEAR = 11;
-
-    }
-
-    private static final SparseArray<String> EVENT_TEXT_ARRAY = new SparseArray<>();
-
-    static {
-        EVENT_TEXT_ARRAY.append(Event.CREATE, "create");
-        EVENT_TEXT_ARRAY.append(Event.PREPARE, "prepare");
-        EVENT_TEXT_ARRAY.append(Event.WAIT, "wait");
-        EVENT_TEXT_ARRAY.append(Event.DOWNLOAD, "download");
-        EVENT_TEXT_ARRAY.append(Event.PROGRESS, "progress");
-        EVENT_TEXT_ARRAY.append(Event.PAUSE, "pause");
-        EVENT_TEXT_ARRAY.append(Event.ERROR, "error");
-        EVENT_TEXT_ARRAY.append(Event.RETRY, "retry");
-        EVENT_TEXT_ARRAY.append(Event.COMPLETE, "complete");
-        EVENT_TEXT_ARRAY.append(Event.RESTART, "restart");
-        EVENT_TEXT_ARRAY.append(Event.DELETE, "delete");
-        EVENT_TEXT_ARRAY.append(Event.CLEAR, "clear");
     }
 
     private static String eventToString(@Event int event) {
-        return EVENT_TEXT_ARRAY.get(event, "unknown");
+        switch (event) {
+            case Event.CREATE:
+                return "create";
+            case Event.PREPARE:
+                return "prepare";
+            case Event.WAIT:
+                return "wait";
+            case Event.DOWNLOAD:
+                return "download";
+            case Event.PROGRESS:
+                return "progress";
+            case Event.PAUSE:
+                return "pause";
+            case Event.ERROR:
+                return "error";
+            case Event.RETRY:
+                return "retry";
+            case Event.COMPLETE:
+                return "complete";
+            case Event.RESTART:
+                return "restart";
+            case Event.DELETE:
+                return "delete";
+            case Event.CLEAR:
+                return "clear";
+            default:
+                return "unknown";
+        }
     }
 
 }

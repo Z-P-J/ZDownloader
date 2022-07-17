@@ -19,7 +19,15 @@ public class Logger {
     }
 
     public static void i(String tag, String msg) {
-        Log.i(PREFIX + tag, msg);
+        if (DEBUG) {
+            Log.i(PREFIX + tag, msg);
+        }
+    }
+
+    public static void i(String tag, String format, Object...args) {
+        if (DEBUG) {
+            i(tag, String.format(format, args));
+        }
     }
 
     public static void d(String tag, String msg) {
@@ -29,11 +37,19 @@ public class Logger {
     }
 
     public static void d(String tag, String format, Object...args) {
-        d(tag, String.format(format, args));
+        if (DEBUG) {
+            d(tag, String.format(format, args));
+        }
     }
 
     public static void w(String tag, String msg) {
         Log.w(PREFIX + tag, msg);
+    }
+
+    public static void w(String tag, String format, Object...args) {
+        if (DEBUG) {
+            w(tag, String.format(format, args));
+        }
     }
 
     public static void e(String tag, String msg) {
