@@ -66,6 +66,9 @@ public class MissionRepository<T extends Mission> implements Repository<T> {
     @Override
     public T queryMissionByUrl(Downloader<T> downloader, String url) {
         MissionInfo info = getMissionDao().queryInfoByUrl(url);
+        if (info == null) {
+            return null;
+        }
         Config config = getConfigDao().queryConfig(info.getMissionId());
         return downloader.createMission(info, config);
     }

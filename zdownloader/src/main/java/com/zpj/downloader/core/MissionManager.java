@@ -31,7 +31,7 @@ public interface MissionManager<T extends Mission> {
     /**
      * 销毁管理器
      */
-    void onDestroy();
+    void destroy();
 
     /**
      * 下载任务监听

@@ -208,31 +208,33 @@ public abstract class BaseDownloader<T extends Mission> implements Downloader<T>
 
                 if (mRepository.queryMissionInfo(mission.getMissionId()) == null) {
                     Mission oldMission = mRepository.queryMissionByUrl(this, mission.getUrl());
-                    if (mConflictPolicy == null) {
-                        if (new DefaultConflictPolicy().isConflict(mission, oldMission)) {
-                            renameOnConflict(mission);
-                        }
-                    } else if (mConflictPolicy.isConflict(mission, oldMission)) {
-                        ThreadPool.post(() -> {
-                            mConflictPolicy.onConflict(mission, accept -> {
-                                mScheduler.execute(() -> {
-                                    if (accept) {
-                                        if (!TextUtils.isEmpty(mission.getName())) {
-                                            File file = AutoRenameHelper.renameFile(mission.getFile());
-                                            mission.setName(file.getName());
+                    if (oldMission != null) {
+                        if (mConflictPolicy == null) {
+                            if (new DefaultConflictPolicy().isConflict(mission, oldMission)) {
+                                renameOnConflict(mission);
+                            }
+                        } else if (mConflictPolicy.isConflict(mission, oldMission)) {
+                            ThreadPool.post(() -> {
+                                mConflictPolicy.onConflict(mission, accept -> {
+                                    mScheduler.execute(() -> {
+                                        if (accept) {
+                                            if (!TextUtils.isEmpty(mission.getName())) {
+                                                File file = AutoRenameHelper.renameFile(mission.getFile());
+                                                mission.setName(file.getName());
+                                            }
+                                            mRepository.saveMissionInfo(mission);
+                                            mRepository.saveConfig(mission.getConfig());
+                                            onMissionAdd(mission);
+                                            // 任务排队等待开始下载
+                                            enqueue(mission);
+                                        } else {
+                                            Logger.w(TAG, "onConflict reject mission: %s", mission.getUrl());
                                         }
-                                        mRepository.saveMissionInfo(mission);
-                                        mRepository.saveConfig(mission.getConfig());
-                                        onMissionAdd(mission);
-                                        // 任务排队等待开始下载
-                                        enqueue(mission);
-                                    } else {
-                                        Logger.w(TAG, "onConflict reject mission: %s", mission.getUrl());
-                                    }
+                                    });
                                 });
                             });
-                        });
-                        return;
+                            return;
+                        }
                     }
 
                     mRepository.saveMissionInfo(mission);

@@ -132,7 +132,7 @@ public class DownloadManagerFragment extends Fragment {
     @Override
     public void onDestroyView() {
         // 销毁MissionManager
-        mManager.onDestroy();
+        mManager.destroy();
         super.onDestroyView();
     }
 

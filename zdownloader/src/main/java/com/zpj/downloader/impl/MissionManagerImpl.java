@@ -18,12 +18,12 @@ import java.util.List;
 public class MissionManagerImpl<T extends Mission>
         implements MissionManager<T>, Downloader.DownloaderObserver<T> {
 
-    private final Class<T> mClass;
+    private final Class<T> mMissionClass;
     private final List<T> mMissions = new ArrayList<>();
     private Observer<T> mObserver;
 
     public MissionManagerImpl(@NonNull Class<T> clazz) {
-        this.mClass = clazz;
+        this.mMissionClass = clazz;
     }
 
     @Override
@@ -38,7 +38,7 @@ public class MissionManagerImpl<T extends Mission>
 
     @Override
     public void loadMissions() {
-        ZDownloader.loadMissions(this.mClass, missions -> {
+        ZDownloader.loadMissions(this.mMissionClass, missions -> {
             if (this.mObserver == null) {
                 return;
             }
@@ -47,14 +47,14 @@ public class MissionManagerImpl<T extends Mission>
             Collections.reverse(mMissions);
 
             this.mObserver.onMissionLoaded(this.mMissions);
-            ZDownloader.addObserver(this.mClass, MissionManagerImpl.this);
+            ZDownloader.addObserver(this.mMissionClass, MissionManagerImpl.this);
         });
     }
 
     @Override
-    public void onDestroy() {
+    public void destroy() {
         this.mObserver = null;
-        ZDownloader.removeObserver(mClass, this);
+        ZDownloader.removeObserver(mMissionClass, this);
         this.mMissions.clear();
     }
 
